@@ -1,15 +1,15 @@
 function [PCA, Dendrogram] = PCA_analysis_reworked(File, nucleus, Stim, varargin)
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-0.03 0.03]; % psth interval, even numbers are better for plot
-PCA_num  = 2; % Number of principal components to use
+int      = [-5 5]; % psth interval, even numbers are better for plot
+PCA_num  = 4; % Number of principal components to use
 clustnum = 3; % Number of clusters
 norm     = 1; % Normalise data
 average  = 0; % plotting averages
 LKmethod = 'complete';
 LKmetric = 'mahalanobis';
-psth_bin = 90; % 600 = 20ms
-mainFolder = 'C:\Users\dmagyar\Desktop\Chrimson_stGtACR';
+psth_bin = 6000; % 600 = 20ms
+mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december';
 
 % User defined params -----------------------------------------------------
 if nargin
@@ -61,27 +61,58 @@ for kk = 1:nNeurons
     % Load TTLs & Choose variable to use as stimulus
     load('TTLs.mat'); %#ok<LOAD>
     switch Stim
+        case 'BA_500'
+            ttl = BA_500;
+        case 'BA_500_5Hz'
+            ttl = BA_500_5Hz;
+        case 'BA_50'
+            ttl = BA_50;
         case 'TTL_500'
             ttl = TTL;
         case 'TTL_50'
             ttl = TTL(1:10:end);
         case 'BA_25'
             ttl = BA_25;
+        case 'BA_25_5Hz'
+            ttl = BA_25_5Hz;
+%            ttl = BA_25_5Hz(11:25);
+        case 'BA_25_10Hz'
+            ttl = BA_25_10Hz;
         case 'TO_25'
             ttl = TO_25;
+        case 'TO_25_5Hz'
+            ttl = TO_25_5Hz;
+%            ttl = TO_25_5Hz(1:10);
+        case 'TO_25_10Hz'
+            ttl = TO_25_10Hz;
         case 'BA_250'
             ttl = BA_250;
-%             ttl = BA_250(1:10:end);
-%             ttl = [ttl; BA_250(2:10:end)];
-%             ttl = [ttl; BA_250(3:10:end)];
+        case 'BA_250_5Hz'
+            ttl = BA_250_5Hz;
+%           ttl = BA_250_5Hz(1:125);
+%             ttl = [ttl; BA_250_5Hz(7:10:end)];
+%             ttl = [ttl; BA_250_5Hz(8:10:end)];
+%             ttl = [ttl; BA_250_5Hz(9:10:end)];
+%             ttl = [ttl; BA_250_5Hz(10:10:end)];
 %             ttl = sort(ttl);
+        case 'BA_250_10Hz'
+            ttl = BA_250_10Hz;
         case 'TO_250'
             ttl = TO_250;
+        case 'TO_250_5Hz'
+            ttl = TO_250_5Hz;
+%            ttl = TO_250_5Hz(1:125);
+        case 'TO_250_10Hz'
+            ttl = TO_250_10Hz;
+        case 'BA_500_5Hz_10Hz'
+            ttl = BA_250_5Hz;
+            ttl = [ttl; BA_250_10Hz];
+            ttl = sort(ttl);
         case 'SK'
             ttl = TTL; % The SK TTL is already called TTL.
     end
     % Select the neuron
-    NeuronID = dir(['*',Tab.Group{kk},'_',num2str(Tab.Neuron(kk)),...
+    NeuronID = dir(['GR',Tab.Group{kk},'_',num2str(Tab.Neuron(kk)),...
         '.mat']);
     NeuronID = NeuronID.name;
     
@@ -110,12 +141,12 @@ for kk = 1:nNeurons
         psth1 = psth;
         [psth_spx, psth_t] = psth_hist(psth1, psth_bin);
         
-        %remove artefact
+        % remove last column of PSTHall (PSTHall length decrease)
         if size(PSTHall,2)== fs*(abs(int(1))+abs(int(2)))/psth_bin
             PSTHall(:,fs*(abs(int(1))+abs(int(2)))/psth_bin) = [];
         end
-        
-        psth_spx(abs(int(1)*fs/psth_bin)+1)=[]; % delete  to remove artefact
+        % remove laser artefact bin (psth_spx length match PSTHall length)
+        psth_spx(abs(int(1)*fs/psth_bin)+1)=[]; 
         
        
         
@@ -163,7 +194,7 @@ for kk = 1:nNeurons
     MyNewOrder(:,4) = Tab.Type(leafOrder);
     
     save ('BAparams.mat', 'leafOrder', 'Dend', 'Clusters', 'MyNewOrder')
-    
+    %leafOrder = flip(leafOrder);
 
     % PCA Figure --------------------------------------------------------------
     figure; 
@@ -188,7 +219,7 @@ for kk = 1:nNeurons
     set(gca,'visible','off')
     
     
-    % The first cluster is the one who is the 'deepest'
+    % The first cluster is the 'deepest'
     if average == 1
         for ll = 1:clustnum
             Clustmeans(ll,:) = mean(PSTHall((find(Clusters==ll)),:),1);

@@ -3,7 +3,8 @@ function medianTrace = applyCARtoDat(filename, nChansTotal, outputDir)
 % point.
 %
 % filename should include the extension
-% outputDir is optional, by default will write to the directory of the input file
+% outputDir is optional, by default will write to the directory of the
+% input file. WRITE cd!!!!!!!
 %
 % should make chunk size as big as possible so that the medians of the
 % channels differ little from chunk to chunk.

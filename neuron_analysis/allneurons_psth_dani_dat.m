@@ -1,5 +1,9 @@
 function psth = allneurons_psth_dani_dat(ttl, varargin)
 
+% allneurons_psth_dani_dat(BA_50, 'pre', 0.1, 'post', 0.1, 'bin', 150, 's', 'figname', 'BA_50') 
+
+
+
 % Get data from psth and save to mat for each neuron
 % IMPORTANT: For the analysis of pairs use ttl_psth.
 % 
@@ -91,7 +95,7 @@ end
 
 for nn = ngroup
 % tmp = dir(['*',num2str(nn),'_','*.mat']); % all .mat that belong to the group
-tmp = dir([ cd '\GR_25\' '*',num2str(nn),'_','*.mat']); % find the same .mat files, but in a subfolder, in order to access structure.oebin simultaneously
+tmp = dir([ cd '\GR_35\' '*',num2str(nn),'_','*.mat']); % find the same .mat files, but in a subfolder, in order to access structure.oebin simultaneously
 files = {tmp.name}'; 
 
 % This reorders the files so after 1 comes 2 and not 10. Thank you MATLAB.
@@ -124,7 +128,7 @@ for ii = 1:length(files)
     FstSpk = [];
 
     neuron = files{ii};
-    load([cd '\GR_25\' neuron],'TS');
+    load([cd '\GR_35\' neuron],'TS');
     
     if exist('Dt', 'var') == 0 
         TT = ((TS(:,1)/10000)); 
@@ -191,7 +195,7 @@ for ii = 1:length(files)
     psth = struct('FstSpk', FstSpk, 'AllSpk', AllSpk,...
         'FstSpk_means', FstSpk_means, 'AllSpk_means', AllSpk_means);
     eval([name '= psth']);
-    save([cd '\GR_25\' neuron],name,'-append');
+    save([cd '\GR_35\' neuron],name,'-append');
     
     if s == 1 % Save figure -----------------------------------------------
         saveas(gcf, matlab.lang.makeValidName([neuron(1:end-4),...
