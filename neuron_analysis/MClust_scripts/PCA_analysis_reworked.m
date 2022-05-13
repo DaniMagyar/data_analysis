@@ -2,8 +2,8 @@ function [PCA, Dendrogram] = PCA_analysis_reworked(File, nucleus, Stim, varargin
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
 int      = [-5 5]; % psth interval, even numbers are better for plot
-PCA_num  = 4; % Number of principal components to use
-clustnum = 3; % Number of clusters
+PCA_num  = 3; % Number of principal components to use
+clustnum = 5; % Number of clusters
 norm     = 1; % Normalise data
 average  = 0; % plotting averages
 LKmethod = 'complete';

@@ -1,13 +1,16 @@
 function Zscore_analysis_Dani(File, nucleus, Stim, varargin)
+
+%input
+% -nucleus: cell format
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
 int      = [-5 5]; % psth interval, even numbers are better for plot
 norm     = 1; % Normalise data
 psth_bin = 6000; % 600 = 20ms
 testBins = 10; % bins included for Z-score ordering 
-Wcx_win = [-5 2]; % Wilcoxon window in seconds
-average = 1; % plot averages, 1 if yes
-mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december';
+Wcx_win = [-1 0.05]; % Wilcoxon window in seconds
+average = 0; % plot averages, 1 if yes
+mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_shock_response\2022\MClust';
 
 % lines to change BA_25 -> 250 : line138-130, line189-190 
 
@@ -104,6 +107,10 @@ for kk = 1:nNeurons
             ttl = sort(ttl);
         case 'SK'
             ttl = TTL; % The SK TTL is already called TTL.
+        case 'shock_only'
+            ttl = shock_only;
+        case 'shock_inh'
+            ttl = shock_inh;
     end
     % Select the neuron
     NeuronID = dir(['GR',Tab.Group{kk},'_',num2str(Tab.Neuron(kk)),...
@@ -152,6 +159,19 @@ for kk = 1:nNeurons
      [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq);
      Wilcoxon_results{kk,1} = NeuronID;
      Wilcoxon_results{kk,2} = num2str(h);
+     
+%    % Normality test included
+%      SWresults{kk,1} = NeuronID;
+%      [SWresults{kk,2},SWresults{kk,3},~] = swtest(preAP_wcx_freq, 0.05, true);
+%      [SWresults{kk,4},SWresults{kk,5},~] = swtest(postAP_wcx_freq, 0.05, true);
+%      if SWresults{kk,2} == 1
+%          if SWresults{kk,4} == 1
+%              h = ttest(preAP_wcx_freq, postAP_wcx_freq);
+%              Wilcoxon_results{kk,2} = num2str(h);
+%          end
+%      end
+
+     
 
     % remove laser artefact bin (psth_spx length match PSTHall length)
         %psth_spx(abs(int(1)*fs/psth_bin)+1)=[]; %to remove first bin after TTL
@@ -185,8 +205,8 @@ for kk = 1:nNeurons
     testMean = mean(testWindow,2);
 
     %% Calculating plotting order based on Z-score change
-    switch Stim(1:2)
-        case 'BA'
+    switch Stim
+        case {'BA_25_5Hz', 'shock_only'}
             [~,SortIDX] = sort(testMean, 'descend');
             MyNewOrder = table;
             MyNewOrder.Recording = Tab.Recording(SortIDX);
@@ -194,7 +214,7 @@ for kk = 1:nNeurons
             MyNewOrder.Neuron = Tab.Neuron(SortIDX);
             MyNewOrder.Type = Tab.Type(SortIDX);
 %            MyNewOrder(:,5) = num2cell(Tab.ContactSite(SortIDX));
-        case 'TO'
+        case {'TO_25_5Hz', 'shock_inh'}
             load ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder')
     end
     %% Common part
@@ -259,12 +279,12 @@ for kk = 1:nNeurons
 %         CurrentID=strjoin(MyNewOrderStrings(pp,:));
 %         text(1,pp,[CurrentID(1:5) CurrentID(17:end)], 'FontSize', 8);
 %     end
-        switch Stim(1:2)
-            case 'BA'
-                save ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder', 'response_dir')
-            case 'TO'
-                load ([mainFolder '\BAparams.mat'], 'response_dir') % for average plots
-        end
+    switch Stim
+        case {'BA_25_5Hz', 'shock_only'}
+            save ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder', 'response_dir')
+        case {'TO_25_5Hz', 'shock_inh'}
+            load ([mainFolder '\BAparams.mat'], 'response_dir') % for average plots
+    end
 
     %% Plot the averages
     if average == 1
@@ -288,18 +308,19 @@ for kk = 1:nNeurons
             elseif tt == 2
                 title('Average response of inhibited neurons')
             end
-            if Stim(1:2) == 'BA'
-                if tt == 1
-                    saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) '_BA_AVG_exc.png'])
-                elseif tt == 2
-                    saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) '_BA_AVG_inh.png'])
-                end
-            elseif Stim(1:2) == 'TO'
-                if tt == 1
-                    saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) '_TO_AVG_exc.png'])
-                elseif tt == 2
-                    saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) '_TO_AVG_inh.png'])
-                end
+            switch Stim
+                case {'BA_25_5Hz', 'shock_only'}
+                    if tt == 1
+                        saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) Stim '_AVG_exc.png'])
+                    elseif tt == 2
+                        saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) Stim '_AVG_inh.png'])
+                    end
+                case {'TO_25_5Hz', 'shock_inh'}
+                    if tt == 1
+                        saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) Stim '_AVG_exc.png'])
+                    elseif tt == 2
+                        saveas(figure(tt+1), [mainFolder '\figures\' matlab.lang.makeValidName(cell2mat(nucleus)) Stim(1:2) num2str(int(2)) Stim '_AVG_inh.png'])
+                    end
             end
         end
     end

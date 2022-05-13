@@ -76,4 +76,13 @@ function load_digital_ttl(experiment)
             BA_50 = BA_500(1:10:end);
             TAG_all = (TTL_channels{2,2})/30000;
             save('TTLs.mat','BA_500','BA_50','TAG_all');
+
+        case 'footshock'
+            shocks = (TTL_channels{2,2})/30000; % start of each shock, in seconds
+            shock_only = shocks(1:2:end);
+            shock_inh = shocks(2:2:end);
+            inhibitions = (TTL_channels{2,3})/30000;
+            save('TTLs.mat','shock_only','shock_inh','inhibitions');
+
+
     end

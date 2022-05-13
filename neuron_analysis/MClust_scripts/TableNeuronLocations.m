@@ -1,6 +1,6 @@
 % xlsx file must be in current folder
 clear all;
-name = 'PFC_ChR2_Arch_2021_dec'; 
+name = 'M2_inhib_2022'; 
 filename = ([name '.xlsx']);
 mainFolder = cd;
 opts = detectImportOptions(name);
@@ -95,7 +95,7 @@ end
 %% Selection of included neurons
 
 for kk = 1:length(Tab.Recording) % selecting included recordings
-    if any(strcmp(Tab.Recording{kk}(1:5), {'MD106'}))
+    if any(strcmp(Tab.Recording{kk}(1:5), {'MD111', 'MD112', 'MD113', 'MD115', 'MD117', 'MD118', 'MD119', 'MD120', 'MD121', 'MD122'}))
         Tab.Location{kk} = Tab.Layer{kk};
     else
         Tab.Location{kk} = 'excluded_recording';
