@@ -4,13 +4,13 @@ function Zscore_analysis_Dani(File, nucleus, Stim, varargin)
 % -nucleus: cell format
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-5 5]; % psth interval, even numbers are better for plot
-norm     = 1; % Normalise data
-psth_bin = 6000; % 600 = 20ms
+int      = [-0.5 0.5]; % psth interval, even numbers are better for plot
+norm     = 0; % Normalise data
+psth_bin = 30; % 600 = 20ms
 testBins = 10; % bins included for Z-score ordering 
-Wcx_win = [-1 0.05]; % Wilcoxon window in seconds
+Wcx_win = [-0.05 0.05]; % Wilcoxon window in seconds
 average = 0; % plot averages, 1 if yes
-mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_shock_response\2022\MClust';
+mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\MClust';
 
 % lines to change BA_25 -> 250 : line138-130, line189-190 
 

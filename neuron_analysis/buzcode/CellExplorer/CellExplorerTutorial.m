@@ -20,6 +20,12 @@ save('temp_wh.laserBA_250_5Hz.manipulation.mat', 'laserBA_250_5Hz')
 cell_metrics = ProcessCellMetrics('session', session);
 
 
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+cell_metrics = ProcessCellMetrics('session', session);
+
+
 
 
 

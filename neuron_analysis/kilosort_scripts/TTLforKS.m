@@ -57,4 +57,8 @@ switch experiment
         shock_inh = shocks(2:2:end);
         inhibitions = (TTL_channels{2,3})/30000;
         save('TTLsKS.mat','shock_only','shock_inh','inhibitions');
+
+    case 'M2_footshock_only'
+        shocks = (TTL_channels{2,1}-double(zeroTime))/30000; % start of each shock, in seconds
+        save('TTLsKS.mat','shocks');
 end

@@ -4,7 +4,7 @@ function rasterPlotAllneurons(File, Stim)
 % File : MyNewOrder table from Z_score_analysis_Dani
 
 % Default params ----------------------------------------------------------
-mainFolder = 'C:\Users\dmagyar\Desktop\MD111_20220104_001_2022-01-04_13-41-19\Record Node 101\experiment1\recording1';
+mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\MClust';
 
 Tab = File;
 folder     = Tab.Recording;
@@ -30,12 +30,12 @@ for kk = 1:nNeurons
     % Select the neuron
     NeuronID = (['GR',Tab.Group{kk},'_',num2str(Tab.Neuron(kk))]);
     % Plot raster
-    raster_plot(NeuronID, ttl, 'window', [-5 5])
-    switch Stim
-        case {'BA_25_5Hz', 'shock_only'}
-            saveas(gcf, [mainFolder '\rasters\MyNewOrder_' num2str(kk) '_' Stim '.png'])
-        case {'TO_25_5Hz', 'shock_inh'}
-            saveas(gcf, [mainFolder '\rasters\MyNewOrder_' num2str(kk) '_' Stim '.png'])
-    end
-    close
+    raster_plot(NeuronID, ttl, 'window', [-0.5 0.5])
+%     switch Stim
+%         case {'BA_25_5Hz', 'shock_only'}
+%             saveas(gcf, [mainFolder '\rasters\MyNewOrder_' num2str(kk) '_' Stim '.png'])
+%         case {'TO_25_5Hz', 'shock_inh'}
+%             saveas(gcf, [mainFolder '\rasters\MyNewOrder_' num2str(kk) '_' Stim '.png'])
+%     end
+     close
 end

@@ -1,6 +1,6 @@
 % xlsx file must be in current folder
 clear all;
-name = 'M2_inhib_2022'; 
+name = 'PFC_Chrimson_stGtACR_2021_dec'; 
 filename = ([name '.xlsx']);
 mainFolder = cd;
 opts = detectImportOptions(name);
@@ -95,7 +95,7 @@ end
 %% Selection of included neurons
 
 for kk = 1:length(Tab.Recording) % selecting included recordings
-    if any(strcmp(Tab.Recording{kk}(1:5), {'MD111', 'MD112', 'MD113', 'MD115', 'MD117', 'MD118', 'MD119', 'MD120', 'MD121', 'MD122'}))
+    if any(strcmp(Tab.Recording{kk}(1:5), {'MD098', 'MD099', 'MD101', 'MD108'}))
         Tab.Location{kk} = Tab.Layer{kk};
     else
         Tab.Location{kk} = 'excluded_recording';

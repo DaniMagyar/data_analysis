@@ -112,15 +112,24 @@ if g.pLength ~= 0
         pulses = pulses(pulses<g.lastTS*30000);
     end
     
-    for ll = 1:info.Header.num_channels
+    parfor ll = 1:info.Header.num_channels
+        tmp = incoming_data(ll,:);
         for kk = 1:numel(pulses)
             pStamp = find(info.Timestamps==pulses(kk)); % timestamp of current pulse
-            incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30) = ...
-                int16(linspace(double(incoming_data(ll,pStamp-g.extracut*30)), ...
-                double(incoming_data(ll,pStamp+(g.pLength+g.extracut)*30)), ...
-                numel(incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30))));
-            %disp(['CH' num2str(ll) ' / artefact ' num2str(kk) '/' num2str(numel(pulses)) ' removed'])
+            
+            tmp(pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30) = ...
+                int16(linspace(double(tmp(pStamp-g.extracut*30)), ...
+                double(tmp(pStamp+(g.pLength+g.extracut)*30)), ...
+                numel(tmp(pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30))));
+            
+% 
+%             incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30) = ...
+%                 int16(linspace(double(incoming_data(ll,pStamp-g.extracut*30)), ...
+%                 double(incoming_data(ll,pStamp+(g.pLength+g.extracut)*30)), ...
+%                 numel(incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30))));
+%             disp(['CH' num2str(ll) ' / artefact ' num2str(kk) '/' num2str(numel(pulses)) ' removed'])
         end
+        incoming_data2(ll,:) = tmp;
     end
 end
 toc
@@ -134,7 +143,7 @@ toc
 %initialize a new .dat file
 fid=fopen(['continuous_Preprocessed_' g.CHmap '_pLength' num2str(g.pLength) '_extracut' num2str(g.extracut) '.dat'],'w+');
 % write data to raw .dat file
-fwrite(fid,incoming_data(:,:),'int16');
+fwrite(fid,incoming_data2(:,:),'int16');
 % close that file
 fclose(fid);
 disp('done')

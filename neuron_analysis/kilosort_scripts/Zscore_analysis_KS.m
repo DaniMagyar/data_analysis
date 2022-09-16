@@ -5,12 +5,13 @@ function Zscore_analysis_KS(Recordings, Stim)
 
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-2 2]; % psth interval, even numbers are better for plot
-norm     = 1; % Normalise data
-psth_bin = 150; % 600 = 20ms
-testBins = 100; % bins included for Z-score ordering 
-Wcx_win = [-2 2]; % Wilcoxon window in seconds
-average = 1; % plot averages, 1 if yes
+int      = [-0.5 0.5]; % psth interval, even numbers are better for plot
+norm     = 0; % Normalise data
+psth_bin = 30; % 600 = 20ms
+testBins = 10; % bins included for Z-score ordering !!!!!! WCX direction based on this
+Wcx_win = [-0.05 0.05]; % Wilcoxon window in seconds
+SignificantZscore = 0; % absolute value, if 0, not included.
+average = 0; % plot averages, 1 if yes
 mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\Kilosort_v2';
 disp(mainFolder)
 PSTHall=[];
@@ -64,13 +65,17 @@ for ii = 1:length(Recordings)
             case 'BA_250'
                 ttl = BA_250;
             case 'BA_250_5Hz'
-                ttl = BA_250_5Hz;
-    %             ttl = BA_250_5Hz(1:125);
-    %             ttl = [ttl; BA_250_5Hz(1:10:end)];
-    %             ttl = [ttl; BA_250_5Hz(2:10:end)];
-    %             ttl = [ttl; BA_250_5Hz(3:10:end)];
-    %             ttl = [ttl; BA_250_5Hz(4:10:end)];
-    %             ttl = sort(ttl);
+                %ttl = BA_250_5Hz;
+                %ttl = vertcat(BA_250_5Hz(1:10:end),[]);
+                ttl = vertcat(BA_250_5Hz(1:10:end), BA_250_5Hz(2:10:end));
+                %ttl = vertcat(BA_250_5Hz(1:10:end), BA_250_5Hz(2:10:end), BA_250_5Hz(3:10:end));
+                ttl = ttl;
+                %ttl = BA_250_5Hz(1:125);
+%                 ttl = [BA_250_5Hz(6:10:end)];
+%                 ttl = [ttl; BA_250_5Hz(7:10:end)];
+%                 ttl = [ttl; BA_250_5Hz(8:10:end)];
+%                 ttl = [ttl; BA_250_5Hz(9:10:end)];
+                ttl = sort(ttl);
             case 'BA_250_10Hz'
                 ttl = BA_250_10Hz;
             case 'TO_250'
@@ -107,7 +112,7 @@ for ii = 1:length(Recordings)
         for jj = 1:numel(TTL) %Each TTL is a a column. 
              preAP{:,jj} = AP(AP>=(TTL(jj)-pre_time) & AP<TTL(jj)); % spikes before each TTL separately
              postAP{:,jj} = AP(AP>TTL(jj) & AP<(TTL(jj)+post_time)); % spikes after each TTL separately
-             %postAP{:,jj} = AP(AP>(TTL(jj)+0.005) & AP<(TTL(jj)+0.005+post_time)); %BA_250
+             %postAP{:,jj} = AP(AP>(TTL(jj)+0.006) & AP<(TTL(jj)+0.006+post_time)); %BA_250
          end
          for ll = 1:numel(TTL) %Each TTL is a a column. 
              preAP_norm{ll} = preAP{ll}-TTL(ll); % spikes relative to their own TTL
@@ -129,15 +134,29 @@ for ii = 1:length(Recordings)
          for wcx = 1:numel(TTL) %Each TTL is a a column. 
              preAP_wcx{:,wcx} = AP(AP>=(TTL(wcx)-abs(Wcx_win(1))) & AP<TTL(wcx)); % spikes before each TTL separately
              postAP_wcx{:,wcx} = AP(AP>TTL(wcx) & AP<(TTL(wcx)+Wcx_win(2))); % spikes after each TTL separately
-             %postAP{:,wcx} = AP(AP>(TTL(wcx)+0.005) & AP<(TTL(wcx)+0.005+Wcx_win)); %BA_250
+             %postAP_wcx{:,wcx} = AP(AP>(TTL(wcx)+0.006) & AP<(TTL(wcx)+0.006+Wcx_win(2))); %BA_250
          end
          preAP_wcx_num = cellfun(@numel, preAP_wcx);
          postAP_wcx_num = cellfun(@numel, postAP_wcx);
          preAP_wcx_freq = preAP_wcx_num/abs(Wcx_win(1));
          postAP_wcx_freq = postAP_wcx_num/Wcx_win(2);
-         [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq);
+         [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq, 'alpha', 0.05);
          Wilcoxon_resCurr{kk,1} = cluster_info.cluster_id(kk);
          Wilcoxon_resCurr{kk,2} = num2str(h);
+
+         % real-time scatter plot
+% close all hidden;
+% x1 = (0.01:0.01:2.5);
+% x2 = (4.01:0.01:6.5);
+% y1 = preAP_wcx_freq;
+% y2 = postAP_wcx_freq;
+% 
+% figure
+% hold on
+% scatter(x1,y1, 30, 'r', 'filled');
+% scatter(x2,y2, 30, 'g', 'filled');
+% 
+% plot([x1(:)';x2(:)'], [y1(:)';y2(:)'], 'k-')
          
     %    % Normality test included
     %      SWresults{kk,1} = NeuronID;
@@ -153,8 +172,9 @@ for ii = 1:length(Recordings)
          
     
         % remove laser artefact bin (psth_spx length match PSTHall length)
-            %psth_spx(abs(int(1)*fs/psth_bin)+1)=[]; %to remove first bin after TTL
-            %psth_spx_dani(end)=[]; % to remove last bin  
+%             psth_spx_dani(numel(psth_spx_dani)+1)=mean(psth_spx_dani); % add extra mean bin  
+%             psth_spx_dani(abs(int(1)*fs/psth_bin)+1)=[]; %to remove first bin after TTL
+            
         
             if norm == 1
                 newpsth = zscore(psth_spx_dani);
@@ -189,7 +209,7 @@ testWindow_lastBin = testWindow_firstBin + (testBins-1);
 testWindow = PSTHall(:, testWindow_firstBin:testWindow_lastBin);
 testMean = mean(testWindow,2);
 switch Stim
-    case {'BA_25_5Hz','BA_25_10Hz', 'shock_only'}
+    case {'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz', 'shock_only'}
         [~,SortIDX] = sort(testMean, 'descend');
         MyNewOrder = table;
 %             MyNewOrder.Recording = Tab.Recording(SortIDX);
@@ -197,7 +217,7 @@ switch Stim
 %             MyNewOrder.Neuron = Tab.Neuron(SortIDX);
 %             MyNewOrder.Type = Tab.Type(SortIDX);
 %            MyNewOrder(:,5) = num2cell(Tab.ContactSite(SortIDX));
-    case {'TO_25_5Hz', 'TO_25_10Hz','shock_inh'}
+    case {'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh'}
         load ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder')
 end
 %% Common part
@@ -208,7 +228,7 @@ imagesc(time/fs, 1:size(PSTHall,1), PSTHall(SortIDX,:)); % plotting sorted psth 
 clim([-max(max(PSTHall,[],1))/2.5 max(max(PSTHall,[],1))]);
 colormap(mycolormap); 
 hold on;
-plot([-0.0125 -0.0125],[1 size(PSTHall,1)],'r', 'LineWidth', 2);
+plot([-0.00125 -0.00125],[1 size(PSTHall,1)],'r', 'LineWidth', 2);
 % plot(int,[min(find(testMean(SortIDX)<0))-0.5 min(find(testMean(SortIDX)<0))-0.5], 'r') % finding the first negative Z-socre mean
 hold off;
 ylabel('# Cell');
@@ -233,9 +253,9 @@ ylim([1 length(Wilcox_sorted)])
 testMeanSorted = testMean(SortIDX);
 for qq = 1:length(testMean)
     if Wilcox_sorted(qq) == 1
-        if testMeanSorted(qq) < 0
+        if testMeanSorted(qq) < -SignificantZscore
             response_dir(qq) = -1;
-        elseif testMeanSorted(qq) >= 0
+        elseif testMeanSorted(qq) >= SignificantZscore
             response_dir(qq) = 1;
         end
     else
@@ -244,7 +264,7 @@ for qq = 1:length(testMean)
 end    
 
 annotation('textbox', [0.55, 0.9, 1, 0], 'string',...
-    ['Significantly modulated units:' num2str(numel(significant_idx))], 'LineStyle','none', 'FontSize', 35)
+    ['Significantly modulated units:' num2str(numel(find(response_dir == 1))+numel(find(response_dir == -1)))], 'LineStyle','none', 'FontSize', 35)
 annotation('textbox', [0.55, 0.7, 1, 0], 'string',...
     ['Excited: ' num2str(numel(find(response_dir == 1))) '  ('...
     num2str(numel(find(response_dir == 1))/length(testMean)*100) '%)'], 'LineStyle','none', 'FontSize', 35)
@@ -263,9 +283,9 @@ set(gcf,'Position',[500 50 1600 1300])
 %         text(1,pp,[CurrentID(1:5) CurrentID(17:end)], 'FontSize', 8);
 %     end
     switch Stim
-        case {'BA_25_5Hz', 'BA_25_10Hz', 'shock_only'}
+        case {'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz','shock_only'}
             save ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder', 'response_dir')
-        case {'TO_25_5Hz', 'TO_25_10Hz','shock_inh'}
+        case {'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh'}
             load ([mainFolder '\BAparams.mat'], 'response_dir') % for average plots
     end
 

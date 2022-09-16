@@ -79,7 +79,7 @@ for ii = 1:info.Header.num_channels
     incoming_data(ii,:)=int16(next_channel);
     disp(['CH ' num2str(channel_map(ii)) ' loaded'])
 end
-tic
+
 %% Remove artefacts
 if g.pLength ~= 0
     channel_states = readNPY([cd '\events\Rhythm_FPGA-100.0\TTL_1\channel_states.npy']);
@@ -113,17 +113,18 @@ if g.pLength ~= 0
     end
     
     for ll = 1:info.Header.num_channels
+        
         for kk = 1:numel(pulses)
             pStamp = find(info.Timestamps==pulses(kk)); % timestamp of current pulse
             incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30) = ...
                 int16(linspace(double(incoming_data(ll,pStamp-g.extracut*30)), ...
                 double(incoming_data(ll,pStamp+(g.pLength+g.extracut)*30)), ...
                 numel(incoming_data(ll,pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30))));
-            %disp(['CH' num2str(ll) ' / artefact ' num2str(kk) '/' num2str(numel(pulses)) ' removed'])
+            disp(['CH' num2str(ll) ' / artefact ' num2str(kk) '/' num2str(numel(pulses)) ' removed'])
         end
     end
 end
-toc
+
 
 % for kk = 1:numel(pulses)
 %     pStamp = find(info.Timestamps==pulses(kk)); % timestamp of current pulse
