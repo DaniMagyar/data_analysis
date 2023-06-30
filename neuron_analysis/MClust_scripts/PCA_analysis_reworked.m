@@ -1,15 +1,15 @@
 function [PCA, Dendrogram] = PCA_analysis_reworked(File, nucleus, Stim, varargin)
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-5 5]; % psth interval, even numbers are better for plot
-PCA_num  = 3; % Number of principal components to use
-clustnum = 5; % Number of clusters
+int      = [-2 6]; % psth interval, even numbers are better for plot
+PCA_num  = 2; % Number of principal components to use
+clustnum = 4; % Number of clusters
 norm     = 1; % Normalise data
 average  = 0; % plotting averages
 LKmethod = 'complete';
 LKmetric = 'mahalanobis';
-psth_bin = 6000; % 600 = 20ms
-mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december';
+psth_bin = 3000; % 600 = 20ms
+mainFolder = 'C:\Users\dmagyar\Desktop\M2_shock_waveform\kilosort';
 
 % User defined params -----------------------------------------------------
 if nargin
@@ -110,6 +110,8 @@ for kk = 1:nNeurons
             ttl = sort(ttl);
         case 'SK'
             ttl = TTL; % The SK TTL is already called TTL.
+        case 'TTL'
+            ttl = TTL(2:2:end);
     end
     % Select the neuron
     NeuronID = dir(['GR',Tab.Group{kk},'_',num2str(Tab.Neuron(kk)),...

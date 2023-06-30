@@ -1,4 +1,4 @@
-function [TS] = LoadNeuron(cellID)
+function [TS] = LoadNeuron(cellID, ttl)
 
 % input
 % -cellID: ID in CellExplorer
@@ -14,3 +14,10 @@ spk_t = double(spike_times(spk_idx));
 TS = spk_t/fs;
 disp([num2str(numel(TS)) ' spikes loaded'])
 disp(['ClusterID in Phy: ' num2str(cluID)])
+
+TTL = load('TTLsKS.mat', ttl);
+fns = fieldnames(TTL);
+ttl = TTL.(fns{1});
+
+rasterPsthSingle(TS,ttl, 'window',[-0.1 0.1],'bin_time', 0.001)
+

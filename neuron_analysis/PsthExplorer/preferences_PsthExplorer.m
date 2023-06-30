@@ -5,7 +5,7 @@ preferences.int      = [-5 5]; % psth interval, even numbers are better for plot
 preferences.norm     = 1; % Normalise data
 preferences.psth_bin = 6000; % 600 = 20ms
 preferences.average = 1; % plot averages, 1 if yes
-preferences.mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\Kilosort_v2';
+preferences.mainFolder = 'C:\Users\dmagyar\Desktop\2022_august\kilosort';
 disp(preferences.mainFolder)
 preferences.plottingMethod = 'PCA'; % 'PCA' or 'Zscore'
 
@@ -14,7 +14,7 @@ preferences.Wcx_win = [-5 2]; % Wilcoxon window in seconds
 preferences.testBins = 10; % bins included for Z-score ordering 
 
 % PCA analysis setting
-preferences.PCA_num  = 3; % Number of principal components to use
+preferences.PCA_num  = 2; % Number of principal components to use
 preferences.clustnum = 5; % Number of clusters
 preferences.LKmethod = 'complete';
 preferences.LKmetric = 'mahalanobis';

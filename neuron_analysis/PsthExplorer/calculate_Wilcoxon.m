@@ -11,5 +11,5 @@ function [h] = calculate_Wilcoxon(AP, TTL, preferences)
  postAP_wcx_num = cellfun(@numel, postAP_wcx);
  preAP_wcx_freq = preAP_wcx_num/abs(preferences.Wcx_win(1));
  postAP_wcx_freq = postAP_wcx_num/preferences.Wcx_win(2);
- [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq);
+ [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq, 'alpha', 0.05);
  h = num2str(h);

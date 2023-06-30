@@ -1,3 +1,4 @@
+
 function Zscore_analysis_Dani(File, nucleus, Stim, varargin)
 
 %input
@@ -10,7 +11,7 @@ psth_bin = 30; % 600 = 20ms
 testBins = 10; % bins included for Z-score ordering 
 Wcx_win = [-0.05 0.05]; % Wilcoxon window in seconds
 average = 0; % plot averages, 1 if yes
-mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\MClust';
+mainFolder = 'C:\Users\dmagyar\Desktop\PFC_shock_run_rest';
 
 % lines to change BA_25 -> 250 : line138-130, line189-190 
 
@@ -111,6 +112,10 @@ for kk = 1:nNeurons
             ttl = shock_only;
         case 'shock_inh'
             ttl = shock_inh;
+        case 'shock_motor_rest'
+            ttl = shock_motor_rest;
+        case 'shock_motor_run'
+            ttl = shock_motor_run;
     end
     % Select the neuron
     NeuronID = dir(['GR',Tab.Group{kk},'_',num2str(Tab.Neuron(kk)),...

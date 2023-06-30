@@ -3,22 +3,29 @@ function Zscore_analysis_KS(Recordings, Stim)
 % -Recordings: vertical list of included recordings in cell format, first 5 char
 % -Stim: variable to use from TTLsKS.mat, string
 
+% Zscore_analysis_KS({'MD130', 'MD131', 'MD132'}, 'BA_25_5Hz')
+% Zscore_analysis_KS({'MD133', 'MD134', 'MD135', 'MD136', 'MD137'}, 'ChETA_50_20Hz')
+% Zscore_analysis_KS({'MD138', 'MD139','MD140', 'MD141', 'MD142', 'MD143'}, 'shock_only')
+% Zscore_analysis_KS({'MD138', 'MD139','MD140', 'MD141', 'MD142', 'MD143'}, 'shock_inh')
+% Zscore_analysis_KS({'MD127', 'MD128', 'MD129'}, 'shocks')
+
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-0.5 0.5]; % psth interval, even numbers are better for plot
-norm     = 0; % Normalise data
-psth_bin = 30; % 600 = 20ms
-testBins = 10; % bins included for Z-score ordering !!!!!! WCX direction based on this
-Wcx_win = [-0.05 0.05]; % Wilcoxon window in seconds
+int      = [-0.025 0.025]; % psth interval, even numbers are better for plot
+norm     = 1; % Normalise data
+psth_bin = 60; % 600 = 20ms; 1500=50ms
+testBins = 5; % bins included for Z-score ordering !!!!!! WCX direction based on this, Must match WCX window
+Wcx_win = [-0.01 0.01]; % Wilcoxon window in seconds
 SignificantZscore = 0; % absolute value, if 0, not included.
 average = 0; % plot averages, 1 if yes
-mainFolder = 'Z:\HajosLab\Dani\Magyar_Daniel\experiments\PFC_layers\Chrimson_stGtACR\2021_december\Kilosort_v2';
+mainFolder = 'C:\Users\dmagyar\Desktop\BAopto_run_rest';
+minFR = 0;
 disp(mainFolder)
 PSTHall=[];
 Wilcoxon_results = [];
 
 for ii = 1:length(Recordings)
-    cd([mainFolder '\' Recordings{ii} '_kilosort\kilosort3preprocess'])
+    cd([mainFolder '\' Recordings{ii} '_kilosort\kilosort25preprocess'])
 
     cluster_group = tdfread('cluster_group.tsv');
     cluster_info = tdfread('cluster_info.tsv');
@@ -33,11 +40,38 @@ for ii = 1:length(Recordings)
     
     groupCell = cellstr(cluster_info.group);
     goodIdx = find(strcmp(groupCell, 'good')==1); % to include MUA: find(strcmp(groupCell, 'noise')==0)
+
+    for lowFR = 1:length(goodIdx)
+        totalTime = double((spike_times(length(spike_times)) - spike_times(1))/30000);
+        spikeNum  = numel(find(spike_clusters(spike_clusters == goodIdx(lowFR))));
+        if spikeNum/totalTime < minFR
+            goodIdx(lowFR) = NaN;
+        end
+    end
+    goodIdx = goodIdx(~isnan(goodIdx));
+
+    goodClusterIDs = cluster_info.id(goodIdx); %not used in this script KS 25
+    %goodClusterIDs = cluster_info.cluster_id(goodIdx); %KS3
+
     
     for kk = 1:length(goodIdx)
         % Load TTLs & Choose variable to use as stimulus
         load([cd '\TTLsKS.mat']); % #ok<LOAD>
         switch Stim
+            case 'BA_50_5Hz'
+                ttl = BA_50_5Hz;
+            case 'BA_50_5Hz_Running'
+                ttl = BA_50_5Hz_Running;   
+            case 'BA_50_5Hz_Resting'
+                ttl = BA_50_5Hz_Resting;
+                ttl = BA_50_5Hz_Resting(1:length(BA_50_5Hz_Running));  
+            case 'BA_50_10Hz_Running'
+                ttl = BA_50_10Hz_Running;   
+            case 'BA_50_10Hz_Resting'
+                ttl = BA_50_10Hz_Resting;
+                ttl = BA_50_10Hz_Resting(1:length(BA_50_10Hz_Running));  
+            case 'ChETA_50_20Hz'
+                ttl = ChETA_50_20Hz;
             case 'BA_500'
                 ttl = BA_500;
             case 'BA_500_5Hz'
@@ -93,12 +127,63 @@ for ii = 1:length(Recordings)
                 ttl = TTL; % The SK TTL is already called TTL.
             case 'shock_only'
                 ttl = shock_only;
+            case 'shock_only_Running'
+               % ttl = shock_only_Running;
+               if length(shock_only_Resting) < length(shock_only_Running)
+                   ttl = shock_only_Running(1:length(shock_only_Resting));
+               else 
+                   ttl = shock_only_Running;
+               end
+            case 'shock_only_Resting'
+               % ttl = shock_only_Resting;
+               if length(shock_only_Running) < length(shock_only_Resting)
+                   ttl = shock_only_Resting(1:length(shock_only_Running));
+               else 
+                   ttl = shock_only_Resting;
+               end
+            case 'shock_inh_Running'
+                ttl = shock_inh_Running;
+            case 'shock_inh_Resting'
+                ttl = shock_inh_Resting;
             case 'shock_inh'
                 ttl = shock_inh;
+            case 'shocks'
+                ttl = shocks;
+            case 'BA_25_all_Resting'
+                ttl = BA_25_all_Resting;
+            case 'BA_25_all_Running'
+                ttl = BA_25_all_Running;
+            case 'BA_25_5Hz_Resting'
+                ttl = BA_25_5Hz_Resting;
+                %ttl = sort(vertcat(ttl, ttl+0.2, ttl+0.4, ttl+0.6, ttl+0.8));
+                %ttl = sort(vertcat(ttl, ttl+0.2, ttl+0.4, ttl+0.6, ttl+0.8, ttl+1, ttl+1.2, ttl+1.4, ttl+1.6, ttl+1.8));
+            case 'shock_motor_rest'
+                ttl = shock_motor_rest;
+            case 'shock_motor_run'
+                ttl = shock_motor_run;
+            case 'BA_5Hz_motor_rest_first'
+                ttl = BA_5Hz_motor_rest_first;
+            case 'BA_20Hz_motor_rest_first'
+                ttl = BA_20Hz_motor_rest_first;
+            case 'BA_5Hz_motor_run_first' 
+                ttl = BA_5Hz_motor_run_first;
+            case 'BA_20Hz_motor_run_first'
+                ttl = BA_20Hz_motor_run_first;
+            case 'BA_5Hz_motor_rest_all'
+                ttl = BA_5Hz_motor_rest_all;
+            case 'BA_20Hz_motor_rest_all'
+                ttl = BA_20Hz_motor_rest_all;
+            case 'BA_5Hz_motor_run_all' 
+                ttl = BA_5Hz_motor_run_all;
+            case 'BA_20Hz_motor_run_all'
+                ttl = BA_20Hz_motor_run_all;
+            case 'stim'
+                ttl = stim;
         end
     
-    
-        spk_idx = find(spike_clusters==cluster_info.cluster_id(goodIdx(kk)));
+        %ttl = ttl(1:10);
+        %spk_idx = find(spike_clusters==cluster_info.cluster_id(goodIdx(kk))); %KS 3
+        spk_idx = find(spike_clusters==cluster_info.id(goodIdx(kk))); %KS 2.5
         spk_t = double(spike_times(spk_idx));
     
         TT = spk_t/fs;
@@ -128,7 +213,9 @@ for ii = 1:length(Recordings)
          end
     
          psth_spx_dani = vertcat(sum(preAP_bin,2), sum(postAP_bin,2));
-    
+         clear preAP_bin postAP_bin preAP postAP preAP_norm postAP_norm  % reset matrices, because different TTL num
+
+
          %% paired Wilcoxon signed rank test: equal length of pre and post data. 
          % Each post point cointain all spikes during the whole illumination period. (Like one 2 secs long bin)
          for wcx = 1:numel(TTL) %Each TTL is a a column. 
@@ -141,9 +228,10 @@ for ii = 1:length(Recordings)
          preAP_wcx_freq = preAP_wcx_num/abs(Wcx_win(1));
          postAP_wcx_freq = postAP_wcx_num/Wcx_win(2);
          [~,h] = signrank(preAP_wcx_freq, postAP_wcx_freq, 'alpha', 0.05);
-         Wilcoxon_resCurr{kk,1} = cluster_info.cluster_id(kk);
+         %Wilcoxon_resCurr{kk,1} = cluster_info.cluster_id(kk); %KS 3
+         Wilcoxon_resCurr{kk,1} = cluster_info.id(kk); %KS 2.5
          Wilcoxon_resCurr{kk,2} = num2str(h);
-
+         clear preAP_wcx postAP_wcx preAP_wcx_num postAP_wcx_num preAP_wcx_freq postAP_wcx_freq
          % real-time scatter plot
 % close all hidden;
 % x1 = (0.01:0.01:2.5);
@@ -189,6 +277,15 @@ for ii = 1:length(Recordings)
 
 end
 
+% rZ = 1;
+% while rZ <= length(PSTHall)
+%     if PSTHall(rZ,:) == 0
+%         PSTHall(rZ,:) = [];
+%         Wilcoxon_results(rZ,:) = [];
+%     end
+%     rZ = rZ +1;
+% end
+
 time = (int(1)*fs:psth_bin:int(2)*fs)';
 time = time(1:end-1);
 
@@ -209,15 +306,20 @@ testWindow_lastBin = testWindow_firstBin + (testBins-1);
 testWindow = PSTHall(:, testWindow_firstBin:testWindow_lastBin);
 testMean = mean(testWindow,2);
 switch Stim
-    case {'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz', 'shock_only'}
+    case {'BA_50_5Hz', 'BA_50_5Hz_Resting','BA_50_10Hz_Resting', 'ChETA_50_20Hz', 'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz', ...
+            'shock_only', 'shock_only_Resting', 'BA_25_all_Resting', 'BA_25_5Hz_Resting', 'shocks', 'shock_motor_rest', ...
+            'BA_5Hz_motor_rest_first', 'BA_20Hz_motor_rest_first', 'BA_5Hz_motor_rest_all', 'BA_20Hz_motor_rest_all', 'stim'}
         [~,SortIDX] = sort(testMean, 'descend');
-        MyNewOrder = table;
+        MyNewOrder = [];
+%       MyNewOrder = goodClusterIDs(SortIDX);
 %             MyNewOrder.Recording = Tab.Recording(SortIDX);
 %             MyNewOrder.Group = Tab.Group(SortIDX);
 %             MyNewOrder.Neuron = Tab.Neuron(SortIDX);
 %             MyNewOrder.Type = Tab.Type(SortIDX);
 %            MyNewOrder(:,5) = num2cell(Tab.ContactSite(SortIDX));
-    case {'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh'}
+    case {'BA_50_5Hz_Running', 'BA_50_10Hz_Running', 'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh', 'shock_only_Running' ,...
+            'shock_inh_Running', 'shock_inh_Resting', 'BA_25_all_Running', 'shock_motor_run',...
+            'BA_5Hz_motor_run_first', 'BA_20Hz_motor_run_first', 'BA_5Hz_motor_run_all', 'BA_20Hz_motor_run_all'}
         load ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder')
 end
 %% Common part
@@ -227,8 +329,13 @@ subplot(1,4,1:2)
 imagesc(time/fs, 1:size(PSTHall,1), PSTHall(SortIDX,:)); % plotting sorted psth matrix 
 clim([-max(max(PSTHall,[],1))/2.5 max(max(PSTHall,[],1))]);
 colormap(mycolormap); 
+cb = colorbar('FontSize',15);
+cb.Ticks = linspace(-20,20,41);
+cb.Label.String = 'Z-score change';
+cb.Label.FontSize = 25;
+cb.Position = [0.55, 0.115, 0.01, 0.255];
 hold on;
-plot([-0.00125 -0.00125],[1 size(PSTHall,1)],'r', 'LineWidth', 2);
+plot([-0.0125 -0.0125],[1 size(PSTHall,1)],'r', 'LineWidth', 2);
 % plot(int,[min(find(testMean(SortIDX)<0))-0.5 min(find(testMean(SortIDX)<0))-0.5], 'r') % finding the first negative Z-socre mean
 hold off;
 ylabel('# Cell');
@@ -249,6 +356,9 @@ set(gca,'visible','off')
 set(subplot(1,4,3:4), 'Position', [0.5, 0.115, 0.01, 0.805])
 xlim([-0.5 0.5])
 ylim([1 length(Wilcox_sorted)])
+
+
+
 
 testMeanSorted = testMean(SortIDX);
 for qq = 1:length(testMean)
@@ -283,9 +393,13 @@ set(gcf,'Position',[500 50 1600 1300])
 %         text(1,pp,[CurrentID(1:5) CurrentID(17:end)], 'FontSize', 8);
 %     end
     switch Stim
-        case {'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz','shock_only'}
+        case {'BA_50_5Hz', 'BA_50_5Hz_Resting', 'BA_50_10Hz_Resting', 'BA_25_5Hz', 'BA_250_5Hz', 'BA_25_10Hz', 'BA_250_10Hz',...
+                'shock_only', 'shock_only_Resting', 'BA_25_all_Resting', 'BA_25_5Hz_Resting', 'shocks', 'shock_motor_rest',...
+                'BA_5Hz_motor_rest_first', 'BA_20Hz_motor_rest_first'}
             save ([mainFolder '\BAparams.mat'], 'SortIDX','MyNewOrder', 'response_dir')
-        case {'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh'}
+        case {'BA_50_5Hz_Running', 'BA_50_10Hz_Running', 'TO_25_5Hz', 'TO_250_5Hz', 'TO_25_10Hz','shock_inh', 'shock_only_Running', ...
+                'shock_inh_Running', 'shock_inh_Resting', 'BA_25_all_Running', 'shock_motor_run',...
+                'BA_5Hz_motor_run_first', 'BA_20Hz_motor_run_first'}
             load ([mainFolder '\BAparams.mat'], 'response_dir') % for average plots
     end
 

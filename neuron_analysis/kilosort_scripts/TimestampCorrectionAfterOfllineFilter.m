@@ -1,5 +1,7 @@
 function TimestampCorrectionAfterOfllineFilter
 
+% copy and paste events folder and timestamp files from continuous folder
+
 info = load_open_ephys_binary([cd '\structure.oebin'],'continuous',1, 'mmap');
 folder = [cd '\continuous\' info.Header.folder_name];
 contFile=fullfile(folder,'continuous.dat');
@@ -11,5 +13,6 @@ timestamps = oldTS(1:samples);
 synchronized_timestamps = oldSynchTS(1:samples);
 writeNPY(timestamps,[folder 'timestamps.npy']);
 writeNPY(synchronized_timestamps,[folder 'synchronized_timestamps.npy']);
+disp('done')
 
 

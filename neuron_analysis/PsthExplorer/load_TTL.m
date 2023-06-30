@@ -1,6 +1,8 @@
 function [ttl] = load_TTL(Stim)
 load([cd '\TTLsKS.mat']); % #ok<LOAD>
     switch Stim
+        case 'ChETA_50_20Hz'
+            ttl = ChETA_50_20Hz;
         case 'BA_500'
             ttl = BA_500;
         case 'BA_500_5Hz'
@@ -54,4 +56,6 @@ load([cd '\TTLsKS.mat']); % #ok<LOAD>
             ttl = shock_only;
         case 'shock_inh'
             ttl = shock_inh;
+        case 'shocks'
+            ttl = shocks;
     end

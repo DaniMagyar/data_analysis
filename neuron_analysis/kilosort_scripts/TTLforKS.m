@@ -15,6 +15,20 @@ for ii = 1:max(channels)
     TTL_channels{2,ii} = timestamps(TTL_ON);
 end
 switch experiment
+    case 'BA_50_5Hz'
+        pulses = (TTL_channels{2,3}-double(zeroTime))/30000; % start of each pulse, in seconds
+        pulses_5Hz = pulses(1:500);
+        BA_50_5Hz = pulses_5Hz(1:10:end);
+        save('TTLsKS.mat','BA_50_5Hz');
+    case 'PFC_ChETA'
+        pulses = (TTL_channels{2,3}-double(zeroTime))/30000; % start of each pulse, in seconds
+        ChETA_50_20Hz = pulses(1:40:end);
+        save('TTLsKS.mat','ChETA_50_20Hz');
+    case 'PFC_shock_laser'
+        shocks = (TTL_channels{2,2}-double(zeroTime))/30000;
+        shock_only = shocks(1:2:end);
+        shock_inh = shocks(2:2:end);
+        save('TTLsKS.mat','shock_only','shock_inh');
     case 'FFI_5Hz_10Hz'
         pulses = (TTL_channels{2,3}-double(zeroTime))/30000; % start of each pulse, in seconds
         pulses_5Hz = pulses(1:500);
@@ -55,7 +69,6 @@ switch experiment
         shocks = (TTL_channels{2,2}-double(zeroTime))/30000; % start of each shock, in seconds
         shock_only = shocks(1:2:end);
         shock_inh = shocks(2:2:end);
-        inhibitions = (TTL_channels{2,3})/30000;
         save('TTLsKS.mat','shock_only','shock_inh','inhibitions');
 
     case 'M2_footshock_only'
