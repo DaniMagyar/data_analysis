@@ -18,7 +18,7 @@ testBins = 5; % bins included for Z-score ordering !!!!!! WCX direction based on
 Wcx_win = [-0.01 0.01]; % Wilcoxon window in seconds
 SignificantZscore = 0; % absolute value, if 0, not included.
 average = 0; % plot averages, 1 if yes
-mainFolder = 'C:\Users\dmagyar\Desktop\BAopto_run_rest';
+mainFolder = 'C:\Users\dmagyar\Desktop\M2_shock_response';
 minFR = 0;
 disp(mainFolder)
 PSTHall=[];

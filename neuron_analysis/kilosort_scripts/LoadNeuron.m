@@ -19,5 +19,5 @@ TTL = load('TTLsKS.mat', ttl);
 fns = fieldnames(TTL);
 ttl = TTL.(fns{1});
 
-rasterPsthSingle(TS,ttl, 'window',[-0.1 0.1],'bin_time', 0.001)
+rasterPsthSingle(TS,ttl, 'window',[-0.5 0.5],'bin_time', 0.02)
 

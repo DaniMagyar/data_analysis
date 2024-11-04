@@ -7,14 +7,14 @@ function Zscore_analysis_CellExp(Recordings, Stim, varargin)
 
 % Default params ----------------------------------------------------------
 fs       = 30000; % Firing rate
-int      = [-0.025 0.025]; % psth interval, even numbers are better for plot
+int      = [-2 2]; % psth interval, even numbers are better for plot
 norm     = 1; % Normalise data
-psth_bin = 30; % 600 = 20ms; 1500=50ms
-testBins = 15; % bins included for Z-score ordering !!!!!! WCX direction based on this, Must match WCX window
-Wcx_win = [-0.015 0.015]; % Wilcoxon window in seconds
+psth_bin = 600; % 600 = 20ms; 1500=50ms
+testBins = 25; % bins included for Z-score ordering !!!!!! WCX direction based on this, Must match WCX window
+Wcx_win = [-0.5 0.5]; % Wilcoxon window in seconds
 SignificantZscore = 0; % absolute value, if 0, not included.
 average = 0; % plot averages, 1 if yes
-mainFolder = 'C:\Users\dmagyar\Desktop\BAopto_run_rest';
+mainFolder = 'C:\Users\dmagyar\Desktop\M2_shock_response';
 minFR = 0;
 disp(mainFolder)
 PSTHall=[];

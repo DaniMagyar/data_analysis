@@ -1,5 +1,5 @@
 clear all;
-Table = readtable('3camera_TS.csv');
+Table = readtable('fpstest_O.csv');
 date = Table.Var17;
 
 time = cellfun(@(fun) fun(12:end-6), date, 'UniformOutput', false); % @(fun) fun...: way to write a function

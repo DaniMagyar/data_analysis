@@ -9,8 +9,8 @@ function Preprocess_OEPv063(varargin)
 % - experiment: 'PFC_BA_doubleLaser' / 'M2_shock_laser'
 
 prs =  inputParser;
-addOptional(prs,'pLength',0,@isnumeric) 
-addOptional(prs,'extracut',0,@isnumeric)
+addOptional(prs,'pLength',5,@isnumeric) 
+addOptional(prs,'extracut',1,@isnumeric)
 %addOptional(prs,'lastTS',0,@isnumeric)
 addOptional(prs,'lastSec',0,@isnumeric) % start = 0 sec
 addOptional(prs, 'removePeriod', [0 0],@isnumeric) % in seconds from 0 sec
