@@ -24,7 +24,7 @@ addOptional(prs,'firstSec',0) % start = 0sec
 addOptional(prs,'lastSec',0,@isnumeric) % start = 0 sec
 addOptional(prs, 'removePeriod', [0 0],@isnumeric) % in seconds from 0 sec
 addOptional(prs, 'experiment', '', @ischar)
-addOptional(prs, 'source', 'none', @ischar)
+addOptional(prs, 'source', 'oebin', @ischar)
 addOptional(prs, 'CAR', 0, @isnumeric) % common average referencing. 'yes', or 'none'
 addOptional(prs, 'filter', 0, @isnumeric) % filtering
 addOptional(prs, 'HighCutOff', 800, @isnumeric) %

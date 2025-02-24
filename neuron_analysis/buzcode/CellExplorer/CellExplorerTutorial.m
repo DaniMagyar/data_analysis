@@ -918,14 +918,14 @@ cell_metrics = ProcessCellMetrics('session', session);
 
 basenames = {'temp_wh','temp_wh','temp_wh','temp_wh','temp_wh','temp_wh','temp_wh','temp_wh'};
 basepaths = {...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD258_002_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD258_003_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD259_001_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD259_004_kilosort\kilosort25preprocess',...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD260_001_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD260_002_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD261_001_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_optotag\MD261_003_kilosort\kilosort25preprocess'};
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD258_002_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD258_003_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD259_001_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD259_004_kilosort\kilosort25preprocess',...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD260_001_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD260_002_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD261_001_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_SST_Chrmine\MD261_003_kilosort\kilosort25preprocess'};
 cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames);
 
 cell_metrics.general.TTL_shocks = {};
@@ -979,15 +979,15 @@ cell_metrics = CellExplorer('metrics',cell_metrics);
 % MD281,MD282, MD2823
 basenames = {'temp_wh', 'temp_wh','temp_wh','temp_wh','temp_wh','temp_wh', 'temp_wh','temp_wh','temp_wh','temp_wh', 'temp_wh'};
 basepaths = {...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD281_001_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD281_002_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD281_003_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD281_004_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD281_005_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD282_001_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD282_002_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD283_002_kilosort\kilosort25preprocess', ...
-    'C:\Users\dmagyar\Desktop\M2_NDNF_VIP2R_Arch\MD283_003_kilosort\kilosort25preprocess'};
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD281_001_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD281_002_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD281_003_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD281_004_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD281_005_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD282_001_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD282_002_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD283_002_kilosort\kilosort25preprocess', ...
+    'Z:\HajosLab\Dani\Magyar_Daniel\experiments\M2_NDNF_VIP2R_Arch\MD283_003_kilosort\kilosort25preprocess'};
 cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames);
 
 
@@ -1007,3 +1007,177 @@ for ii = 1:max(cell_metrics.batchIDs)
 end
 clear TTL AP ii allTTL
 cell_metrics = CellExplorer('metrics',cell_metrics);
+
+
+
+
+
+%MD288, 289, 290, 291
+
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'tone_habit_all') 
+TTL_tone_habit_all.timestamps = tone_habit_all;
+TTL_tone_habit_all.timestamps(:,2) = tone_habit_all + 0.5;
+save('temp_wh.TTL_tone_habit_all.manipulation.mat', 'TTL_tone_habit_all')
+
+load('TTLsKS.mat', 'tone_cond_all') 
+TTL_tone_cond_all.timestamps = tone_cond_all;
+TTL_tone_cond_all.timestamps(:,2) = tone_cond_all + 0.5;
+save('temp_wh.TTL_tone_cond_all.manipulation.mat', 'TTL_tone_cond_all')
+
+load('TTLsKS.mat', 'tone_recall_all') 
+TTL_tone_recall_all.timestamps = tone_recall_all;
+TTL_tone_recall_all.timestamps(:,2) = tone_recall_all + 0.5;
+save('temp_wh.TTL_tone_recall_all.manipulation.mat', 'TTL_tone_recall_all')
+
+load('TTLsKS.mat', 'tone_habit_first') 
+TTL_tone_habit_first.timestamps = tone_habit_first;
+TTL_tone_habit_first.timestamps(:,2) = tone_habit_first + 0.5;
+save('temp_wh.TTL_tone_habit_first.manipulation.mat', 'TTL_tone_habit_first')
+
+load('TTLsKS.mat', 'tone_cond_first') 
+TTL_tone_cond_first.timestamps = tone_cond_first;
+TTL_tone_cond_first.timestamps(:,2) = tone_cond_first + 0.5;
+save('temp_wh.TTL_tone_cond_first.manipulation.mat', 'TTL_tone_cond_first')
+
+load('TTLsKS.mat', 'tone_recall_first') 
+TTL_tone_recall_first.timestamps = tone_recall_first;
+TTL_tone_recall_first.timestamps(:,2) = tone_recall_first + 0.5;
+save('temp_wh.TTL_tone_recall_first.manipulation.mat', 'TTL_tone_recall_first')
+
+cell_metrics = ProcessCellMetrics('session', session);
+
+
+basenames = {'temp_wh', 'temp_wh', 'temp_wh', 'temp_wh', 'temp_wh'};
+basepaths = {...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD288_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD289_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD290_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD291_kilosort\kilosort25preprocess'};
+cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames);
+
+cell_metrics = CellExplorer('metrics',cell_metrics);
+
+
+
+
+
+% Tibi
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'pulses')
+pulsesTTL.timestamps = pulses;
+pulsesTTL.timestamps(:,2) = pulses + 0.5;
+save('temp_wh.pulsesTTL.manipulation.mat', 'pulsesTTL')
+
+load('TTLsKS.mat', 'firstlickUniq')
+firstlickUniqTTL.timestamps = firstlickUniq;
+firstlickUniqTTL.timestamps(:,2) = firstlickUniq + 0.5;
+save('temp_wh.firstlickUniqTTL.manipulation.mat', 'firstlickUniqTTL')
+
+load('TTLsKS.mat', 'nonRewardlick')
+nonRewardlickTTL.timestamps = nonRewardlick;
+nonRewardlickTTL.timestamps(:,2) = nonRewardlick + 0.5;
+save('temp_wh.nonRewardlickTTL.manipulation.mat', 'nonRewardlickTTL')
+
+cell_metrics = ProcessCellMetrics('session', session);
+
+
+
+
+
+
+%MD294
+
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'shocks_nonpredicted')
+shocks_nonpredictedTTL.timestamps = shocks_nonpredicted;
+shocks_nonpredictedTTL.timestamps(:,2) = shocks_nonpredicted + 0.5;
+save('temp_wh.shocks_nonpredictedTTL.manipulation.mat', 'shocks_nonpredictedTTL')
+
+load('TTLsKS.mat', 'shocks_predicted')
+shocks_predictedTTL.timestamps = shocks_predicted;
+shocks_predictedTTL.timestamps(:,2) = shocks_predicted + 0.5;
+save('temp_wh.shocks_predictedTTL.manipulation.mat', 'shocks_predictedTTL')
+
+load('TTLsKS.mat', 'tone_habit_all') 
+TTL_tone_habit_all.timestamps = tone_habit_all;
+TTL_tone_habit_all.timestamps(:,2) = tone_habit_all + 0.5;
+save('temp_wh.TTL_tone_habit_all.manipulation.mat', 'TTL_tone_habit_all')
+
+load('TTLsKS.mat', 'tone_cond_all') 
+TTL_tone_cond_all.timestamps = tone_cond_all;
+TTL_tone_cond_all.timestamps(:,2) = tone_cond_all + 0.5;
+save('temp_wh.TTL_tone_cond_all.manipulation.mat', 'TTL_tone_cond_all')
+
+load('TTLsKS.mat', 'tone_recall_all') 
+TTL_tone_recall_all.timestamps = tone_recall_all;
+TTL_tone_recall_all.timestamps(:,2) = tone_recall_all + 0.5;
+save('temp_wh.TTL_tone_recall_all.manipulation.mat', 'TTL_tone_recall_all')
+
+load('TTLsKS.mat', 'tone_habit_first') 
+TTL_tone_habit_first.timestamps = tone_habit_first;
+TTL_tone_habit_first.timestamps(:,2) = tone_habit_first + 0.5;
+save('temp_wh.TTL_tone_habit_first.manipulation.mat', 'TTL_tone_habit_first')
+
+load('TTLsKS.mat', 'tone_cond_first') 
+TTL_tone_cond_first.timestamps = tone_cond_first;
+TTL_tone_cond_first.timestamps(:,2) = tone_cond_first + 0.5;
+save('temp_wh.TTL_tone_cond_first.manipulation.mat', 'TTL_tone_cond_first')
+
+load('TTLsKS.mat', 'tone_recall_first') 
+TTL_tone_recall_first.timestamps = tone_recall_first;
+TTL_tone_recall_first.timestamps(:,2) = tone_recall_first + 0.5;
+save('temp_wh.TTL_tone_recall_first.manipulation.mat', 'TTL_tone_recall_first')
+
+load('TTLsKS.mat', 'triptest_shocks_only')
+triptest_shocks_onlyTTL.timestamps = triptest_shocks_only;
+triptest_shocks_onlyTTL.timestamps(:,2) = triptest_shocks_only + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL.manipulation.mat', 'triptest_shocks_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_sound_only')
+triptest_sound_onlyTTL.timestamps = triptest_sound_only;
+triptest_sound_onlyTTL.timestamps(:,2) = triptest_sound_only + 0.5;
+save('temp_wh.triptest_sound_onlyTTL.manipulation.mat', 'triptest_sound_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_both')
+triptest_bothTTL.timestamps = triptest_both;
+triptest_bothTTL.timestamps(:,2) = triptest_both + 0.5;
+save('temp_wh.triptest_bothTTL.manipulation.mat', 'triptest_bothTTL')
+
+cell_metrics = ProcessCellMetrics('session', session);
+
+
+
+
+basenames = {'temp_wh', 'temp_wh', 'temp_wh', 'temp_wh', 'temp_wh'};
+basepaths = {...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD293_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD294_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD295_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD296_kilosort\kilosort25preprocess', ...
+    'C:\Users\dmagyar\Desktop\BA_fear_cond\MD297_kilosort\kilosort25preprocess'};
+cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames);
+
+cell_metrics = CellExplorer('metrics',cell_metrics);
+

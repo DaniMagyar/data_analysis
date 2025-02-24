@@ -1,4 +1,4 @@
-function Zscore_analysis_CellExp_v3(varargin)
+function [PSTHall] = Zscore_analysis_CellExp_v3(varargin)
 
 % v3: exclude neurons that are labelled as 'junk' in CellExplorer.
 close all;
@@ -19,6 +19,8 @@ addParameter(prs,'int',[-0.5 0.5],@isnumeric) % Plotting window [-pre post] in s
 addParameter(prs,'Wcx_win',[-0.05 0.05],@isnumeric) % Time window [-pre post] for Wilcoxon in seconds. Two sides should be equal.
 addParameter(prs,'Wcx_alpha',0.05,@isnumeric) % alpha value for Wilcoxon, default 0.05
 addParameter(prs,'norm',1,@isnumeric) % Normalise data (Z-score). Options: 1 or 0.
+addParameter(prs,'smooth',0,@isnumeric) % Smoothdata. Options: 1 or 0.
+addParameter(prs,'smoothvalue',5,@isnumeric) % Smoothvalue.
 addParameter(prs,'offset',1,@isnumeric) % Offset to pre stimulus firing rate ( int(1)).
 addParameter(prs,'average',0,@isnumeric) % Plot excited/inhibited group averages. Options: 1 or 0. 
 addParameter(prs,'piechart',0,@isnumeric) % Plot excited/inhibited group pie-charts. Options: 1 or 0. 
@@ -115,6 +117,11 @@ for hh = cellIdx_selected
             elseif g.offset == 0
                 newpsth = newpsth;
             end
+            if g.smooth == 1
+                newpsth = smoothdata(newpsth, 'movmean', g.smoothvalue);
+            elseif g.smooth == 0 
+                newpsth = newpsth;
+            end
 
             % mean(newpsth(1:abs(g.int(1))*g.fs/g.psth_bin)) % display mean of pre 
             % mean(newpsth(abs(g.int(1))*g.fs/g.psth_bin+1:end)) % display mean of post
@@ -139,6 +146,8 @@ mycolormap(21:64,3) = linspace(c2(3),c3(3),44);
 
 
 switch g.plotType
+    case 'none'
+
     case 'Heatmap'  
         % Calculating plotting order based on Z-score change
         testWindow_firstBin = abs(g.int(1))*g.fs/g.psth_bin+1;

@@ -342,63 +342,81 @@ switch experiment
 % tone_recall_first = tone_recall_all(1:30:end);
 % noise_recall_first = noise_recall_all(1:30:end);
 % save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'noise_habit_all', 'noise_cond_all', 'noise_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'noise_habit_first', 'noise_cond_first', 'noise_recall_first')
+% 
+% % MD243, MD250, MD251, MD254
+% LED_synch = TTL_channels{2,3}-double(zeroTime);
+% shocks = TTL_channels{2,1}-double(zeroTime);
+% sound_all = TTL_channels{2,5}-double(zeroTime);
+% sound_all_diff = diff(sound_all);
+% sound_all_diff1 = [0.5; sound_all_diff];
+% sound_all1 = sound_all(sound_all_diff1>=0.5);
+% sound_habit_all = sound_all1(1:100);
+% sound_habit_resh = reshape(sound_habit_all, [5,20]);
+% tone_habit_all = reshape(sound_habit_resh(:,1:2:end), [50,1]);
+% noise_habit_all = reshape(sound_habit_resh(:,2:2:end), [50,1]);
+% sound_cond_all = sound_all1(101:300);
+% sound_cond_resh = reshape(sound_cond_all, [5,40]);
+% tone_cond_all = reshape(sound_cond_resh(:,1:2:end), [100,1]);
+% noise_cond_all = reshape(sound_cond_resh(:,2:2:end), [100,1]);
+% sound_recall_all = sound_all1(301:400);
+% sound_recall_resh = reshape(sound_recall_all, [5,20]);
+% tone_recall_all = reshape(sound_recall_resh(:,1:2:end), [50,1]);
+% noise_recall_all = reshape(sound_recall_resh(:,2:2:end), [50,1]);
+% tone_habit_first = tone_habit_all(1:5:end);
+% noise_habit_first = noise_habit_all(1:5:end);
+% tone_cond_first = tone_cond_all(1:5:end);
+% noise_cond_first = noise_cond_all(1:5:end);
+% tone_recall_first = tone_recall_all(1:5:end);
+% noise_recall_first = noise_recall_all(1:5:end);
+% save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'noise_habit_all', 'noise_cond_all', 'noise_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'noise_habit_first', 'noise_cond_first', 'noise_recall_first', 'LED_synch')
+% plot(tone_habit_all, ones(numel(tone_habit_all)),'.',noise_habit_all, ones(numel(noise_habit_all)),'.',tone_cond_all, ones(numel(tone_cond_all)),'.',noise_cond_all, ones(numel(noise_cond_all)),'.',tone_recall_all, ones(numel(tone_recall_all)),'.',noise_recall_all, ones(numel(noise_recall_all)),'.')
+% 
+% % interchanged CS, MD252, MD253, MD268, MD277, MD278
+% LED_synch = TTL_channels{2,3}-double(zeroTime);
+% shocks = TTL_channels{2,1}-double(zeroTime);
+% sound_all = TTL_channels{2,5}-double(zeroTime);
+% sound_all_diff = diff(sound_all);
+% sound_all_diff1 = [0.5; sound_all_diff];
+% sound_all1 = sound_all(sound_all_diff1>=0.5);
+% sound_habit_all = sound_all1(1:100);
+% sound_habit_resh = reshape(sound_habit_all, [5,20]);
+% tone_habit_all = reshape(sound_habit_resh(:,2:2:end), [50,1]);
+% noise_habit_all = reshape(sound_habit_resh(:,1:2:end), [50,1]);
+% sound_cond_all = sound_all1(101:300);
+% sound_cond_resh = reshape(sound_cond_all, [5,40]);
+% tone_cond_all = reshape(sound_cond_resh(:,2:2:end), [100,1]);
+% noise_cond_all = reshape(sound_cond_resh(:,1:2:end), [100,1]);
+% sound_recall_all = sound_all1(301:400);
+% sound_recall_resh = reshape(sound_recall_all, [5,20]);
+% tone_recall_all = reshape(sound_recall_resh(:,2:2:end), [50,1]);
+% noise_recall_all = reshape(sound_recall_resh(:,1:2:end), [50,1]);
+% tone_habit_first = tone_habit_all(1:5:end);
+% noise_habit_first = noise_habit_all(1:5:end);
+% tone_cond_first = tone_cond_all(1:5:end);
+% noise_cond_first = noise_cond_all(1:5:end);
+% tone_recall_first = tone_recall_all(1:5:end);
+% noise_recall_first = noise_recall_all(1:5:end);
+% save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'noise_habit_all', 'noise_cond_all', 'noise_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'noise_habit_first', 'noise_cond_first', 'noise_recall_first', 'LED_synch')
+% plot(tone_habit_all, ones(numel(tone_habit_all)),'.',noise_habit_all, ones(numel(noise_habit_all)),'.',tone_cond_all, ones(numel(tone_cond_all)),'.',noise_cond_all, ones(numel(noise_cond_all)),'.',tone_recall_all, ones(numel(tone_recall_all)),'.',noise_recall_all, ones(numel(noise_recall_all)),'.')
+% 
 
-% MD243, MD250, MD251, MD254
+
+% BAfc_oneTone_nonpredictedUS
 LED_synch = TTL_channels{2,3}-double(zeroTime);
 shocks = TTL_channels{2,1}-double(zeroTime);
 sound_all = TTL_channels{2,5}-double(zeroTime);
 sound_all_diff = diff(sound_all);
 sound_all_diff1 = [0.5; sound_all_diff];
 sound_all1 = sound_all(sound_all_diff1>=0.5);
-sound_habit_all = sound_all1(1:100);
-sound_habit_resh = reshape(sound_habit_all, [5,20]);
-tone_habit_all = reshape(sound_habit_resh(:,1:2:end), [50,1]);
-noise_habit_all = reshape(sound_habit_resh(:,2:2:end), [50,1]);
-sound_cond_all = sound_all1(101:300);
-sound_cond_resh = reshape(sound_cond_all, [5,40]);
-tone_cond_all = reshape(sound_cond_resh(:,1:2:end), [100,1]);
-noise_cond_all = reshape(sound_cond_resh(:,2:2:end), [100,1]);
-sound_recall_all = sound_all1(301:400);
-sound_recall_resh = reshape(sound_recall_all, [5,20]);
-tone_recall_all = reshape(sound_recall_resh(:,1:2:end), [50,1]);
-noise_recall_all = reshape(sound_recall_resh(:,2:2:end), [50,1]);
+tone_habit_all = sound_all1(1:50);
+tone_cond_all = sound_all1(51:150);
+tone_recall_all = sound_all1(151:200);
 tone_habit_first = tone_habit_all(1:5:end);
-noise_habit_first = noise_habit_all(1:5:end);
 tone_cond_first = tone_cond_all(1:5:end);
-noise_cond_first = noise_cond_all(1:5:end);
 tone_recall_first = tone_recall_all(1:5:end);
-noise_recall_first = noise_recall_all(1:5:end);
-save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'noise_habit_all', 'noise_cond_all', 'noise_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'noise_habit_first', 'noise_cond_first', 'noise_recall_first', 'LED_synch')
-plot(tone_habit_all, ones(numel(tone_habit_all)),'.',noise_habit_all, ones(numel(noise_habit_all)),'.',tone_cond_all, ones(numel(tone_cond_all)),'.',noise_cond_all, ones(numel(noise_cond_all)),'.',tone_recall_all, ones(numel(tone_recall_all)),'.',noise_recall_all, ones(numel(noise_recall_all)),'.')
-
-% interchanged CS, MD252, MD253, MD268, MD277, MD278
-LED_synch = TTL_channels{2,3}-double(zeroTime);
-shocks = TTL_channels{2,1}-double(zeroTime);
-sound_all = TTL_channels{2,5}-double(zeroTime);
-sound_all_diff = diff(sound_all);
-sound_all_diff1 = [0.5; sound_all_diff];
-sound_all1 = sound_all(sound_all_diff1>=0.5);
-sound_habit_all = sound_all1(1:100);
-sound_habit_resh = reshape(sound_habit_all, [5,20]);
-tone_habit_all = reshape(sound_habit_resh(:,2:2:end), [50,1]);
-noise_habit_all = reshape(sound_habit_resh(:,1:2:end), [50,1]);
-sound_cond_all = sound_all1(101:300);
-sound_cond_resh = reshape(sound_cond_all, [5,40]);
-tone_cond_all = reshape(sound_cond_resh(:,2:2:end), [100,1]);
-noise_cond_all = reshape(sound_cond_resh(:,1:2:end), [100,1]);
-sound_recall_all = sound_all1(301:400);
-sound_recall_resh = reshape(sound_recall_all, [5,20]);
-tone_recall_all = reshape(sound_recall_resh(:,2:2:end), [50,1]);
-noise_recall_all = reshape(sound_recall_resh(:,1:2:end), [50,1]);
-tone_habit_first = tone_habit_all(1:5:end);
-noise_habit_first = noise_habit_all(1:5:end);
-tone_cond_first = tone_cond_all(1:5:end);
-noise_cond_first = noise_cond_all(1:5:end);
-tone_recall_first = tone_recall_all(1:5:end);
-noise_recall_first = noise_recall_all(1:5:end);
-save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'noise_habit_all', 'noise_cond_all', 'noise_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'noise_habit_first', 'noise_cond_first', 'noise_recall_first', 'LED_synch')
-plot(tone_habit_all, ones(numel(tone_habit_all)),'.',noise_habit_all, ones(numel(noise_habit_all)),'.',tone_cond_all, ones(numel(tone_cond_all)),'.',noise_cond_all, ones(numel(noise_cond_all)),'.',tone_recall_all, ones(numel(tone_recall_all)),'.',noise_recall_all, ones(numel(noise_recall_all)),'.')
-
+save('TTLsKS.mat', 'shocks', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', 'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'LED_synch')
+plot(tone_habit_all, ones(numel(tone_habit_all)),'.', tone_cond_all, ones(numel(tone_cond_all)),'.', tone_recall_all, ones(numel(tone_recall_all)),'.')
+csvwrite('events.csv',shocks)
 
 
 
@@ -442,4 +460,67 @@ csvwrite('events.csv',shocks_light)
 TTL_synch = TTL_channels{2,3}-double(zeroTime);
 save('MD243_TTL_synch.mat', 'TTL_synch')
 
+
+
+% Tibi VIP2R lick
+shocks = TTL_channels{2,13}-double(zeroTime);
+pulses = TTL_channels{2,5}-double(zeroTime);
+reward = TTL_channels{2,9}-double(zeroTime);
+lick = TTL_channels{2,1}-double(zeroTime);
+
+for ii = 1:numel(reward)
+    firstlick(ii,1) = lick(find(lick>reward(ii), 1));
 end
+firstlickUniq = unique(firstlick);
+
+
+all_lick_start = lick([true; diff(lick) >= 1]);
+nonRewardlick = setdiff(all_lick_start, firstlickUniq);
+save('TTLsKS.mat', 'shocks', 'pulses', 'reward', 'lick', 'firstlick', 'firstlickUniq', 'nonRewardlick')
+csvwrite('events.csv',pulses)
+
+
+
+
+%MD294 - BAfc_oneTone_nonpredictedUS_triplestimtest
+LED_synch = TTL_channels{2,3}-double(zeroTime);
+shocks = TTL_channels{2,1}-double(zeroTime);
+shocks_nonpredicted = shocks(1:20);
+shocks_predicted = shocks(21:40);
+sound_all = TTL_channels{2,5}-double(zeroTime);
+sound_all_diff = diff(sound_all);
+sound_all_diff1 = [0.5; sound_all_diff];
+sound_all1 = sound_all(sound_all_diff1>=0.5);
+tone_habit_all = sound_all1(1:50);
+tone_cond_all = sound_all1(51:150);
+tone_recall_all = sound_all1(151:200);
+tone_habit_first = tone_habit_all(1:5:end);
+tone_cond_first = tone_cond_all(1:5:end);
+tone_recall_first = tone_recall_all(1:5:end);
+
+
+
+triptest_sound_all = sound_all1(201:300);
+triptest_sound_only = triptest_sound_all(1:2:end);
+triptest_both = triptest_sound_all(2:2:end);
+triptest_shocks_only = shocks(41:2:end);
+
+
+
+save('TTLsKS.mat', 'shocks', 'shocks_nonpredicted', 'shocks_predicted', 'sound_all1', 'tone_habit_all', 'tone_cond_all', 'tone_recall_all', ...
+    'tone_habit_first', 'tone_cond_first', 'tone_recall_first', 'LED_synch', 'triptest_sound_only', 'triptest_both', 'triptest_shocks_only')
+
+
+plot(tone_habit_all, ones(numel(tone_habit_all)),'.', tone_cond_all, ones(numel(tone_cond_all)),'.', tone_recall_all, ones(numel(tone_recall_all)),'.')
+csvwrite('events.csv',shocks)
+
+
+
+
+
+
+
+
+
+end
+

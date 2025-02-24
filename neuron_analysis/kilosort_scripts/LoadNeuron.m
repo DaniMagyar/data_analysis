@@ -1,7 +1,10 @@
-function [TS] = LoadNeuron(cellID, ttl)
+function [TS] = LoadNeuron(cellID, ttl, window)
 
 % input
+
 % -cellID: ID in CellExplorer
+% -ttl: 'shocks'
+% -window: [-5 5];
 
 fs = 30000; %sampling rate
 spike_times = readNPY('spike_times.npy');
@@ -19,5 +22,5 @@ TTL = load('TTLsKS.mat', ttl);
 fns = fieldnames(TTL);
 ttl = TTL.(fns{1});
 
-rasterPsthSingle(TS,ttl, 'window',[-0.5 0.5],'bin_time', 0.02)
+rasterPsthSingle(TS,ttl, 'window',window,'bin_time', 0.02)
 

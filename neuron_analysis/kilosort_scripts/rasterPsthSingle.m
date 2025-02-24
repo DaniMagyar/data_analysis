@@ -47,14 +47,14 @@ set(gca, 'xtick', xt(1):xt(end):xt(end)) % ezt en irtam, itt az ylim [0 nTT]
 xticklabels({num2str(time(1)),num2str(time(end))})
 ylim([0 nTT]); 
 yt = yticks;
-yticks(yt(end));
-yticklabels(ntt(end));
+% yticks(yt(end));
+% yticklabels(ntt(end));
 
 
 if g.eventline == 1
     hold on; 
     X = find(time==0);
-    plot([X-1 X-1],[0 yt(end)],'r','LineWidth',1);  
+    plot([X-1 X-1],[0 nTT],'r','LineWidth',1);  
     hold off;
 end
 pos = get(gcf,'Position');
