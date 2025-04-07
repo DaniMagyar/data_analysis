@@ -1,24 +1,25 @@
 cell_metrics = BAfc_load_neurons('NP_BAfc_triptest');
-
 responseTypes = {'exc', 'inh'};
+smoothwindow = 20; % excitaciora kb ugyanolyan eredmenyt ad a 20 es az 50-es zscore is, tehat jobb a 20-at hasznalni
 for rT = 1:numel(responseTypes)
     brainRegions = {'LA','BA'};
     for bR = 1:numel(brainRegions)    
         %% Calculate response magnitude (z-score)
-        fig = figure;
-        mainTile = tiledlayout(fig,1,7); % 1 row, 3 column
         % Find the index or responseive units
-        [~, idx_shocks] =   BAfc_find_response('NP_BAfc_triptest', 'shock','TTL_triptest_shocks_only',       responseTypes{rT}, 0.5, 0.5, 0.5, 0.05, 1, 0.001, 50, 'brainRegion', brainRegions{bR});
-        [~, idx_sounds] =   BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_sound_only',    responseTypes{rT}, 0.5, 0.5, 0.5, 0.05, 1, 0.001, 50, 'brainRegion', brainRegions{bR});
-        [~, idx_both] =     BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_both',          responseTypes{rT}, 0.5, 0.5, 0.5, 0.05, 1, 0.001, 50, 'brainRegion', brainRegions{bR});
+        [~, idx_shocks, ~] =   BAfc_find_response('NP_BAfc_triptest', 'shock','TTL_triptest_shocks_only',       responseTypes{rT}, 0.5, 0.5, [0.012 0.05], 0.001, 'artefactLength', 0.012, 'brainRegion', brainRegions{bR});
+        [~, idx_sounds, ~] =   BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_sound_only',    responseTypes{rT}, 0.5, 0.5, [0.012 0.05], 0.001, 'artefactLength',     0, 'brainRegion', brainRegions{bR});
+        [~, idx_both, ~] =     BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_both',          responseTypes{rT}, 0.5, 0.5, [0.012 0.05], 0.001, 'artefactLength', 0.012, 'brainRegion', brainRegions{bR});
+        
         idx_all = sort(intersect(idx_shocks,idx_sounds));
         % calculate the zscore change in 0.1 s after the stim. Baseline time 1 sec, bin time 0.1 sec
-        [resp_shocks, ~] =  BAfc_find_response('NP_BAfc_triptest', 'shock', 'TTL_triptest_shocks_only',     responseTypes{rT}, 1, 1, 0.1, 0.1, 1, 0.1, 50); % smoothing does not affect psth_spx
-        [resp_sounds, ~] =  BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_sound_only',   responseTypes{rT}, 1, 1, 0.1, 0.1, 1, 0.1, 50);
-        [resp_both, ~] =    BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_both',         responseTypes{rT}, 1, 1, 0.1, 0.1, 1, 0.1, 50);
+        [resp_shocks, ~, ~] =  BAfc_find_response('NP_BAfc_triptest', 'shock', 'TTL_triptest_shocks_only',     responseTypes{rT}, 1, 0.1, [0.012 0.1], 0.1); % smoothing does not affect psth_spx
+        [resp_sounds, ~, ~] =  BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_sound_only',   responseTypes{rT}, 1, 0.1, [0.012 0.1], 0.1);
+        [resp_both, ~, ~] =    BAfc_find_response('NP_BAfc_triptest', 'allsound', 'TTL_triptest_both',         responseTypes{rT}, 1, 0.1, [0.012 0.1], 0.1);
         z_resp_shocks = zscore(resp_shocks,0,2);
         z_resp_sounds = zscore(resp_sounds,0,2);
         z_resp_both = zscore(resp_both,0,2);
+        fig = figure;
+        mainTile = tiledlayout(fig,1,7); % 1 row, 3 column
         ax = nexttile(mainTile); %Line plot with points
         hold on;
         for i = idx_all
@@ -37,7 +38,7 @@ for rT = 1:numel(responseTypes)
         boxplot(data, 'Labels', {'Vector 1', 'Vector 2', 'Vector 3'});
         title([brainRegions{bR} ' Boxplots of response magnitude']);
         ylabel('Values');
-        
+
         %% Calculate excitatory response latencies (ms)
         [lat_shocks] =  BAfc_calc_latency('NP_BAfc_triptest', 'TTL_triptest_shocks_only',    1, 0.05, 0.001, 'abs', 1);
         [lat_sounds] =  BAfc_calc_latency('NP_BAfc_triptest', 'TTL_triptest_sound_only',     1, 0.05, 0.001, 'abs', 1);
@@ -94,11 +95,17 @@ for rT = 1:numel(responseTypes)
     end
 end
 
-cell_metrics.ResponseShocks(1:numel(lat_both)) = 0;
-cell_metrics.ResponseSounds(1:numel(lat_both)) = 0;
+cell_metrics.ResponseShocks(1:numel(cell_metrics.cellID)) = 0;
+cell_metrics.ResponseSounds(1:numel(cell_metrics.cellID)) = 0;
 cell_metrics.ResponseShocks([responses.LA.shocks.exc;responses.BA.shocks.exc]) = 1;
 cell_metrics.ResponseShocks([responses.LA.shocks.inh;responses.BA.shocks.inh]) = -1;
 cell_metrics.ResponseSounds([responses.LA.sounds.exc;responses.BA.sounds.exc]) = 1;
 cell_metrics.ResponseSounds([responses.LA.sounds.inh;responses.BA.sounds.inh]) = -1;
 
 CellExplorer('metrics',cell_metrics);
+
+
+disp(['sound excited: ' num2str(sum(cell_metrics.ResponseSounds==1))])
+disp(['sound inhibited: ' num2str(sum(cell_metrics.ResponseSounds==-1))])
+disp(['shock excited: ' num2str(sum(cell_metrics.ResponseShocks==1))])
+disp(['shock inhibited: ' num2str(sum(cell_metrics.ResponseShocks==-1))])

@@ -22,7 +22,7 @@ if g.abs == 1
 end
 timewin = g.pre_time/g.bin_time+1:(g.pre_time+g.post_time)/g.bin_time;
 for ii = 1:size(psth_spx,1)   
-    smoothed_spx(ii,:) = smoothdata(zscore(psth_spx(ii,:)),'movmean', 10); 
+    smoothed_spx(ii,:) = smoothdata(zscore(psth_spx(ii,:)),'gaussian', 5); % gaussian is more precise than movmean, 5 ms window is ok. 
     PeakBin = find(smoothed_spx(ii,timewin)...
         == max(smoothed_spx(ii,timewin)), 1, 'first');
     if isempty(PeakBin) 

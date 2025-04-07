@@ -58,10 +58,8 @@ end
 
 switch g.CHmap
     case 'none'
-        error('No channel map selected')
-    case 'preordered'
-        channel_map = [1:64];
-        disp('Selected channel map: PREORDERED')
+        channel_map = 1:64;
+        disp('No channel map selected')
     case 'A1x32'
         channel_map = [1 17 16 32 3 19 14 30 9 25 10 20 8 24 2 29 7 26 15 21 11 23 12 28 6 18 13 22 5 27 4 31];
         disp('Selected channel map: A1x32')
@@ -123,6 +121,7 @@ if g.filter == 1
     end  
     close(loadBar)
 end
+toc
 %% Remove stimulation artefacts
 if g.pLength ~= 0
     channel_states = readNPY([cd '\events\' info.Header.folder_name '\TTL\states.npy']);

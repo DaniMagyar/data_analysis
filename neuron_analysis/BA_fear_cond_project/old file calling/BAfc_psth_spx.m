@@ -8,7 +8,7 @@ function [psth_spx, num_ttl, bR] =  BAfc_psth_spx(varargin)
 
 %% Default params
 prs =  inputParser;
-addRequired(prs,'recordings',@iscell)
+addRequired(prs, 'experiment',@ischar)
 addRequired(prs,'ttl',@ischar)
 addRequired(prs,'pre_time', @isnumeric)
 addRequired(prs,'post_time', @isnumeric)
@@ -18,7 +18,7 @@ addParameter(prs, 'TTLshift',0,@isnumeric) % shifting the PSTH compared to TTL, 
 parse(prs,varargin{:})
 g = prs.Results;
 
-cell_metrics = BAfc_load_neurons('recordings', g.recordings, 'ttl', g.ttl);
+cell_metrics = BAfc_load_neurons(g.experiment);
 bR = cell_metrics.brainRegion;
 
 num_ttlAll = size(cell_metrics.general.(g.ttl){1},1);
