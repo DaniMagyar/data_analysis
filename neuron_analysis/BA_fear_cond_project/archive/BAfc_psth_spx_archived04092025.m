@@ -1,33 +1,37 @@
-function [psth_spx, num_ttl] =  BAfc_psth_spx(varargin)
+function [psth_spx, num_ttl, bR] =  BAfc_psth_spx(varargin)
 
 %v02: parfor loop , faster
 % Reworked with parser
 % OUTPUT:   -psth_spx: spikes
 %           -num_ttl: number of stimulations
+%           -bR: brain region
 
 %% Default params
 prs =  inputParser;
-addParameter(prs,'cell_metrics',[],@isstruct) % MUST CONTAIN: ttl in cell_metrics.general
-addParameter(prs,'ttl',@ischar)
-addParameter(prs,'pre_time', @isnumeric)
-addParameter(prs,'post_time', @isnumeric)
-addParameter(prs,'bin_time',[], @isnumeric)
+addRequired(prs,'recordings',@iscell)
+addRequired(prs,'ttl',@ischar)
+addRequired(prs,'pre_time', @isnumeric)
+addRequired(prs,'post_time', @isnumeric)
+addRequired(prs,'bin_time', @isnumeric)
 addParameter(prs,'TTLinclude',0,@isnumeric) 
 addParameter(prs, 'TTLshift',0,@isnumeric) % shifting the PSTH compared to TTL, negative or positive number (negative shifts backward, positive forward)
 parse(prs,varargin{:})
 g = prs.Results;
 
-num_ttlAll = size(g.cell_metrics.general.(g.ttl){1},1);
+cell_metrics = BAfc_load_neurons('recordings', g.recordings, 'ttl', g.ttl);
+bR = cell_metrics.brainRegion;
+
+num_ttlAll = size(cell_metrics.general.(g.ttl){1},1);
 if ~any(g.TTLinclude)
     g.TTLinclude = 1:num_ttlAll;
 end
 num_ttl = numel(g.TTLinclude);
 %% Preallocate arrays for results
-num_cells = numel(g.cell_metrics.cellID);
+num_cells = numel(cell_metrics.cellID);
 psth_spx = zeros(num_cells, round((g.pre_time + g.post_time) / g.bin_time)); % adjust size accordingly
 parfor ii = 1:num_cells
-    TTL = g.cell_metrics.general.(g.ttl){ii}(g.TTLinclude)+g.TTLshift;
-    AP = g.cell_metrics.spikes.times{ii};
+    TTL = cell_metrics.general.(g.ttl){ii}(g.TTLinclude)+g.TTLshift;
+    AP = cell_metrics.spikes.times{ii};
     % Preallocate cell arrays for spikes
     preAP = cell(numel(TTL), 1);
     postAP = cell(numel(TTL), 1);

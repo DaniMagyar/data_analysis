@@ -1,18 +1,32 @@
 % function BAfc_figure_1 
 % Plotting experimental design, waveform features and cell type  separation
 
-% !!!!!!!!!!!!!!!!!! TO CREATE PRINT QUALITY: exportgraphics(gcf, 'figure.tiff', 'Resolution', 300);
-
-clear all
 recordings = {...
+    'MD243_kilosort',... 
+    'MD250_kilosort',... 
+    'MD251_kilosort',... 
+    'MD252_kilosort',...
+    'MD253_kilosort',...
+    'MD254_kilosort',...
+    'MD266_kilosort',...
+    'MD267_kilosort',...
+    'MD268_kilosort',...
+    'MD269_kilosort',...
+    'MD275_kilosort_waveform800',...
+    'MD276_kilosort_waveform800',...
+    'MD277_kilosort_waveform800',...
+    'MD278_kilosort_waveform800',...
+    'MD288_kilosort',...
+    'MD289_kilosort',...
+    'MD290_kilosort_waveform800',...
+    'MD291_kilosort',...
     'MD292_002_kilosort',...
     'MD293_kilosort',...
     'MD294_kilosort',...
     'MD295_kilosort',...
     'MD296_kilosort',...
     'MD297_kilosort'};
-g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', {'triptest_sound_only', 'triptest_shocks_only', 'triptest_both'});
-g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
+g.cell_metrics = BAfc_load_neurons('recordings', recordings);
 
 clearvars -except g 
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
@@ -50,7 +64,7 @@ hold on
 for ii = 1:size(ttlMD292_002,1)
     sn_curr = ttlMD292_002(ii,1)*fs;
     timeaxis = linspace(twin(1),twin(2),(twin(2)-twin(1))*fs)*1000;%in ms
-    plot(ax2_1,timeaxis, rawMD292_002(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0])
+    plot(ax2_1,timeaxis, rawMD292_002(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', g.colors.raw_primary)
 end
 ylabel('Voltage (mV)', 'FontSize', g.fontSize2)
 ylim([-0.5 0.3]);
@@ -59,7 +73,7 @@ ax2_1.XColor = 'none';
 yLimits = get(ax2_1, 'YLim'); % get y-axis limits
 xShade = [0 10 10 0];       % in ms
 yShade = [yLimits(1) yLimits(1) yLimits(2) yLimits(2)];
-fill(ax2_1, xShade, yShade, [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
+fill(ax2_1, xShade, yShade, [1 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
 hold off
 title(ax2_1, 'Example data traces', 'FontSize', g.fontSize1)
 % PSTH
@@ -82,13 +96,13 @@ end
 meanCounts = mean(counts, 1);
 % Plot PSTH
 b = bar(edges(1:end-1)*1000+binSize*1000/2, meanCounts/binSize, 'hist'); % spikes/sec
-b.FaceColor =  [0 0 0];
+b.FaceColor =  g.colors.raw_primary;
 b.EdgeColor = 'none';  
 hold on
 yLimits = get(ax2_2, 'YLim'); % get y-axis limits
 xShade = [0 10 10 0];       % in ms
 yShade = [yLimits(1) yLimits(1) yLimits(2) yLimits(2)];
-fill(ax2_2, xShade, yShade, [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
+fill(ax2_2, xShade, yShade, [1 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
 hold off
 xlabel('Time (ms)', 'FontSize', g.fontSize1);
 ylabel('Firing Rate (Hz)', 'FontSize', g.fontSize2);
@@ -101,6 +115,7 @@ clearvars -except t g % clear variables
 
 %% (1,3) - Trough to peak distribution
 ax3 = nexttile(t, 9, [4 4]);
+g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
 idx_LA = find(contains(g.cell_metrics.brainRegion, 'LA'));
 idx_BA = find(contains(g.cell_metrics.brainRegion, 'BA'));
 data = g.cell_metrics.troughToPeak([idx_LA idx_BA])';
@@ -113,7 +128,7 @@ h = histogram(ax3,data, 'Normalization', 'pdf', 'BinWidth', 0.01);
 hold on;
 % Overlay the GMM fit
 plot(x, y, 'r', 'LineWidth', 2);
-xline(0.475, '--r', '475 ms', 'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'top', 'FontSize', g.fontSize1);
+xline(0.475, '--r', '475 ms', 'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'middle', 'FontSize', g.fontSize1);
 hold off;
 title('Trough to peak distribution', 'FontSize', g.fontSize1);
 xlabel('Trough to peak time (ms)', 'FontSize', g.fontSize1);
@@ -122,14 +137,13 @@ ax3.Box = 'off';
 clearvars -except t g % clear variables
 
 %% (2,1) - Example PN and IN ISI with ACG and waveform
-% example CellID: PN 54 (cluID 479, MD292), IN 147 (cluID 106, MD295)
 g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
-cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD292')), find(g.cell_metrics.cluID == 479)); % PN
-cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD295')), find(g.cell_metrics.cluID == 106)); % IN
-spike_timestamps_w = g.cell_metrics.spikes.times{cellID_1}; % example neuron
-ISI_w = diff(spike_timestamps_w);
-spike_timestamps_n = g.cell_metrics.spikes.times{cellID_2}; % example neuron
+cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD289')), find(g.cell_metrics.cluID == 363));
+cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD250')), find(g.cell_metrics.cluID == 321));
+spike_timestamps_n = g.cell_metrics.spikes.times{cellID_1}; % example neuron
 ISI_n = diff(spike_timestamps_n); 
+spike_timestamps_w = g.cell_metrics.spikes.times{cellID_2}; % example neuron
+ISI_w = diff(spike_timestamps_w);
 num_bins = 50; % Increase the number of bins
 bin_edges = logspace(log10(min([ISI_n;ISI_w])), log10(max([ISI_n;ISI_w])), num_bins);   
 % PN
@@ -178,27 +192,15 @@ idx_PN = strcmp(g.cell_metrics.putativeCellType,'PN');
 idx_IN = strcmp(g.cell_metrics.putativeCellType,'IN');
 idx_unknown = strcmp(g.cell_metrics.putativeCellType,'unknown');
 hold on
-plot(g.cell_metrics.troughToPeak(idx_IN),g.cell_metrics.ab_ratio(idx_IN), 'o', 'Color',g.colors.IN_primary)
-plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.ab_ratio(idx_PN), 'o', 'Color',g.colors.PN_primary)
-plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.ab_ratio(idx_unknown), 'o', 'Color',[.7 .7 .7])
-%set(gca, 'YScale', 'log')  % Makes the Y-axis logarithmic
-yline(0.1, '--k', 'LineWidth', 1);
+plot(g.cell_metrics.troughToPeak(idx_IN),g.cell_metrics.firingRate(idx_IN), 'o', 'Color',g.colors.IN_primary)
+plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.firingRate(idx_PN), 'o', 'Color',g.colors.PN_primary)
+plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.firingRate(idx_unknown), 'o', 'Color',[.7 .7 .7])
+set(gca, 'YScale', 'log')  % Makes the Y-axis logarithmic
+yline(6, '--k', 'LineWidth', 1);
 xline(0.475, '--k', 'LineWidth', 1);   
-ylabel('Waveform asymmetry (b-a)/(b+a)', 'FontSize', g.fontSize1);
-xlabel('Trough to peak time (c, ms)', 'FontSize', g.fontSize1);
+ylabel('Firing rate (Hz)', 'FontSize', g.fontSize1);
+xlabel('Trough to peak time (ms)', 'FontSize', g.fontSize1);
 title('Spike features accross unit type', 'FontSize', g.fontSize1);
-xlim([0.1 0.8])
-
-
-[img, cmap] = imread([g.mainFolder '\ab_ratio.png']);
-if ~isempty(cmap)
-    img = ind2rgb(img, cmap);  % Convert to RGB
-end
-image([0.6 0.75],[1 0.25], img);
-% axes('Position', [0.5 0.5 0.1 0.1]); 
-% [img, cmap] = imread([g.mainFolder '\ab_ratio.png']);
-
-% imshow(img);
 %% (2,3) - Normalized waveforms
 
 ax6 = nexttile(t, 58, [4 3]);
@@ -251,8 +253,6 @@ fill([timeaxis(13:48), fliplr(timeaxis(13:48))], ...
      g.colors.PN_secondary, 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Shaded region for SD
 plot(timeaxis(13:48), mean_PN, 'Color', g.colors.PN_primary, 'LineWidth', 1.5); % Mean waveform
 hold off;     
-text(0.2, -2, ['Principal neurons (n = ' num2str(sum(idx_PN)) ')'], 'Color',  g.colors.PN_primary, 'FontSize', 12);
-text(0.2, -2.5, ['Interneurons (n = ' num2str(sum(idx_IN)) ')'], 'Color',  g.colors.IN_primary, 'FontSize', 12);
 xlabel('Time (ms)', 'FontSize', g.fontSize1);
 ylabel('Z-score', 'FontSize', g.fontSize1)
 title('Normalized waveforms accross unit type', 'FontSize', g.fontSize1);
@@ -287,5 +287,3 @@ end
 imshow(img, 'Parent', ax9);
 title(ax9, 'All recorded traces', 'FontSize', g.fontSize1)
 clearvars -except t g % clear variables
-
-

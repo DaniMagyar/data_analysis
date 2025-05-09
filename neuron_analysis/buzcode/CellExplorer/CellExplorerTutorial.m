@@ -1,4 +1,10 @@
 session = sessionTemplate(cd);
+cell_metrics = ProcessCellMetrics('session', session);
+
+
+
+
+session = sessionTemplate(cd);
 %% CHETA PFC
 load('TTLsKS.mat', 'ChETA_50_20Hz')
 laserChETA_50_20Hz.timestamps = ChETA_50_20Hz;
