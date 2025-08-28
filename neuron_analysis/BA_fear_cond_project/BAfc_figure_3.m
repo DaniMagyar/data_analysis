@@ -1,22 +1,45 @@
 % function BAfc_figure_3
 % % Plotting region specific responses on heatmaps
 clear all
+% recordings = {...
+%     'MD292_002_kilosort',...
+%     'MD293_kilosort',...
+%     'MD294_kilosort',...
+%     'MD295_kilosort',...
+%     'MD296_kilosort',...
+%     'MD297_kilosort',...
+%     'MD298_kilosort',...
+%     'MD299_kilosort',...
+%     'MD300_kilosort',...
+%     'MD304_kilosort'};
+
 recordings = {...
     'MD292_002_kilosort',...
     'MD293_kilosort',...
     'MD294_kilosort',...
     'MD295_kilosort',...
     'MD296_kilosort',...
-    'MD297_kilosort'};
+    'MD297_kilosort',...
+    'MD298_kilosort',...
+    'MD299_kilosort',...
+    'MD300_kilosort',...
+    'MD304_kilosort',...
+    'MD307_kilosort',...
+    'MD309_kilosort',...
+    'MD311_kilosort',...
+    'MD312_kilosort',...
+    'MD313_kilosort',...
+    'MD314_kilosort'};
+
 g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', {'triptest_sound_only', 'triptest_shocks_only', 'triptest_both'});
 
 clearvars -except g
 g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
 g.colors = BAfc_colors;
-g.fontSize1 = 12;
+g.fontSize1 = 13;
 g.fontSize2 = 12;
-g.fontsize3 = 10;
+g.xlinewidth = 2;
 g.pre_time = 5;
 g.post_time = 5;
 g.bin_time = 0.001;
@@ -40,8 +63,7 @@ for ii = 1:2
     titles = {'CS', 'US', 'CS + US'};
     for jj = 1:3
         ax = nexttile;
-        plotPSTHLocal(g.cell_metrics.spikes.times{cellID}, g.cell_metrics.general.(ttl{jj}){cellID}, [-0.5 1], 0.01);
-        xlabel('Time (s)');
+        plotPSTHLocal(g, g.cell_metrics.spikes.times{cellID}, g.cell_metrics.general.(ttl{jj}){cellID}, [-0.5 1], 0.01);
         if ii == 1 && jj == 1
             ylabel({'Example neuron 1', 'Firing Rate (Hz)'})
         elseif ii == 2 && jj == 1
@@ -49,11 +71,13 @@ for ii = 1:2
         end
         yticks([0 50 100])
         xticks([-0.5 0 0.5 1])
-        set(gca, 'FontSize', g.fontSize1);
         box off
         if ii == 1 
-            title(titles{jj}, 'FontSize', 20)
+            title(titles{jj}, 'FontSize', g.fontSize1)
+        elseif ii == 2
+            xlabel('Time (s)');
         end
+        set(gca, 'FontSize', g.fontSize2);
     end
 end
 
@@ -136,7 +160,7 @@ set(h1(:,4:6), 'Color', g.colors.IN_primary);
 hold on
 
 [p_pn1, p_in1] = test_kw(allData1, group1);
-text(2, 15, [['p(PN) = ' num2str(p_pn1)] newline ['p(IN) = ' num2str(p_in1)]], 'FontSize', 10, 'Color', 'k');
+text(2, 15, [['p(PN) = ' num2str(p_pn1)] newline ['p(IN) = ' num2str(p_in1)]], 'FontSize', 12, 'Color', 'k');
 % Plot individual points and connect them
 jitterAmount = 0.2;
 
@@ -159,7 +183,6 @@ for ii = 1:2  % 1: LA_PN (groups 1–3), 2: LA_IN (groups 4–6)
 end
 ylim([-2 18])
 ylabel('Z-score')
-title('Response magnitude of individual neurons')
 xticks([1 2 3 4 5 6])                          % set the tick locations
 xticklabels({'CS', 'US', 'CS+US', 'CS', 'US', 'CS+US'})  % custom labels
 c1 = scatter(NaN, NaN, 100, g.colors.PN_primary, 'filled', 'MarkerFaceAlpha', 0.5);
@@ -169,7 +192,8 @@ c2 = scatter(NaN, NaN, 100, g.colors.IN_primary, 'filled', 'MarkerFaceAlpha', 0.
 set(c2, 'MarkerFaceAlpha', 0.5);
 % Add legend
 legend([c1 c2], {'PN', 'IN'}, 'Location', 'northwest');
-set(gca, 'FontSize', g.fontSize1);
+set(gca, 'FontSize', g.fontSize2);
+title('Response magnitude of individual neurons', 'FontSize', g.fontSize1)
 
 
 %% (3,2) - Response latencies
@@ -196,7 +220,7 @@ set(h2(:,4:6), 'Color', g.colors.IN_primary);
 hold on
 
 [p_pn2, p_in2] = test_kw(allData2, group2);
-text(2, 40, [['p(PN) = ' num2str(p_pn2)] newline ['p(IN) = ' num2str(p_in2)]], 'FontSize', 10, 'Color', 'k');
+text(2, 40, [['p(PN) = ' num2str(p_pn2)] newline ['p(IN) = ' num2str(p_in2)]], 'FontSize', 12, 'Color', 'k');
 
 % Plot individual data points with jitter
 for i = 1:length(data2)
@@ -209,7 +233,6 @@ for i = 1:length(data2)
 end
 ylim([0 50])
 ylabel('Latency (ms)')
-title('Response latency of individual neurons')
 xticks([1 2 3 4 5 6])                          % set the tick locations
 xticklabels({'CS', 'US', 'CS+US', 'CS', 'US', 'CS+US'})  % custom labels
 c1 = scatter(NaN, NaN, 100, g.colors.PN_primary, 'filled', 'MarkerFaceAlpha', 0.5);
@@ -219,7 +242,9 @@ c2 = scatter(NaN, NaN, 100, g.colors.IN_primary, 'filled', 'MarkerFaceAlpha', 0.
 set(c2, 'MarkerFaceAlpha', 0.5);
 % Add legend
 legend([c1 c2], {'PN', 'IN'}, 'Location', 'northwest');
-set(gca, 'FontSize', g.fontSize1);
+set(gca, 'FontSize', g.fontSize2);
+title('Response latency of individual neurons', 'FontSize', g.fontSize1)
+
 
 
 
@@ -255,7 +280,7 @@ set(h3(:,1:3), 'Color', g.colors.PN_primary);
 set(h3(:,4:6), 'Color', g.colors.IN_primary);
 hold on
 [p_pn3, p_in3] = test_friedman(data3);
-text(2, 12, [['p(PN) = ' num2str(p_pn3)] newline ['p(IN) = ' num2str(p_in3)]], 'FontSize', 10, 'Color', 'k');
+text(2, 14, [['p(PN) = ' num2str(p_pn3)] newline ['p(IN) = ' num2str(p_in3)]], 'FontSize', 12, 'Color', 'k');
 % Plot individual points and connect them
 jitterAmount = 0.2;
 
@@ -278,7 +303,7 @@ for ii = 1:2  % 1: LA_PN (groups 1–3), 2: LA_IN (groups 4–6)
 end
 ylim([-2 18])
 ylabel('Z-score')
-title('Response magnitude of multisensory neurons')
+
 xticks([1 2 3 4 5 6])                          % set the tick locations
 xticklabels({'CS', 'US', 'CS+US', 'CS', 'US', 'CS+US'})  % custom labels
 c1 = scatter(NaN, NaN, 100, g.colors.PN_primary, 'filled', 'MarkerFaceAlpha', 0.5);
@@ -288,12 +313,12 @@ c2 = scatter(NaN, NaN, 100, g.colors.IN_primary, 'filled', 'MarkerFaceAlpha', 0.
 set(c2, 'MarkerFaceAlpha', 0.5);
 % Add legend
 legend([c1 c2], {'PN', 'IN'}, 'Location', 'northwest');
-set(gca, 'FontSize', g.fontSize1);
+set(gca, 'FontSize', g.fontSize2);
+title('Response magnitude of multisensory neurons', 'FontSize', g.fontSize1)
 
 
 
-
-function plotPSTHLocal(spikeTimes, stimTimes, window, binSize)
+function plotPSTHLocal(g, spikeTimes, stimTimes, window, binSize)
     edges = window(1):binSize:window(2);
     counts = zeros(1, length(edges)-1);
     for trial = 1:length(stimTimes)
@@ -304,8 +329,12 @@ function plotPSTHLocal(spikeTimes, stimTimes, window, binSize)
     % Convert counts to firing rate (spikes per second)
     firingRate = counts / length(stimTimes) / binSize;
     binCenters = edges(1:end-1) + binSize/2;
-    bar(binCenters, firingRate, 'k', 'BarWidth', 1);
+    b = bar(binCenters, firingRate, 'BarWidth', 1);
+    b.FaceColor =  g.colors.barcolor;
+    b.EdgeColor = g.colors.barcolor; 
+    xline(0, '--k', 'LineWidth', g.xlinewidth, 'Alpha',1);
     ylim([0 100])
+    yticks([0 50 100])
 end
 
 
@@ -319,7 +348,7 @@ function [p_pn, p_in] = test_kw(data, group)
     [p_pn, tbl_pn, stats_pn] = kruskalwallis(data_subset_pn, group_subset_pn, 'off');
     % Post-hoc comparisons if significant
     if p_pn < 0.05
-        multcompare(stats_pn, 'CType', 'bonferroni');
+        multcompare(stats_pn, 'CType', 'bonferroni'); % Dunn test kellene kw !!!!!!!
     end
     % Run Kruskal–Wallis test
     [p_in, tbl_in, stats_in] = kruskalwallis(data_subset_in, group_subset_in, 'off');

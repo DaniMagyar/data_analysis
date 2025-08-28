@@ -1187,3 +1187,137 @@ cell_metrics = loadCellMetricsBatch('basepaths',basepaths,'basenames',basenames)
 
 cell_metrics = CellExplorer('metrics',cell_metrics);
 
+
+%MD300
+
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'tone_habit_all') 
+TTL_tone_habit_all.timestamps = tone_habit_all;
+TTL_tone_habit_all.timestamps(:,2) = tone_habit_all + 0.5;
+save('temp_wh.TTL_tone_habit_all.manipulation.mat', 'TTL_tone_habit_all')
+
+load('TTLsKS.mat', 'tone_habit_first') 
+TTL_tone_habit_first.timestamps = tone_habit_first;
+TTL_tone_habit_first.timestamps(:,2) = tone_habit_first + 0.5;
+save('temp_wh.TTL_tone_habit_first.manipulation.mat', 'TTL_tone_habit_first')
+
+load('TTLsKS.mat', 'tone_habit_all_light') 
+TTL_tone_habit_all_light.timestamps = tone_habit_all_light;
+TTL_tone_habit_all_light.timestamps(:,2) = tone_habit_all_light + 0.5;
+save('temp_wh.TTL_tone_habit_all_light.manipulation.mat', 'TTL_tone_habit_all_light')
+
+load('TTLsKS.mat', 'tone_habit_first_light') 
+TTL_tone_habit_first_light.timestamps = tone_habit_first_light;
+TTL_tone_habit_first_light.timestamps(:,2) = tone_habit_first_light + 0.5;
+save('temp_wh.TTL_tone_habit_first_light.manipulation.mat', 'TTL_tone_habit_first_light')
+
+load('TTLsKS.mat', 'triptest_shocks_only')
+triptest_shocks_onlyTTL.timestamps = triptest_shocks_only;
+triptest_shocks_onlyTTL.timestamps(:,2) = triptest_shocks_only + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL.manipulation.mat', 'triptest_shocks_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_sound_only')
+triptest_sound_onlyTTL.timestamps = triptest_sound_only;
+triptest_sound_onlyTTL.timestamps(:,2) = triptest_sound_only + 0.5;
+save('temp_wh.triptest_sound_onlyTTL.manipulation.mat', 'triptest_sound_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_both')
+triptest_bothTTL.timestamps = triptest_both;
+triptest_bothTTL.timestamps(:,2) = triptest_both + 0.5;
+save('temp_wh.triptest_bothTTL.manipulation.mat', 'triptest_bothTTL')
+
+load('TTLsKS.mat', 'triptest_shocks_only_light')
+triptest_shocks_onlyTTL_light.timestamps = triptest_shocks_only_light;
+triptest_shocks_onlyTTL_light.timestamps(:,2) = triptest_shocks_only_light + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL_light.manipulation.mat', 'triptest_shocks_onlyTTL_light')
+
+load('TTLsKS.mat', 'triptest_sound_only_light')
+triptest_sound_onlyTTL_light.timestamps = triptest_sound_only_light;
+triptest_sound_onlyTTL_light.timestamps(:,2) = triptest_sound_only_light + 0.5;
+save('temp_wh.triptest_sound_onlyTTL_light.manipulation.mat', 'triptest_sound_onlyTTL_light')
+
+load('TTLsKS.mat', 'triptest_both_light')
+triptest_bothTTL_light.timestamps = triptest_both_light;
+triptest_bothTTL_light.timestamps(:,2) = triptest_both_light + 0.5;
+save('temp_wh.triptest_bothTTL_light.manipulation.mat', 'triptest_bothTTL_light')
+
+cell_metrics = ProcessCellMetrics('session', session);
+
+
+
+%MD309 BAfc_triptest_opto_v2
+
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'triptest_shocks_only')
+triptest_shocks_onlyTTL.timestamps = triptest_shocks_only;
+triptest_shocks_onlyTTL.timestamps(:,2) = triptest_shocks_only + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL.manipulation.mat', 'triptest_shocks_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_sound_only')
+triptest_sound_onlyTTL.timestamps = triptest_sound_only;
+triptest_sound_onlyTTL.timestamps(:,2) = triptest_sound_only + 0.5;
+save('temp_wh.triptest_sound_onlyTTL.manipulation.mat', 'triptest_sound_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_both')
+triptest_bothTTL.timestamps = triptest_both;
+triptest_bothTTL.timestamps(:,2) = triptest_both + 0.5;
+save('temp_wh.triptest_bothTTL.manipulation.mat', 'triptest_bothTTL')
+
+load('TTLsKS.mat', 'triptest_shocks_only_light')
+triptest_shocks_onlyTTL_light.timestamps = triptest_shocks_only_light;
+triptest_shocks_onlyTTL_light.timestamps(:,2) = triptest_shocks_only_light + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL_light.manipulation.mat', 'triptest_shocks_onlyTTL_light')
+
+load('TTLsKS.mat', 'triptest_sound_only_light')
+triptest_sound_onlyTTL_light.timestamps = triptest_sound_only_light;
+triptest_sound_onlyTTL_light.timestamps(:,2) = triptest_sound_only_light + 0.5;
+save('temp_wh.triptest_sound_onlyTTL_light.manipulation.mat', 'triptest_sound_onlyTTL_light')
+
+load('TTLsKS.mat', 'triptest_both_light')
+triptest_bothTTL_light.timestamps = triptest_both_light;
+triptest_bothTTL_light.timestamps(:,2) = triptest_both_light + 0.5;
+save('temp_wh.triptest_bothTTL_light.manipulation.mat', 'triptest_bothTTL_light')
+
+cell_metrics = ProcessCellMetrics('session', session);
+
+%MD311 BAfc_triptest_opto_v2
+
+
+session = sessionTemplate(cd);
+
+load('TTLsKS.mat', 'shocks')
+shocksTTL.timestamps = shocks;
+shocksTTL.timestamps(:,2) = shocks + 0.5;
+save('temp_wh.shocksTTL.manipulation.mat', 'shocksTTL')
+
+load('TTLsKS.mat', 'triptest_shocks_only')
+triptest_shocks_onlyTTL.timestamps = triptest_shocks_only;
+triptest_shocks_onlyTTL.timestamps(:,2) = triptest_shocks_only + 0.5;
+save('temp_wh.triptest_shocks_onlyTTL.manipulation.mat', 'triptest_shocks_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_sound_only')
+triptest_sound_onlyTTL.timestamps = triptest_sound_only;
+triptest_sound_onlyTTL.timestamps(:,2) = triptest_sound_only + 0.5;
+save('temp_wh.triptest_sound_onlyTTL.manipulation.mat', 'triptest_sound_onlyTTL')
+
+load('TTLsKS.mat', 'triptest_both')
+triptest_bothTTL.timestamps = triptest_both;
+triptest_bothTTL.timestamps(:,2) = triptest_both + 0.5;
+save('temp_wh.triptest_bothTTL.manipulation.mat', 'triptest_bothTTL')
+
+cell_metrics = ProcessCellMetrics('session', session);
+

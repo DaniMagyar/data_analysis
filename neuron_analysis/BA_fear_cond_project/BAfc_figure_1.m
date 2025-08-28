@@ -1,23 +1,43 @@
 % function BAfc_figure_1 
-% Plotting experimental design, waveform features and cell type  separation
-
-% !!!!!!!!!!!!!!!!!! TO CREATE PRINT QUALITY: exportgraphics(gcf, 'figure.tiff', 'Resolution', 300);
-
+% TO CREATE PRINT QUALITY: exportgraphics(gcf, 'figure.tiff', 'Resolution', 300);
 clear all
+% recordings = {...
+%     'MD292_002_kilosort',...
+%     'MD293_kilosort',...
+%     'MD294_kilosort',...
+%     'MD295_kilosort',...
+%     'MD296_kilosort',...
+%     'MD297_kilosort',...
+%     'MD298_kilosort',...
+%     'MD299_kilosort',...
+%     'MD300_kilosort',...
+%     'MD304_kilosort'};
+
 recordings = {...
     'MD292_002_kilosort',...
     'MD293_kilosort',...
     'MD294_kilosort',...
     'MD295_kilosort',...
     'MD296_kilosort',...
-    'MD297_kilosort'};
+    'MD297_kilosort',...
+    'MD298_kilosort',...
+    'MD299_kilosort',...
+    'MD300_kilosort',...
+    'MD304_kilosort',...
+    'MD307_kilosort',...
+    'MD309_kilosort',...
+    'MD311_kilosort',...
+    'MD312_kilosort',...
+    'MD313_kilosort',...
+    'MD314_kilosort'};
+
 g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', {'triptest_sound_only', 'triptest_shocks_only', 'triptest_both'});
 g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
 
 clearvars -except g 
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
 g.colors = BAfc_colors;
-g.fontSize1 = 15;
+g.fontSize1 = 13;
 g.fontSize2 = 12;
 
 %% Initiate figure
@@ -52,16 +72,19 @@ for ii = 1:size(ttlMD292_002,1)
     timeaxis = linspace(twin(1),twin(2),(twin(2)-twin(1))*fs)*1000;%in ms
     plot(ax2_1,timeaxis, rawMD292_002(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0])
 end
-ylabel('Voltage (mV)', 'FontSize', g.fontSize2)
+ylabel('Voltage (mV)')
 ylim([-0.5 0.3]);
+set(gca, 'FontSize', g.fontSize2);
 ax2_1.XColor = 'none';
 % Define shaded region (0 to 10 ms)
 yLimits = get(ax2_1, 'YLim'); % get y-axis limits
 xShade = [0 10 10 0];       % in ms
 yShade = [yLimits(1) yLimits(1) yLimits(2) yLimits(2)];
 fill(ax2_1, xShade, yShade, [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
+
 hold off
 title(ax2_1, 'Example data traces', 'FontSize', g.fontSize1)
+
 % PSTH
 ax2_2 = nexttile(t2, [1 4]);
 % Parameters
@@ -90,9 +113,11 @@ xShade = [0 10 10 0];       % in ms
 yShade = [yLimits(1) yLimits(1) yLimits(2) yLimits(2)];
 fill(ax2_2, xShade, yShade, [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none') % red with transparency
 hold off
-xlabel('Time (ms)', 'FontSize', g.fontSize1);
-ylabel('Firing Rate (Hz)', 'FontSize', g.fontSize2);
+xlabel('Time (ms)');
+ylabel('Firing Rate (Hz)');
 ylim([0 500]);
+yticks([0 250 500]);
+set(gca, 'FontSize', g.fontSize2);
 ax2_1.Layer = 'top'; % to fix graphical glithc
 ax2_2.Layer = 'top'; 
 ax2_1.Box = 'off';
@@ -113,11 +138,12 @@ h = histogram(ax3,data, 'Normalization', 'pdf', 'BinWidth', 0.01);
 hold on;
 % Overlay the GMM fit
 plot(x, y, 'r', 'LineWidth', 2);
-xline(0.475, '--r', '475 ms', 'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'top', 'FontSize', g.fontSize1);
+xline(0.475, '--r', '475 ms', 'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'top', 'FontSize', g.fontSize2);
 hold off;
+xlabel('Trough to peak time (ms)');
+ylabel('Probability Density');
+set(gca, 'FontSize', g.fontSize2);
 title('Trough to peak distribution', 'FontSize', g.fontSize1);
-xlabel('Trough to peak time (ms)', 'FontSize', g.fontSize1);
-ylabel('Probability Density', 'FontSize', g.fontSize1);
 ax3.Box = 'off';
 clearvars -except t g % clear variables
 
@@ -137,37 +163,65 @@ ax4_1 = nexttile(t, 49, [4 3]);
 histogram(ISI_w, 'BinEdges', bin_edges, 'Normalization', 'probability', 'FaceColor', g.colors.PN_primary);
 xlim([0.001 80])
 set(gca, 'XScale', 'log'); % Set x-axis to log scale
-xlabel('Time (ms)', 'FontSize', g.fontSize1);
+xlabel('Time (ms)');
 ylim([0 0.1])
-ylabel('Probability', 'FontSize', g.fontSize1);
+ylabel('Probability');
+yticks([0 0.05 0.1])
+set(gca, 'FontSize', g.fontSize2);
 title('Example PN ISI', 'FontSize', g.fontSize1)
 p1 = ax4_1.Position;
 acg_w = axes('Position', [p1(1)+0.15 p1(2)+0.15 p1(3)*0.25 p1(4)*0.25]);
-bar(acg_w,g.cell_metrics.acg.narrow(75:125,cellID_1), 'FaceColor', g.colors.PN_primary, 'EdgeColor', 'none')
+bar(acg_w,g.cell_metrics.acg.narrow(:,cellID_1), 'FaceColor', g.colors.PN_primary, 'EdgeColor', g.colors.PN_primary)
+% scalebar
+hold on
+y = -10; 
+plot([160 200], [y y], 'k', 'LineWidth', 2); % black line, 2 px thick
+text(160, y-20, '20 ms', 'HorizontalAlignment', 'center');
 waveform_w = axes('Position', [p1(1)+0.15 p1(2)+0.08 p1(3)*0.25 p1(4)*0.25]);
 plot(waveform_w,g.cell_metrics.waveforms.filt{cellID_1}, 'Color', g.colors.PN_primary, 'LineWidth', 2);  
+% scalebar
+hold on
+y = -300; 
+plot([33 48], [y y], 'k', 'LineWidth', 2); % 40-43 az 1ms a cell_metrics.waveforms.time alapjan. 
+text(40, y-80, '5 ms', 'HorizontalAlignment', 'center');
 waveform_w.XColor = 'none';
 waveform_w.YColor = 'none';
 acg_w.XColor = 'none';
 acg_w.YColor = 'none';
+
 % IN
 ax4_2 = nexttile(t, 52, [4 3]);
 histogram(ISI_n, 'BinEdges', bin_edges, 'Normalization', 'probability', 'FaceColor', g.colors.IN_primary);  
 xlim([0.001 80])
 set(gca, 'XScale', 'log'); % Set x-axis to log scale
-xlabel('Time (ms)', 'FontSize', g.fontSize1);
+xlabel('Time (ms)');
 ylim([0 0.1])    
+yticks([0 0.05 0.1])
+set(gca, 'FontSize', g.fontSize2);
 title('Example IN ISI', 'FontSize', g.fontSize1)
 ax4_2.YTickLabel = [];
 p2 = ax4_2.Position;
 acg_n = axes('Position', [p2(1)+0.15 p2(2)+0.15 p2(3)*0.25 p2(4)*0.25]);
-bar(acg_n,g.cell_metrics.acg.narrow(75:125,cellID_2), 'FaceColor', g.colors.IN_primary, 'EdgeColor', 'none')
+bar(acg_n,g.cell_metrics.acg.narrow(:,cellID_2), 'FaceColor', g.colors.IN_primary, 'EdgeColor', g.colors.IN_primary)
+hold on
+% scalebar
+y = -5; 
+plot([160 200], [y y], 'k', 'LineWidth', 2); % black line, 2 px thick
+text(160, y-8, '20 ms', 'HorizontalAlignment', 'center');
+
+
 waveform_n = axes('Position', [p2(1)+0.15 p2(2)+0.08 p2(3)*0.25 p2(4)*0.25]);
 plot(waveform_n,g.cell_metrics.waveforms.filt{cellID_2}, 'Color', g.colors.IN_primary, 'LineWidth', 2);  
+% scalebar
+hold on
+y = -300; 
+plot([33 48], [y y], 'k', 'LineWidth', 2); % 40-43 az 1ms a cell_metrics.waveforms.time alapjan. 
+text(40, y-100, '5 ms', 'HorizontalAlignment', 'center');
 waveform_n.XColor = 'none';
 waveform_n.YColor = 'none';
 acg_n.XColor = 'none';
 acg_n.YColor = 'none';
+
 ax4_1.Box = 'off';
 ax4_2.Box = 'off';
 clearvars -except t g % clear variables
@@ -183,9 +237,11 @@ plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.ab_ratio(idx_PN), 'o', '
 plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.ab_ratio(idx_unknown), 'o', 'Color',[.7 .7 .7])
 %set(gca, 'YScale', 'log')  % Makes the Y-axis logarithmic
 yline(0.1, '--k', 'LineWidth', 1);
-xline(0.475, '--k', 'LineWidth', 1);   
-ylabel('Waveform asymmetry (b-a)/(b+a)', 'FontSize', g.fontSize1);
-xlabel('Trough to peak time (c, ms)', 'FontSize', g.fontSize1);
+xline(0.475, '--k', 'LineWidth', 1);
+yticks([-1 0 1])
+ylabel('Waveform asymmetry (b-a)/(b+a)');
+xlabel('Trough to peak time (c, ms)');
+set(gca, 'FontSize', g.fontSize2);
 title('Spike features accross unit type', 'FontSize', g.fontSize1);
 xlim([0.1 0.8])
 
@@ -251,10 +307,12 @@ fill([timeaxis(13:48), fliplr(timeaxis(13:48))], ...
      g.colors.PN_secondary, 'FaceAlpha', 0.3, 'EdgeColor', 'none'); % Shaded region for SD
 plot(timeaxis(13:48), mean_PN, 'Color', g.colors.PN_primary, 'LineWidth', 1.5); % Mean waveform
 hold off;     
-text(0.2, -2, ['Principal neurons (n = ' num2str(sum(idx_PN)) ')'], 'Color',  g.colors.PN_primary, 'FontSize', 12);
-text(0.2, -2.5, ['Interneurons (n = ' num2str(sum(idx_IN)) ')'], 'Color',  g.colors.IN_primary, 'FontSize', 12);
-xlabel('Time (ms)', 'FontSize', g.fontSize1);
-ylabel('Z-score', 'FontSize', g.fontSize1)
+text(0.2, -2, ['Principal neurons (n = ' num2str(sum(idx_PN)) ')'], 'Color',  g.colors.PN_primary, 'FontSize', g.fontSize2);
+text(0.2, -2.5, ['Interneurons (n = ' num2str(sum(idx_IN)) ')'], 'Color',  g.colors.IN_primary, 'FontSize', g.fontSize2);
+xlabel('Time (ms)');
+ylabel('Z-score')
+yticks([-4 -2 0 2])
+set(gca, 'FontSize', g.fontSize2);
 title('Normalized waveforms accross unit type', 'FontSize', g.fontSize1);
 clearvars -except t g % clear variables
 

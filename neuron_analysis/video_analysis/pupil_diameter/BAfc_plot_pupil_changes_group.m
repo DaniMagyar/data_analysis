@@ -3,7 +3,7 @@ function [group_averages] = BAfc_plot_pupil_changes_group(animalID, secPre, secP
     %animalID = 'MD278';
     % secPre = 10;
     % secPost = 20;
-    cd C:\Users\dmagyar\Desktop\BAfc_pupil_cropped-DM-2024-10-25\videos
+    cd Z:\HajosLab\Dani\Magyar_Daniel\experiments\BA_fear_cond\BAfc_pupil_cropped-DM-2024-10-25\videos
     filename1 = [animalID '_crossing_indices.csv'];
     filename2 = [animalID '_pupil_diameters.mat'];
     filename3 = [animalID '_TTLsKS.mat'];

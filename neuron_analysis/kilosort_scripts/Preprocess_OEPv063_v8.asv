@@ -1,4 +1,4 @@
-function [outgoing_data] = Preprocess_OEPv063_v7(varargin)
+function [outgoing_data] = Preprocess_OEPv063_v8(varargin)
 
 % Detrend than highpass filter (300Hz) is a very good method upon large electrical
 % stimuli noises. (Preprocess_OEPv063_v7('experiment',
@@ -10,6 +10,7 @@ function [outgoing_data] = Preprocess_OEPv063_v7(varargin)
 % v6: channel mapping loop is removed, much faster
 % v7: lowpass, highpass and bandpass filter available, 'none' channel map
 % avaialable, DM_load_channel_map, DM_load_artefacts added
+% v8: artefact removal in batch processing
 
 %  INPUT: 
 % - pLength: length of the artefact in ms. Default is 5ms.
@@ -37,6 +38,7 @@ addParameter(prs,'downsamplefactor',[],@isnumeric) % downsampling
 addParameter(prs,'savename',[],@ischar) % savename e.g. 'mapped_CAR'
 addParameter(prs,'savepath',[],@ischar) %savepath
 addParameter(prs,'detrend',[],@isnumeric) % two time points relative to artifact (in ms) between which the detrending will be performed. (e.g. [0.015 0.03]) 
+addParameter(prs,'batchSize',30,@isnumercis) % in seconds. Default 30s.
 parse(prs,varargin{:})
 g = prs.Results;
 disp(['OEP v0.6.3'])
@@ -104,6 +106,8 @@ if g.CAR
 end
 %% Remove stimulation artefacts
 if any(g.pLength)
+    disp('Transposing matrix...')
+    incoming_data = incoming_data.';
     disp('Removing artefacts...')
     artefacts_sn = DM_load_artefacts(g);
     parfor ll = 1:info.Header.num_channels
@@ -120,6 +124,7 @@ if any(g.pLength)
 else 
     outgoing_data = incoming_data;
 end
+
 %% Downsampling
 if any(g.downsamplefactor)
     disp('Downsampling data...')

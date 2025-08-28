@@ -1,4 +1,8 @@
-function [outgoing_data] = Preprocess_OEPv063_v7(varargin)
+function [outgoing_data] = Preprocess_OEPv063_v8(varargin)
+
+% Detrend than highpass filter (300Hz) is a very good method upon large electrical
+% stimuli noises. (Preprocess_OEPv063_v7('experiment',
+% 'BAfc_shock_laser_ONOFF', 'CHmap', 'Cambridge64_P1_Adpt_Cambridge', 'detrend', [0.012 0.200], 'filter', 'high', 'cutoff', 300, 'savename', 'preprocessed_MD305_detrended');)
 
 % This function removes artefacts from recording and applies channel map.
 % v3: CAR and filtering added
@@ -6,6 +10,7 @@ function [outgoing_data] = Preprocess_OEPv063_v7(varargin)
 % v6: channel mapping loop is removed, much faster
 % v7: lowpass, highpass and bandpass filter available, 'none' channel map
 % avaialable, DM_load_channel_map, DM_load_artefacts added
+% v8: artefact removal in batch processing
 
 %  INPUT: 
 % - pLength: length of the artefact in ms. Default is 5ms.
@@ -18,20 +23,22 @@ function [outgoing_data] = Preprocess_OEPv063_v7(varargin)
 % - CHmap: channel map
 
 prs =  inputParser;
-addOptional(prs,'pLength',0,@isnumeric) 
-addOptional(prs,'extracut',0,@isnumeric)
-addOptional(prs,'firstSec',0) % start = 0sec
-addOptional(prs,'lastSec',0,@isnumeric) % start = 0 sec
-addOptional(prs,'experiment','',@ischar)
-addOptional(prs,'source','oebin',@ischar)
-addOptional(prs,'CAR', [],@isnumeric) % common average referencing. 
-addOptional(prs,'filter',[],@ischar) % filter type: 'low', 'high', 'bandpass
-addOptional(prs,'cutoff',[],@isnumeric) % single value for highpass and lowpass, and two value vector for bandpass (e.g.[300 6000])
-addOptional(prs,'fs', 30000,@isnumeric) %sampling rate
-addOptional(prs,'CHmap','none',@ischar) % channel map
-addOptional(prs,'downsamplefactor',[],@isnumeric) % downsampling
-addOptional(prs,'savename',[],@ischar) % savename e.g. 'mapped_CAR'
-addOptional(prs,'doDetrend',[],@isnumeric) % two element vector. 
+addParameter(prs,'pLength',0,@isnumeric) 
+addParameter(prs,'extracut',0,@isnumeric)
+addParameter(prs,'firstSec',0) % start = 0sec
+addParameter(prs,'lastSec',0,@isnumeric) % start = 0 sec
+addParameter(prs,'experiment','',@ischar)
+addParameter(prs,'source','oebin',@ischar)
+addParameter(prs,'CAR', [],@isnumeric) % common average referencing. 
+addParameter(prs,'filter',[],@ischar) % filter type: 'low', 'high', 'bandpass'
+addParameter(prs,'cutoff',[],@isnumeric) % single value for highpass and lowpass, and two value vector for bandpass (e.g.[300 6000])
+addParameter(prs,'fs', 30000,@isnumeric) %sampling rate
+addParameter(prs,'CHmap','none',@ischar) % channel map
+addParameter(prs,'downsamplefactor',[],@isnumeric) % downsampling
+addParameter(prs,'savename',[],@ischar) % savename e.g. 'mapped_CAR'
+addParameter(prs,'savepath',[],@ischar) %savepath
+addParameter(prs,'detrend',[],@isnumeric) % two time points relative to artifact (in ms) between which the detrending will be performed. (e.g. [0.015 0.03]) 
+addParameter(prs,'batchSize',30,@isnumercis) % in seconds. Default 30s.
 parse(prs,varargin{:})
 g = prs.Results;
 disp(['OEP v0.6.3'])
@@ -59,6 +66,9 @@ channel_map = DM_load_channel_map(g.CHmap);
 g.numChannels = numel(channel_map);
 g.OriginalHeader = info.Header;
 g.filename = info.Data.Filename;
+if any(g.pLength) && any(g.detrend)
+    error('Do not use pLength. Artefacts removed in detrend!')
+end
 %% Defining time window for preprocessing
 if g.firstSec > 0
     firstEL = g.firstSec*30000;
@@ -74,17 +84,17 @@ tic
 disp('Loading data...')
 incoming_data = info.Data.Data(1).mapped(channel_map,firstEL:lastEL);
 %% Detrending before anything else
-disp('Detrending data...')
-if 
-
-
+if g.detrend
+    disp('Detrending data...')
+    incoming_data = DM_detrend_data(g, incoming_data);
+end
 %% Apply filters
 if g.filter
     disp('Filtering data...')
     [b_high, a_high] = butter(2,g.cutoff/g.fs*2,g.filter);
     loadBar = waitbar(0,'Filtering data...');
     for fn = 1:info.Header.num_channels
-        incoming_data(fn,:) = int16(filtfilt(b_high,a_high,double(incoming_data(fn,:))));
+        incoming_data(fn,:) = int16(filtfilt(b_high,a_high,double(incoming_data(fn,:)))); % filter for one direction, filtfilt for zero-phase
         waitbar(fn/info.Header.num_channels,loadBar);
     end  
     close(loadBar)
@@ -96,11 +106,14 @@ if g.CAR
 end
 %% Remove stimulation artefacts
 if any(g.pLength)
+    disp('Transposing matrix...')
+    incoming_data = incoming_data.';
+    outgoing_data = zeros(size(incoming_data), 'like', incoming_data);
     disp('Removing artefacts...')
     artefacts_sn = DM_load_artefacts(g);
-    pwb = parwaitbar(info.Header.num_channels);
-    parfor ll = 1:info.Header.num_channels
-        tmp = incoming_data(ll,:);
+    out_temp = [];
+    for ll = 1:info.Header.num_channels
+        tmp = incoming_data(:,ll)';
         for kk = 1:numel(artefacts_sn)
             pStamp = artefacts_sn(kk); % sample_num of current pulse            
             tmp(pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30) = ...
@@ -108,12 +121,15 @@ if any(g.pLength)
                 double(tmp(pStamp+(g.pLength+g.extracut)*30)), ...
                 numel(tmp(pStamp-g.extracut*30:pStamp+(g.pLength+g.extracut)*30))));
         end
-        outgoing_data(ll,:) = tmp;
-        pwb.progress();
+        outgoing_data(:,ll) = tmp';
+        disp(['Channel ' num2str(ll) ' processed'])
     end
+    disp('Transposing matrix again...')
+    outgoing_data = outgoing_data.';
 else 
     outgoing_data = incoming_data;
 end
+
 %% Downsampling
 if any(g.downsamplefactor)
     disp('Downsampling data...')
@@ -123,6 +139,9 @@ if any(g.downsamplefactor)
 end
 
 %% initialize a new .dat file, write data and close. Save 
+if g.savepath
+    cd (g.savepath)
+end
 if any(g.savename)
     savename = g.savename;
     fid=fopen([savename '.dat'],'w+');

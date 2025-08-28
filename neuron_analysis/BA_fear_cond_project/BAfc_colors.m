@@ -8,7 +8,7 @@ colors.IN_secondary = [247,104,161]/255;
 colors.raw_primary = [44,162,95]/255;
 colors.raw_secondary = [153,216,201]/255;
 
-
+colors.barcolor = [0.4 0.4 0.4];
 % Colormap blue:white:red -------------------------------------------------
 c1 = 1/255*[0,115,185];
 c2 = 1/255*[239,239,239];

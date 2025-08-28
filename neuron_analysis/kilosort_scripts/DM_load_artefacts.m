@@ -15,16 +15,10 @@ for jj = 1:max(channel_states)
 end
 
 switch g.experiment
-    case 'PFC_shock_run_rest'
+    case 'BAfc_shock'
         artefacts_sn = sort([TTL_channels{2,1}]); % number of samples where stimulation starts
-    case 'PFC_shock_run_rest_ONOFF'
-        artefacts_sn = sort([TTL_channels{2,1}; TTL_channels{2,2}]); % number of samples where stimulation starts
-    case 'PFC_BAopto_run_rest'
-         artefacts_sn = sort([TTL_channels{2,7}]);
-    case 'PFC_BAopto_laser_remove'
-        artefacts_sn = sort([TTL_channels{2,7}; TTL_channels{2,9}]);
-    case 'PFC_BAopto_laser_ON_OFF_remove'
-        artefacts_sn = sort([TTL_channels{2,7}; TTL_channels{2,8}; TTL_channels{2,9}; TTL_channels{2,10};]);
+    case 'BAfc_shock_laser_ONOFF'
+        artefacts_sn = sort([TTL_channels{2,1}; TTL_channels{2,7}; TTL_channels{2,8}]); % number of samples where stimulation starts
     otherwise 
         error('unknown experiment')
 end

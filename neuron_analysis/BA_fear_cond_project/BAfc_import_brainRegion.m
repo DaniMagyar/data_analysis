@@ -5,7 +5,7 @@ function BAfc_import_brainRegion
 % contains subfolders of different experiments 
 % (e.g. mainFolder/MD243_kilosort/kilosort25preprocess/)
 
-mainFolder = 'C:\Users\dmagyar\Desktop\inhibtest';
+mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
 cd(mainFolder)
 load('channel_assignments.mat')
 folders = dir;

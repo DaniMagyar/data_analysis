@@ -518,6 +518,99 @@ csvwrite('events.csv',shocks)
 
 
 
+% MD300
+LED_synch = TTL_channels{2,3}-double(zeroTime);
+shocks = TTL_channels{2,1}-double(zeroTime);
+sound_all = TTL_channels{2,5}-double(zeroTime);
+sound_all_diff = diff(sound_all);
+sound_all_diff1 = [0.5; sound_all_diff];
+sound_all1 = sound_all(sound_all_diff1>=0.5);
+
+
+triptest_sound_all = sound_all1(1:200);
+
+triptest_sound_only = triptest_sound_all(1:4:end);
+triptest_sound_only_light = triptest_sound_all(2:4:end);
+triptest_both = triptest_sound_all(3:4:end);
+triptest_both_light = triptest_sound_all(4:4:end);
+
+triptest_shocks_only = shocks(1:4:end);
+triptest_shocks_only_light = shocks(2:4:end);
+
+
+tone_habit_all = sound_all1(201:250);
+tone_habit_first = tone_habit_all(1:5:end);
+
+tone_habit_all_light = sound_all1(251:300);
+tone_habit_first_light = tone_habit_all_light(1:5:end);
+
+save('TTLsKS.mat', 'shocks', 'sound_all1', 'LED_synch', 'triptest_sound_only', 'triptest_both', 'triptest_shocks_only',...
+     'triptest_sound_only_light', 'triptest_both_light', 'triptest_shocks_only_light', 'tone_habit_all', 'tone_habit_first',...
+     'tone_habit_all_light', 'tone_habit_first_light')
+csvwrite('events.csv',shocks)
+
+
+
+% MD309 BA_triptest_opto_V2
+LED_synch = TTL_channels{2,3}-double(zeroTime);
+shocks = TTL_channels{2,1}-double(zeroTime);
+sound_all = TTL_channels{2,5}-double(zeroTime);
+sound_all_diff = diff(sound_all);
+sound_all_diff1 = [0.5; sound_all_diff];
+sound_all1 = sound_all(sound_all_diff1>=0.5);
+
+
+triptest_sound_all = sound_all1;
+
+triptest_sound_only = triptest_sound_all(1:4:end);
+triptest_sound_only_light = triptest_sound_all(2:4:end);
+triptest_both = triptest_sound_all(3:4:end);
+triptest_both_light = triptest_sound_all(4:4:end);
+
+triptest_shocks_only = shocks(1:4:end);
+triptest_shocks_only_light = shocks(2:4:end);
+
+
+
+save('TTLsKS.mat', 'shocks', 'sound_all1', 'LED_synch', 'triptest_sound_only', 'triptest_both', 'triptest_shocks_only',...
+     'triptest_sound_only_light', 'triptest_both_light', 'triptest_shocks_only_light')
+csvwrite('events.csv',shocks)
+
+
+
+% MD311
+LED_synch = TTL_channels{2,3}-double(zeroTime);
+shocks = TTL_channels{2,1}-double(zeroTime);
+sound_all = TTL_channels{2,5}-double(zeroTime);
+sound_all_diff = diff(sound_all);
+sound_all_diff1 = [0.5; sound_all_diff];
+sound_all1 = sound_all(sound_all_diff1>=0.5);
+
+
+triptest_sound_all = sound_all1;
+
+triptest_sound_only = sort([triptest_sound_all(1:4:end); triptest_sound_all(2:4:end)]);
+
+triptest_both = sort([triptest_sound_all(3:4:end); triptest_sound_all(4:4:end)]);
+
+triptest_shocks_only = sort([shocks(1:4:end); shocks(2:4:end)]);
+
+
+
+save('TTLsKS.mat', 'shocks', 'sound_all1', 'LED_synch', 'triptest_sound_only', 'triptest_both', 'triptest_shocks_only')
+csvwrite('events.csv',shocks)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

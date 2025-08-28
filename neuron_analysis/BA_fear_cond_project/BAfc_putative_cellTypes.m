@@ -15,15 +15,20 @@ cell_metrics = g.cell_metrics;
 
 narrow_idx = find(cell_metrics.troughToPeak<=g.width_critical);
 wide_idx = find(cell_metrics.troughToPeak>g.width_critical);
-% idx_fs = find(cell_metrics.firingRate>=g.fr_critical);
-% idx_rs = find(cell_metrics.firingRate<g.fr_critical);
-idx_sym = find(cell_metrics.ab_ratio>=g.ab_ratio);
-idx_asym = find(cell_metrics.ab_ratio<g.ab_ratio);
+
 idx_LA = find(contains(cell_metrics.brainRegion, 'LA'));
 idx_BA = find(contains(cell_metrics.brainRegion, 'BA'));
 
+% idx_fs = find(cell_metrics.firingRate>=g.fr_critical);
+% idx_rs = find(cell_metrics.firingRate<g.fr_critical);
+% idx_IN = intersect(intersect(narrow_idx, idx_fs),[idx_LA idx_BA]);
+% idx_PN = intersect(intersect(wide_idx, idx_rs),[idx_LA idx_BA]);
+
+idx_sym = find(cell_metrics.ab_ratio>=g.ab_ratio);
+idx_asym = find(cell_metrics.ab_ratio<g.ab_ratio);
 idx_IN = intersect(intersect(narrow_idx, idx_sym),[idx_LA idx_BA]);
 idx_PN = intersect(intersect(wide_idx, idx_asym),[idx_LA idx_BA]);
+
 idx_unknown = setdiff([idx_LA idx_BA], [idx_IN idx_PN]);
 
 cell_metrics.putativeCellType(idx_IN) = {'IN'};
