@@ -1294,7 +1294,7 @@ save('temp_wh.triptest_bothTTL_light.manipulation.mat', 'triptest_bothTTL_light'
 
 cell_metrics = ProcessCellMetrics('session', session);
 
-%MD311 BAfc_triptest_opto_v2
+%MD311 BAfc_triptest_opto_v2 (without light)
 
 
 session = sessionTemplate(cd);

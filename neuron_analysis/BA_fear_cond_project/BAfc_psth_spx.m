@@ -1,9 +1,10 @@
-function [psth_spx, preAP_bin_spx, postAP_bin_spx, preAP_norm_spx, postAP_norm_spx] =  BAfc_psth_spx(varargin)
+function [psth_spx, preAP_norm, postAP_norm, preAP_bin, postAP_bin] =  BAfc_psth_spx(varargin)
 
 %v02: parfor loop , faster
 % Reworked with parser
-% OUTPUT:   -psth_spx: spikes
-%           -num_ttl: number of stimulations
+% OUTPUT:   -psth_spx: all spikes in all trialss. Each neuron is a row.
+%           -preAP_norm, postAP_norm: normalized spike timestamps
+%           -
 
 %% Default params
 prs =  inputParser;
@@ -26,45 +27,43 @@ g = prs.Results;
 
 %% Preallocate arrays for results
 num_cells = numel(g.cell_metrics.cellID);
+preAP_norm = cell(num_cells, 1);
+postAP_norm = cell(num_cells, 1);
+preAP_bin = cell(num_cells, 1);
+postAP_bin = cell(num_cells, 1);
 psth_spx = zeros(num_cells, round((g.pre_time + g.post_time) / g.bin_time)); % adjust size accordingly
-parfor ii = 1:num_cells
+for ii = 1:num_cells
     %TTL = g.cell_metrics.general.(g.ttl){ii}(g.TTLinclude)+g.TTLshift; % commented out bc of incompatibility with Gergo's data. It might be unused anyways.
     TTL = g.cell_metrics.general.(g.ttl){ii}+g.TTLshift;
     AP = g.cell_metrics.spikes.times{ii};
     % Preallocate cell arrays for spikes
     preAP = cell(numel(TTL), 1);
     postAP = cell(numel(TTL), 1);
-    preAP_norm = cell(numel(TTL), 1);
-    postAP_norm = cell(numel(TTL), 1);
+    preAP_norm{ii} = cell(numel(TTL), 1);
+    postAP_norm{ii} = cell(numel(TTL), 1);
     % Binning variables
-    preAP_bin = zeros(g.pre_time/g.bin_time, numel(TTL));
-    postAP_bin = zeros(g.post_time/g.bin_time, numel(TTL));
+    preAP_bin{ii} = zeros(g.pre_time/g.bin_time, numel(TTL));
+    postAP_bin{ii} = zeros(g.post_time/g.bin_time, numel(TTL));
     % Loop over TTL events
     for jj = 1:numel(TTL)
         % Spikes before and after each TTL
         preAP{jj} = AP(AP >= (TTL(jj) - g.pre_time) & AP < TTL(jj));
         postAP{jj} = AP(AP > TTL(jj) & AP < (TTL(jj) + g.post_time));
         % Normalize spike times to TTL
-        preAP_norm{jj} = preAP{jj} - TTL(jj);
-        postAP_norm{jj} = postAP{jj} - TTL(jj);
-    end
-    % Bin spike times
-    for tt = 1:numel(TTL)
+        preAP_norm{ii}{jj} = preAP{jj} - TTL(jj);
+        postAP_norm{ii}{jj} = postAP{jj} - TTL(jj);
+        % Bin spike times
         if g.pre_time == 0
-            preAP_bin = [];
+            preAP_bin{ii} = [];
         else
-            preAP_bin(:, tt) = histcounts(preAP_norm{tt}, linspace(-g.pre_time, 0, g.pre_time/g.bin_time + 1));
+            preAP_bin{ii}(:, jj) = histcounts(preAP_norm{ii}{jj}, linspace(-g.pre_time, 0, g.pre_time/g.bin_time + 1));
         end
         if g.post_time == 0
-            postAP_bin = [];
+            postAP_bin{ii} = [];
         else
-            postAP_bin(:, tt) = histcounts(postAP_norm{tt}, linspace(0, g.post_time, g.post_time/g.bin_time + 1));
+            postAP_bin{ii}(:, jj) = histcounts(postAP_norm{ii}{jj}, linspace(0, g.post_time, g.post_time/g.bin_time + 1));
         end
     end
     % Sum bins across TTLs
-    psth_spx(ii,:) = sum([preAP_bin; postAP_bin], 2);
-    preAP_bin_spx{ii} = sum(preAP_bin,1);
-    postAP_bin_spx{ii} = sum(postAP_bin,1);
-    preAP_norm_spx{ii} = cell2mat(preAP_norm);
-    postAP_norm_spx{ii} = cell2mat(postAP_norm);
+    psth_spx(ii,:) = sum([preAP_bin{ii}; postAP_bin{ii}], 2);
 end

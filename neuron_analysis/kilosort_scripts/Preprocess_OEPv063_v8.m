@@ -1,5 +1,8 @@
 function [outgoing_data] = Preprocess_OEPv063_v8(varargin)
 
+% Potential upgrade: load data into columns from the begining. 
+
+
 % Detrend than highpass filter (300Hz) is a very good method upon large electrical
 % stimuli noises. (Preprocess_OEPv063_v7('experiment',
 % 'BAfc_shock_laser_ONOFF', 'CHmap', 'Cambridge64_P1_Adpt_Cambridge', 'detrend', [0.012 0.200], 'filter', 'high', 'cutoff', 300, 'savename', 'preprocessed_MD305_detrended');)

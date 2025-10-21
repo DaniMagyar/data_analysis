@@ -30,10 +30,17 @@ if ~isempty(g.ttl)
     end
 end
 
-% Rename cell_metrics.animal
-for ii = 1:size(cell_metrics.animal,2)
-    cell_metrics.animal(ii) = regexp(cell_metrics.general.batch{1, ...
-        cell_metrics.batchIDs(ii)}.basepath, 'MD.{3}', 'match');
+% % Rename cell_metrics.animal
+% for ii = 1:size(cell_metrics.animal,2)
+%     recID = regexp(cell_metrics.general.batch{1, ...
+%         cell_metrics.batchIDs(ii)}.basepath, 'MD.{27}', 'match');
+%     cell_metrics.animal(ii) = {recID{1}([1:5, 26:29])};
+%     % cell_metrics.animal(ii) = regexp(cell_metrics.general.batch{1, ...
+%     %     cell_metrics.batchIDs(ii)}.basepath, 'MD.{27}', 'match');
+% end
+animalIDs = {};
+for ii = 1:size(g.recordings,2)
+    animalIDs = [animalIDs repmat({g.recordings{ii}(1:9)}, 1, cell_metrics.general.batch_benchmark.file_cell_count(ii))];
 end
-
+cell_metrics.animal = animalIDs;
 cell_metrics.general.mainFolder = g.mainFolder;

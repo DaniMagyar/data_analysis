@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/dmagyar/Documents/data_analysis/neuron_analysis/BA_fear_cond_project/**)",
+      "WebSearch",
+      "Bash(matlab:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "Bash(cp:*)",
+      "WebFetch(domain:elifesciences.org)",
+      "WebFetch(domain:www.nature.com)",
+      "Bash(mkdir uni_optogenetics)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -15,24 +15,30 @@ clear all
 
 recordings = {...
     'MD292_002_kilosort',...
-    'MD293_kilosort',...
-    'MD294_kilosort',...
-    'MD295_kilosort',...
-    'MD296_kilosort',...
-    'MD297_kilosort',...
-    'MD298_kilosort',...
-    'MD299_kilosort',...
-    'MD300_kilosort',...
-    'MD304_kilosort',...
-    'MD307_kilosort',...
-    'MD309_kilosort',...
-    'MD311_kilosort',...
-    'MD312_kilosort',...
-    'MD313_kilosort',...
-    'MD314_kilosort'};
+    'MD293_001_kilosort',...
+    'MD294_001_kilosort',...
+    'MD295_001_kilosort',...
+    'MD296_001_kilosort',...
+    'MD297_001_kilosort',...
+    'MD298_001_kilosort',...
+    'MD299_001_kilosort',...
+    'MD300_001_kilosort',...
+    'MD304_001_kilosort',...
+    'MD307_001_kilosort',...
+    'MD309_001_kilosort',...
+    'MD311_002_kilosort',...
+    'MD312_001_kilosort',...
+    'MD313_001_kilosort',...
+    'MD314_001_kilosort',...
+    'MD315_001_kilosort',...
+    'MD316_002_kilosort',...
+    'MD317_001_kilosort',...
+    'MD318_001_kilosort',...
+    'MD318_002_kilosort',...
+    'MD319_003_kilosort'};
 
 g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', {'triptest_sound_only', 'triptest_shocks_only', 'triptest_both'});
-g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
+g.cell_metrics = BAfc_match_celltypes('cell_metrics', g.cell_metrics);
 
 clearvars -except g 
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
@@ -61,7 +67,7 @@ t2.Layout.TileSpan = [4 4];
 ax2_1 = nexttile(t2, [1 4]);
 rawMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\temp_wh_ch32.mat']); % cludID = 341 from MD292_002
 rawMD292_002 = rawMD292_002.temp_wh_Ch32.values*0.195; % convert to mV
-cellID = intersect(find(strcmp(g.cell_metrics.animal, 'MD292')), find(g.cell_metrics.cluID == 341));
+cellID = intersect(find(strcmp(g.cell_metrics.animal, 'MD292_002')), find(g.cell_metrics.cluID == 341));
 ttlMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\TTLsKS.mat']);
 ttlMD292_002 = ttlMD292_002.shocks([5 7 36 41 43 47]); % 34, 36, 41 43, 47?
 twin = [-0.01 0.04];
@@ -128,13 +134,25 @@ clearvars -except t g % clear variables
 ax3 = nexttile(t, 9, [4 4]);
 idx_LA = find(contains(g.cell_metrics.brainRegion, 'LA'));
 idx_BA = find(contains(g.cell_metrics.brainRegion, 'BA'));
-data = g.cell_metrics.troughToPeak([idx_LA idx_BA])';
-gm = fitgmdist(data, 2); % Fit a 2-component Gaussian mixture
+%data = g.cell_metrics.troughToPeak([idx_LA idx_BA])';
+
+% new method:
+filePath = 'C:\Users\dmagyar\Desktop\BA_fear_cond\putative_celltype_measurements.mat';
+data_sep = load(filePath);
+timebin = mean(diff(data_sep.timeaxis_super));
+g.data_ttp = data_sep.trough_to_peak_corrected_ms;
+g.data_width = data_sep.half_width_corrected_ms;
+
+
+
+
+
+gm = fitgmdist(g.data_ttp, 2); % Fit a 2-component Gaussian mixture
 % Generate x values for PDF
-x = linspace(min(data), max(data), 1000);
+x = linspace(min(g.data_ttp), max(g.data_ttp), 1000);
 y = pdf(gm, x');
 % Plot histogram
-h = histogram(ax3,data, 'Normalization', 'pdf', 'BinWidth', 0.01);
+h = histogram(ax3,g.data_ttp, 'Normalization', 'pdf', 'BinWidth', 0.01);
 hold on;
 % Overlay the GMM fit
 plot(x, y, 'r', 'LineWidth', 2);
@@ -149,9 +167,8 @@ clearvars -except t g % clear variables
 
 %% (2,1) - Example PN and IN ISI with ACG and waveform
 % example CellID: PN 54 (cluID 479, MD292), IN 147 (cluID 106, MD295)
-g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
-cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD292')), find(g.cell_metrics.cluID == 479)); % PN
-cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD295')), find(g.cell_metrics.cluID == 106)); % IN
+cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD292_002')), find(g.cell_metrics.cluID == 479)); % PN
+cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD295_001')), find(g.cell_metrics.cluID == 106)); % IN
 spike_timestamps_w = g.cell_metrics.spikes.times{cellID_1}; % example neuron
 ISI_w = diff(spike_timestamps_w);
 spike_timestamps_n = g.cell_metrics.spikes.times{cellID_2}; % example neuron
@@ -228,29 +245,54 @@ clearvars -except t g % clear variables
 
 %% (2,2) - Spike feature accross unit type
 ax5 = nexttile(t, 55, [4 3]);
-idx_PN = strcmp(g.cell_metrics.putativeCellType,'PN');
-idx_IN = strcmp(g.cell_metrics.putativeCellType,'IN');
-idx_unknown = strcmp(g.cell_metrics.putativeCellType,'unknown');
+idx_PN = strcmp(g.cell_metrics.putativeCellType,'PN') & (strcmp(g.cell_metrics.brainRegion,'LA') | strcmp(g.cell_metrics.brainRegion,'BA'));
+idx_IN = strcmp(g.cell_metrics.putativeCellType,'IN') & (strcmp(g.cell_metrics.brainRegion,'LA') | strcmp(g.cell_metrics.brainRegion,'BA'));
+idx_unknown = strcmp(g.cell_metrics.putativeCellType,'unknown') & (strcmp(g.cell_metrics.brainRegion,'LA') | strcmp(g.cell_metrics.brainRegion,'BA'));
 hold on
-plot(g.cell_metrics.troughToPeak(idx_IN),g.cell_metrics.ab_ratio(idx_IN), 'o', 'Color',g.colors.IN_primary)
-plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.ab_ratio(idx_PN), 'o', 'Color',g.colors.PN_primary)
-plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.ab_ratio(idx_unknown), 'o', 'Color',[.7 .7 .7])
-%set(gca, 'YScale', 'log')  % Makes the Y-axis logarithmic
-yline(0.1, '--k', 'LineWidth', 1);
-xline(0.475, '--k', 'LineWidth', 1);
-yticks([-1 0 1])
-ylabel('Waveform asymmetry (b-a)/(b+a)');
+
+%  manually separated data
+plot(g.data_ttp(idx_IN),g.data_width(idx_IN), 'o', 'Color',g.colors.IN_primary)
+plot(g.data_ttp(idx_PN),g.data_width(idx_PN), 'o', 'Color',g.colors.PN_primary)
+plot(g.data_ttp(idx_unknown),g.data_width(idx_unknown), 'o', 'Color',[.7 .7 .7])
+%yline(0.1, '--k', 'LineWidth', 1);
+ylabel('Spike half-width');
+
+% %  manually separated data with firing rate
+% plot(g.data_ttp(idx_IN),g.cell_metrics.firingRate(idx_IN), 'o', 'Color',g.colors.IN_primary)
+% plot(g.data_ttp(idx_PN),g.cell_metrics.firingRate(idx_PN), 'o', 'Color',g.colors.PN_primary)
+% plot(g.data_ttp(idx_unknown),g.cell_metrics.firingRate(idx_unknown), 'o', 'Color',[.7 .7 .7])
+% yline(0.1, '--k', 'LineWidth', 1);
+% ylabel('Firing rate');
+% 
+
+% %  Ab-ratio
+% plot(g.cell_metrics.troughToPeak(idx_IN),g.cell_metrics.ab_ratio(idx_IN), 'o', 'Color',g.colors.IN_primary)
+% plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.ab_ratio(idx_PN), 'o', 'Color',g.colors.PN_primary)
+% plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.ab_ratio(idx_unknown), 'o', 'Color',[.7 .7 .7])
+% yline(0.1, '--k', 'LineWidth', 1);
+% ylabel('Waveform asymmetry (b-a)/(b+a)');
+
+% % Firing rate
+% plot(g.cell_metrics.troughToPeak(idx_IN),g.cell_metrics.firingRate(idx_IN), 'o', 'Color',g.colors.IN_primary)
+% plot(g.cell_metrics.troughToPeak(idx_PN),g.cell_metrics.firingRate(idx_PN), 'o', 'Color',g.colors.PN_primary)
+% plot(g.cell_metrics.troughToPeak(idx_unknown),g.cell_metrics.firingRate(idx_unknown), 'o', 'Color',[.7 .7 .7])
+% yline(10, '--k', 'LineWidth', 1);
+% ylabel('Waveform asymmetry (b-a)/(b+a)');
+% set(gca, 'YScale', 'log')  % Makes the Y-axis logarithmic
+
+xline(0.4, '--k', 'LineWidth', 1);
+%yticks([-1 0 1])
 xlabel('Trough to peak time (c, ms)');
 set(gca, 'FontSize', g.fontSize2);
 title('Spike features accross unit type', 'FontSize', g.fontSize1);
 xlim([0.1 0.8])
 
 
-[img, cmap] = imread([g.mainFolder '\ab_ratio.png']);
-if ~isempty(cmap)
-    img = ind2rgb(img, cmap);  % Convert to RGB
-end
-image([0.6 0.75],[1 0.25], img);
+% [img, cmap] = imread([g.mainFolder '\ab_ratio.png']);
+% if ~isempty(cmap)
+%     img = ind2rgb(img, cmap);  % Convert to RGB
+% end
+% image([0.6 0.75],[1 0.25], img);
 % axes('Position', [0.5 0.5 0.1 0.1]); 
 % [img, cmap] = imread([g.mainFolder '\ab_ratio.png']);
 
@@ -259,20 +301,10 @@ image([0.6 0.75],[1 0.25], img);
 
 ax6 = nexttile(t, 58, [4 3]);
 timeaxis = g.cell_metrics.waveforms.time{1};
-waveforms = zeros(size(g.cell_metrics.waveforms.filt,2),48);
-for ii = 1:size(g.cell_metrics.waveforms.filt,2)
-    if size(g.cell_metrics.waveforms.time{ii},2) == 48
-        waveforms(ii,:) = zscore(g.cell_metrics.waveforms.filt{ii});
-    elseif size(g.cell_metrics.waveforms.time{ii},2) == 96
-        waveforms(ii,:) = zscore(g.cell_metrics.waveforms.filt{ii}(30:77)); % 30:77 is the best, others shift towrads left or right
-    end
-end
+waveforms = zscore(cell2mat(g.cell_metrics.waveforms.filt(:)),[],2);
 % flipping reverse spikes
-for ii = 1:size(waveforms,1)
-    if median(waveforms(ii,23:27)) > 1 && strcmp(g.cell_metrics.putativeCellType{ii}, 'Narrow Interneuron')
-        waveforms(ii,:) = -waveforms(ii,:);
-    end
-end
+waveforms(g.cell_metrics.polarity>0,:) = -waveforms(g.cell_metrics.polarity>0,:);
+
 % finding outliers based on Euclidean distance
 wide_idx = find(idx_PN == 1);
 mean_wide = mean(waveforms(wide_idx,:),1);

@@ -17,10 +17,11 @@ for jj = 1:size(folderNames,2)
     cd([mainFolder '/' folderNames{jj} '/kilosort25preprocess'])
     load('temp_wh.cell_metrics.cellinfo.mat')
     for ii = 1:length(cell_metrics.brainRegion)
-        idx = find(channel_assignments.(folderNames{jj}(1:5)).channels == cell_metrics.maxWaveformCh1(ii));
-        cell_metrics.brainRegion(ii) = channel_assignments.(folderNames{jj}(1:5)).regions(idx);
+        idx = find(channel_assignments.(folderNames{jj}(1:9)).channels == cell_metrics.maxWaveformCh1(ii));
+        cell_metrics.brainRegion(ii) = channel_assignments.(folderNames{jj}(1:9)).regions(idx);
     end
     save('temp_wh.cell_metrics.cellinfo.mat', 'cell_metrics')
-    disp([folderNames{jj}(1:5) ': done'])
+    disp([folderNames{jj}(1:9) ': done'])
     clearvars -except channel_assignments mainFolder folderNames
 end
+cd(mainFolder)
