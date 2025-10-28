@@ -2,7 +2,7 @@
 % Aneshetized recordings, only responsive neurons
 
 clear all
-recordings = {'MD313_kilosort'};
+recordings = {'MD313_001_kilosort'};
 g.mainFolder = 'C:\Users\dmagyar\Desktop\Gergo';
 g.cell_metrics = BAfc_load_neurons('mainFolder', g.mainFolder, 'recordings', recordings, 'ttl', {'triptest_shocks_only'});
 g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);

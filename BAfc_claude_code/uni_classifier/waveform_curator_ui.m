@@ -406,12 +406,12 @@ updatePlot(fig_interactive);
             combined_half_width_corrected_ms = [existing.half_width_corrected_ms; half_width_corrected_ms];
             combined_waveforms_super = [existing.waveforms_super; waveforms_super];
             combined_waveforms_raw = [existing.waveforms_raw; waveforms_raw];
-            combined_firing_rates = [existing.firing_rates; firing_rates];
-            combined_brain_regions = [existing.brain_regions; brain_regions];
-            combined_animals = [existing.animals; animals];
-            combined_batch_ids = [existing.batch_ids; batch_ids];
-            combined_cell_ids = [existing.cell_ids; cell_ids];
-            combined_clu_ids = [existing.clu_ids; clu_ids];
+            combined_firing_rates = [existing.firing_rates firing_rates];
+            combined_brain_regions = [existing.brain_regions brain_regions];
+            combined_animals = [existing.animals animals];
+            combined_batch_ids = [existing.batch_ids batch_ids];
+            combined_cell_ids = [existing.cell_ids cell_ids];
+            combined_clu_ids = [existing.clu_ids clu_ids];
 
             % Merge manual corrections with updated neuron indices
             combined_manual_corrections = existing.manual_corrections;

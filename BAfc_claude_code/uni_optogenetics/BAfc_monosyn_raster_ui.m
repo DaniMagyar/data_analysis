@@ -190,8 +190,8 @@ updatePlot(fig);
             end
 
             % Use shorter time window for display (50ms baseline, 50ms post)
-            plot_pre_time = 0.05;  % 50ms baseline
-            plot_post_time = 0.05;  % 50ms post
+            plot_pre_time = g.params.pre_time_short;  % 50ms baseline
+            plot_post_time = g.params.post_time_short;  % 50ms post
 
             % Plot raster
             for trial = 1:length(ttl_events)

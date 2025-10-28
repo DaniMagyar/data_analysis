@@ -1092,6 +1092,136 @@ end
 sgtitle('Response Change Analysis: PV Silencing Effects on Short Latency Responses (0-25ms)', ...
     'FontSize', 14, 'FontWeight', 'bold');
 
+%% ===== CREATE FIGURE 4: HEATMAP COMPARISON OF RESPONSIVE NEURONS =====
+
+fprintf('\nGenerating Figure 4: Heatmap comparison of responsive neurons...\n');
+
+% Load colors for heatmap
+g.colors = BAfc_colors;
+
+% Create figure
+fig4 = figure('Position', [200, 100, 1600, 900]);
+fig4.Color = 'w';
+
+% Create layout: 2 rows (CS, US) × 4 columns (CS no-light, CS light, US no-light, US light)
+t = tiledlayout(fig4, 2, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Time axis for short window
+time_axis_heatmap = -params.pre_time_short:g.bin_time:(params.post_time_short - g.bin_time);
+
+% Define global color limits for consistent scaling across all heatmaps
+global_clim = [-5.5, 13];  % Same as standard BAfc heatmaps
+
+for grp = 1:2
+    grp_name = group_names{grp};
+
+    % Get data for this group from short_latency_results
+    peak_z_nolight = short_latency_results.(grp_name).peak_zscore_nolight;
+    peak_z_light = short_latency_results.(grp_name).peak_zscore_light;
+
+    % Calculate percent change and identify increased response neurons
+    percent_change = (peak_z_light - peak_z_nolight) ./ peak_z_nolight;
+    idx_increased = percent_change > g.change_threshold;
+
+    % Filter to only increased response neurons
+    neuron_indices_increased = group_indices{grp}(idx_increased);
+
+    % Get TTL indices for this group
+    if grp == 1  % CS
+        ttl_idx_nolight = 1;  % triptest_sound_only
+        ttl_idx_light = 2;    % triptest_sound_only_light
+        stimulus_label = 'CS';
+    else  % US
+        ttl_idx_nolight = 3;  % triptest_shocks_only
+        ttl_idx_light = 4;    % triptest_shocks_only_light
+        stimulus_label = 'US';
+    end
+
+    % Calculate peak z-scores for sorting neurons (using no-light condition)
+    peak_zscores = zeros(length(neuron_indices_increased), 1);
+    for idx = 1:length(neuron_indices_increased)
+        neuron_idx = neuron_indices_increased(idx);
+        psth_z = psth_data(ttl_idx_nolight).psth_z(neuron_idx, :);
+
+        % Peak z-score in short latency window
+        short_window_baseline_bins = round(g.pre_time / g.bin_time);
+        short_latency_bins = round(g.short_latency_window / g.bin_time);
+        window_start = short_window_baseline_bins + 1;
+        window_end = short_window_baseline_bins + short_latency_bins;
+
+        peak_zscores(idx) = max(psth_z(window_start:window_end));
+    end
+
+    % Sort neurons by peak z-score (descending)
+    [~, sort_idx] = sort(peak_zscores, 'descend');
+    sorted_neuron_indices = neuron_indices_increased(sort_idx);
+
+    % Now create heatmaps for all 4 conditions (CS and US, both no-light and light)
+    for cond = 1:4
+        % Determine which TTL to use
+        if cond == 1
+            ttl_idx = 1;  % CS no-light
+            col_idx = 1;
+            condition_title = 'CS (no light)';
+        elseif cond == 2
+            ttl_idx = 2;  % CS light
+            col_idx = 2;
+            condition_title = 'CS + PV silencing';
+        elseif cond == 3
+            ttl_idx = 3;  % US no-light
+            col_idx = 3;
+            condition_title = 'US (no light)';
+        else
+            ttl_idx = 4;  % US light
+            col_idx = 4;
+            condition_title = 'US + PV silencing';
+        end
+
+        % Extract z-scored PSTH for sorted neurons
+        heatmap_matrix = zeros(length(sorted_neuron_indices), length(time_axis_heatmap));
+        for idx = 1:length(sorted_neuron_indices)
+            neuron_idx = sorted_neuron_indices(idx);
+            heatmap_matrix(idx, :) = psth_data(ttl_idx).psth_z(neuron_idx, :);
+        end
+
+        % Plot heatmap
+        ax = nexttile(t, (grp-1)*4 + col_idx);
+        imagesc(time_axis_heatmap, 1:size(heatmap_matrix, 1), heatmap_matrix);
+        clim(global_clim);
+        colormap(ax, g.colors.Heatmap);
+
+        % Add stimulus onset line
+        hold on;
+        xline(0, '--k', 'LineWidth', 2, 'Alpha', 1);
+
+        % Add monosynaptic window patch
+        patch([0, g.monosyn_window, g.monosyn_window, 0], ...
+              [0.5, 0.5, size(heatmap_matrix, 1)+0.5, size(heatmap_matrix, 1)+0.5], ...
+              [1, 0.9, 0.9], 'EdgeColor', 'none', 'FaceAlpha', 0.15);
+        hold off;
+
+        % Labels
+        xlabel('Time from stimulus onset (s)', 'FontSize', 10);
+        if col_idx == 1
+            ylabel(sprintf('%s Responsive\n(n=%d)\nNeuron #', stimulus_label, length(sorted_neuron_indices)), ...
+                'FontSize', 11, 'FontWeight', 'bold');
+        else
+            set(gca, 'YTickLabel', []);
+        end
+
+        title(condition_title, 'FontSize', 11, 'FontWeight', 'bold');
+        set(gca, 'FontSize', 10, 'TickDir', 'out');
+    end
+end
+
+% Add colorbar to the rightmost column
+cb = colorbar(nexttile(t, 4), 'eastoutside', 'FontSize', 11);
+ylabel(cb, 'Z-score Firing Rate', 'FontSize', 11);
+
+% Add main title
+title(t, 'Heatmap Comparison: Short Latency Responses (±100ms)', ...
+    'FontSize', 14, 'FontWeight', 'bold');
+
 fprintf('\n========================================\n');
 fprintf('Analysis complete!\n');
 fprintf('Results stored in workspace variables:\n');

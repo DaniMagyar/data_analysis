@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/dmagyar/Documents/data_analysis/neuron_analysis/**)",
+      "Read(//c/Users/dmagyar/Documents/data_analysis/BAfc_claude_code/**)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

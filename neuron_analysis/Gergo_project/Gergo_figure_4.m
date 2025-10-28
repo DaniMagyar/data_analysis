@@ -2,7 +2,7 @@
 % Awake recordings, only responsive neurons
 
 clear all
-recordings = {'MD313_kilosort'};
+recordings = {'MD313_001_kilosort'};
 g.mainFolder = 'C:\Users\dmagyar\Desktop\Gergo';
 g.cell_metrics = BAfc_load_neurons('mainFolder', g.mainFolder, 'recordings', recordings, 'ttl', {'triptest_shocks_only'});
 g.cell_metrics = BAfc_putative_cellTypes('cell_metrics', g.cell_metrics);
@@ -30,8 +30,8 @@ imshow(img, 'Parent', ax1);
 title(ax1, 'Experimental setup', 'FontSize', g.fontSize1)
 clearvars -except t g % clear variables
 
-cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD313')), find(g.cell_metrics.cluID == 530)); 
-cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD313')), find(g.cell_metrics.cluID == 468)); 
+cellID_1 = intersect(find(strcmp(g.cell_metrics.animal, 'MD313_001')), find(g.cell_metrics.cluID == 530)); 
+cellID_2 = intersect(find(strcmp(g.cell_metrics.animal, 'MD313_001')), find(g.cell_metrics.cluID == 468)); 
 
 spike_times{1} = g.cell_metrics.spikes.times{cellID_1}; 
 spike_times{2} = g.cell_metrics.spikes.times{cellID_2}; 

@@ -9,7 +9,13 @@
       "Bash(cp:*)",
       "WebFetch(domain:elifesciences.org)",
       "WebFetch(domain:www.nature.com)",
-      "Bash(mkdir uni_optogenetics)"
+      "Bash(mkdir uni_optogenetics)",
+      "WebFetch(domain:www.jneurosci.org)",
+      "WebFetch(domain:www.ncbi.nlm.nih.gov)",
+      "Read(//c/Users/dmagyar/Documents/data_analysis/**)",
+      "WebFetch(domain:www.researchgate.net)",
+      "Bash(git checkout:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

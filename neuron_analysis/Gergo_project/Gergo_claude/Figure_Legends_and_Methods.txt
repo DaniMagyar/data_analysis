@@ -1,0 +1,39 @@
+FIGURE 1: Differential responses of BA→PFC and BA→DMS projection neurons to unconditioned stimulus
+
+(A) Representative raster plot of a single BA→PFC neuron showing spike responses aligned to shock onset (time 0, indicated by red lightning symbol) across 80 trials. Each dot represents a single spike; each row represents one trial. Time window: -1 to +1 s relative to stimulus onset.
+
+(B) Population heatmap of z-scored firing rates for all BA→PFC projection neurons (n=15 neurons) in response to unconditioned stimulus (shock). Each row represents one neuron; neurons are sorted by response onset latency (earliest responding neurons at top). Color scale represents z-score normalized to baseline firing rate. Red lightning symbol indicates shock onset. Time window: -1 to +1 s.
+
+(C) Population-averaged firing rate of BA→PFC projection neurons in response to unconditioned stimulus. Solid line represents mean firing rate across all neurons; shaded area represents ±SEM. Red lightning symbol indicates shock onset. Time window: -1 to +1 s.
+
+(D) Proportion of responsive versus non-responsive BA→PFC neurons to unconditioned stimulus. Stacked bar chart showing percentage of neurons classified as responsive (red) or non-responsive (gray) based on z-score threshold criteria (|z| ≥ 2 within 0-600 ms post-stimulus window). Total neuron count indicated (n=15).
+
+(E) Representative raster plot of a single BA→DMS neuron showing spike responses aligned to shock onset (red lightning symbol) across 80 trials. Time window: -1 to +1 s relative to stimulus onset.
+
+(F) Population heatmap of z-scored firing rates for all BA→DMS projection neurons (n=17 neurons) in response to unconditioned stimulus. Neurons sorted by response onset latency. Red lightning symbol indicates shock onset. Time window: -1 to +1 s.
+
+(G) Population-averaged firing rate of BA→DMS projection neurons in response to unconditioned stimulus. Solid line represents mean; shaded area represents ±SEM. Red lightning symbol indicates shock onset. Time window: -1 to +1 s.
+
+(H) Proportion of responsive versus non-responsive BA→DMS neurons to unconditioned stimulus. Stacked bar chart showing percentage classifications (responsive in red, non-responsive in gray). Total neuron count indicated (n=17).
+
+
+FIGURE 2 (SUPPLEMENTARY): Optogenetic identification of BA projection neurons
+
+(A) Representative raster plot of optotagging response for a BA→PFC neuron. Blue shaded area (0-10 ms) indicates 10-ms light pulse delivery. Each row represents one optogenetic stimulation trial. Black dashed line indicates light onset (time 0). Time window: -20 to +20 ms relative to light onset.
+
+(B) Population heatmap of z-scored firing rates for BA→PFC projection neurons during optogenetic stimulation (n=15 neurons). Each row represents one neuron, sorted by shock response onset latency (matching order from Figure 1B). Color scale represents z-score. Time window: -20 to +20 ms.
+
+(C) Representative raster plot of optotagging response for a BA→DMS neuron. Blue shaded area (0-10 ms) indicates light pulse. Time window: -20 to +20 ms relative to light onset.
+
+(D) Population heatmap of z-scored firing rates for BA→DMS projection neurons during optogenetic stimulation (n=17 neurons). Neurons sorted by shock response onset latency. Time window: -20 to +20 ms.
+
+
+================================================================================
+METHODS
+================================================================================
+Data Analysis
+
+Spike times were extracted from sorted units and converted to seconds. For each neuron, spike times were aligned to shock onset and binned into 1-ms bins for peri-stimulus time histogram (PSTH) construction spanning -1000 ms to +1000 ms relative to stimulus onset. Z-score normalization was performed separately for each neuron to account for differences in baseline firing rates. For each neuron, the mean and standard deviation of spike counts were calculated exclusively from the baseline period (-1000 to 0 ms pre-stimulus). Z-scored activity was then computed for all time points as: z(t) = [spike_count(t) - mean_baseline] / std_baseline, where spike_count(t) is the raw spike count in bin t, mean_baseline is the average spike count during the baseline period, and std_baseline is the standard deviation of spike counts during the baseline period. Z-scored PSTHs were smoothed using a Savitzky-Golay filter (polynomial order 3, frame length 201 ms for shock responses; 3 ms for optogenetic responses) to reduce high-frequency noise while preserving the temporal structure of neural responses. Neurons were classified as responsive to the unconditioned stimulus if their z-scored activity exceeded ±2 standard deviations (|z| ≥ 2) at any point within a 600-ms window following stimulus onset (0-600 ms post-shock). Response onset latency was calculated as the time of the first bin exceeding threshold within the response window. Neurons were sorted in heatmap visualizations by response onset latency to reveal the temporal sequence of population activation. For population-averaged firing rate traces, spike counts were converted to firing rates (spikes/second) by dividing by bin width (0.001 s) and the number of trials. Mean firing rates and standard error of the mean (SEM) were calculated across all neurons within each projection group (BA→PFC or BA→DMS) at each time point.
+
+
+

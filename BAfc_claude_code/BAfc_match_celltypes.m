@@ -22,14 +22,15 @@ for i = 1:length(cell_metrics.cellID)
     matched = false;
     for j = 1:length(cell_ids)
         if strcmp(cell_metrics.animal{i}, animals{j}) && ...
-           strcmp(cell_metrics.brainRegion{i}, brain_regions{j}) && ...
            cell_metrics.cellID(i) == cell_ids(j) && ...
            cell_metrics.cluID(i) == clu_ids(j)
-           if trough_to_peak_corrected_ms(j) < 0.4
+           if trough_to_peak_corrected_ms(j) < 0.4 && cell_metrics.firingRate(i) > 10
                cell_metrics.putativeCellType{1,i} = 'IN';
            else
                cell_metrics.putativeCellType{1,i} = 'PN';
            end
+           cell_metrics.spikes.ttp(i,1) = trough_to_peak_corrected_ms(j);
+           cell_metrics.spikes.half_width(i,1) = half_width_corrected_ms(j);
            num_matched = num_matched + 1;
            matched = true;
            break;

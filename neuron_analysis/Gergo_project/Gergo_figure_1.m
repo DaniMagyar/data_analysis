@@ -19,7 +19,7 @@ g.fullPaths_DMS = fullfile(g.subfolders.DMS, {folderList_DMS.name});
 g.pre_time = 1;
 g.post_time = 1;
 g.bin_time = 0.005;
-g.smoothvalue = 20;
+g.smoothvalue = 21;
 g.timeaxis = -g.pre_time:g.bin_time:g.post_time;
 g.colors = BAfc_colors;
 g.test_time = 0.6;
@@ -224,7 +224,7 @@ clearvars -except g order_DMS order_PFC
 %% PSTH
 psth_spx =  BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', 'optoTTL', 'pre_time', g.optopre, 'post_time', g.optopost, 'bin_time', g.optobin);
 psth_spx_zscore = zscore(psth_spx,0,2);
-%psth_spx_zscore = smoothdata(psth_spx_zscore,2,'sgolay', 3);
+psth_spx_zscore = smoothdata(psth_spx_zscore,2,'sgolay', 3);
 idx_PFC = strcmp(g.cell_metrics.projection, 'PFC')';
 idx_DMS = strcmp(g.cell_metrics.projection, 'DMS')';
 psth_spx_zscore_PFC = psth_spx_zscore(idx_PFC,:);

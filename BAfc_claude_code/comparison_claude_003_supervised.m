@@ -20,8 +20,10 @@ recordings = {...
     'MD299_001_kilosort',...
     'MD300_001_kilosort',...
     'MD304_001_kilosort',...
+    'MD305_001_kilosort',...
     'MD307_001_kilosort',...
     'MD309_001_kilosort',...
+    'MD310_001_kilosort',...
     'MD311_002_kilosort',...
     'MD312_001_kilosort',...
     'MD313_001_kilosort',...
@@ -56,13 +58,13 @@ g.k_max = 10;                   % Maximum k to test for optimal k determination
 % Onset Detection Parameters
 g.testvalue = 3;                % significance threshold (z-score)
 g.onset_threshold = g.testvalue; % z-score threshold for onset
-g.bin_time = 0.01;
+g.bin_time = 0.001;
 g.min_consec_bins = max(1, round(0.02 / g.bin_time)); % minimum consecutive bins (20 ms)
 
-g.smoothvalue = 5;
+g.smoothvalue = 101;
 g.plotwin = [0.5 1];
 g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
-g.clim = [-5.5 13];
+g.clim = [-2 5];
 
 % ROI for k-means/PCA (time axis for cluster comparison plot: +/- 0.5 s)
 g.roi = g.pre_time/g.bin_time+1:(g.pre_time+g.test_time)/g.bin_time; % 0 to 0.5s from stimulus onset (for latency check)
@@ -71,7 +73,7 @@ g.timeaxis_pca = -0.5:g.bin_time:0.5;
 
 g.bR = 'LA';
 idx_PN = strcmp(g.cell_metrics.brainRegion, g.bR) & strcmp(g.cell_metrics.putativeCellType, 'PN');
-% idx_PN = strcmp(g.cell_metrics.brainRegion, g.bR);
+%idx_PN = strcmp(g.cell_metrics.brainRegion, g.bR);
 %% Prepare data
 
 PSTHall = [];
