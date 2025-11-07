@@ -37,17 +37,17 @@ g.cell_metrics = BAfc_match_celltypes('cell_metrics', g.cell_metrics);
 clearvars -except g
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
 g.colors = BAfc_colors;
-g.fontSize1 = 14;  % Title font size
-g.fontSize2 = 12;  % Axis font size
+g.fontSize1 = 10;  % Title font size
+g.fontSize2 = 10;  % Axis font size
 
 %% Initialize figure (A4 dimensions: 210mm x 297mm = 8.27" x 11.69" at 96 DPI)
-fig = figure('Position', [0, 0, 1500, 1500], 'Units', 'pixels');  % A4 size
+fig = figure('Position', [0, 0, 1000, 1000], 'Units', 'pixels');  % A4 size
 t = tiledlayout(fig, 4, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 %% ROW 1: Experimental setup and example traces
 panel_experimental_setup(t, g, 1, [1 2]);  % Spans 2 columns
-panel_example_traces(t, g, 3, 'Example 1');
-panel_example_traces(t, g, 4, 'Example 2');  % Duplicate for now
+panel_example_traces(t, g, 3, 'Example CS response', 'MD312_001', 84);
+panel_example_traces(t, g, 4, 'Example US response', 'MD292_002', 32);
 
 %% ROW 2: ISI examples, spike features, and waveforms
 panel_example_ISI(t, g, 5, 'PN');
@@ -83,34 +83,73 @@ function panel_experimental_setup(t, g, tile_num, tile_span)
     title(ax, 'Experimental setup', 'FontSize', g.fontSize1);
 end
 
-function panel_example_traces(t, g, tile_num, example_name)
+function panel_example_traces(t, g, tile_num, example_name, animal, channel)
     % Panel: Example raw traces and PSTH
-    % Raw traces
-    rawMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\temp_wh_ch32.mat']);
-    rawMD292_002 = rawMD292_002.temp_wh_Ch32.values * 0.195; % convert to mV
-    cellID = intersect(find(strcmp(g.cell_metrics.animal, 'MD292_002')), find(g.cell_metrics.cluID == 341));
-    ttlMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\TTLsKS.mat']);
-    ttlMD292_002 = ttlMD292_002.shocks([5 7 36 41 43 47]);
-    twin = [-0.01 0.04];
+    twin = [-0.04 0.06];
     fs = 30000;
+
+    % Load data based on example number
+    if tile_num == 3
+        % Example 1: MD312_001
+        rawMD312_001 = load([g.mainFolder '\MD312_001_kilosort\kilosort25preprocess\temp_wh_ch_122.mat']);
+        rawMD312_001 = rawMD312_001.temp_wh_Ch122.values * 0.195; % convert to mV
+        ttlMD312_001 = load([g.mainFolder '\MD312_001_kilosort\kilosort25preprocess\TTLsKS.mat']);
+        ttlMD312_001 = ttlMD312_001.triptest_sound_only([2 3 4 5 6], :);
+
+        raw_data = rawMD312_001;
+        ttl_data = ttlMD312_001;
+    else
+        % Example 2: MD292_002
+        rawMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\temp_wh_ch32.mat']);
+        rawMD292_002 = rawMD292_002.temp_wh_Ch32.values * 0.195; % convert to mV
+        ttlMD292_002 = load([g.mainFolder '\MD292_002_kilosort\kilosort25preprocess\TTLsKS.mat']);
+        ttlMD292_002 = ttlMD292_002.shocks([5 7 36 41 43 47], :);
+
+        raw_data = rawMD292_002;
+        ttl_data = ttlMD292_002;
+    end
 
     % Subplot 1: Raw traces
     ax1 = nexttile(t, tile_num, [1 1]);
     hold(ax1, 'on');
-    for ii = 1:size(ttlMD292_002, 1)
-        sn_curr = ttlMD292_002(ii, 1) * fs;
+    for ii = 1:size(ttl_data, 1)
+        sn_curr = ttl_data(ii, 1) * fs;
         timeaxis = linspace(twin(1), twin(2), (twin(2)-twin(1))*fs) * 1000;
-        plot(ax1, timeaxis, rawMD292_002(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0]);
+        plot(ax1, timeaxis, raw_data(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0]);
     end
+    xlim(ax1, [twin(1)*1000, twin(2)*1000]);
     ylabel(ax1, 'Voltage (mV)', 'FontSize', g.fontSize2);
-    ylim(ax1, [-0.5 0.3]);
-    yticks(ax1, [-0.5 -0.1 0.3]);
+
+    % Set ylim based on example
+    if tile_num == 3
+        ylim(ax1, [-0.12 0.1]);
+        yticks(ax1, [-0.1 0 0.1]);
+    else
+        ylim(ax1, [-0.5 0.3]);
+        yticks(ax1, [-0.5 -0.1 0.3]);
+    end
+
     set(ax1, 'FontSize', g.fontSize2);
-    ax1.XColor = 'none';
     yLimits = get(ax1, 'YLim');
-    fill(ax1, [0 10 10 0], [yLimits(1) yLimits(1) yLimits(2) yLimits(2)], [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+
+    % Add stimulus indicators
+    if tile_num == 3
+        % Example 1 (CS): Add speaker symbol (red)
+        text(ax1, 7, yLimits(2), '🔊', 'Color', 'r', 'FontSize', 16, 'FontWeight', 'bold', ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
+    else
+        % Example 2 (US): Add gray shaded area and lightning bolt (red, bold)
+        fill(ax1, [0 10 10 0], [yLimits(1) yLimits(1) yLimits(2) yLimits(2)], [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+        text(ax1, 5, yLimits(2), '⚡', 'Color', 'r', 'FontSize', 20, 'FontWeight', 'bold', ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
+    end
+
+    % Add dashed line at time 0
+    plot(ax1, [0 0], yLimits, '--k', 'LineWidth', 1);
+
     ax1.Layer = 'top';
     ax1.Box = 'off';
+    xlabel(ax1, 'Time (ms)', 'FontSize', g.fontSize2);
     title(ax1, example_name, 'FontSize', g.fontSize1);
 end
 
@@ -154,7 +193,7 @@ function panel_example_ISI(t, g, tile_num, cell_type)
     ylim_acg = ylim(acg_ax);
     y = ylim_acg(1) - (ylim_acg(2)-ylim_acg(1))*0.1;
     plot(acg_ax, [160 200], [y y], 'k', 'LineWidth', 2);
-    text(acg_ax, 180, y - (ylim_acg(2)-ylim_acg(1))*0.08, '20 ms', 'HorizontalAlignment', 'center', 'FontSize', g.fontSize2-2);
+    text(acg_ax, 180, y - (ylim_acg(2)-ylim_acg(1))*0.08, '20 ms', 'HorizontalAlignment', 'center', 'FontSize', g.fontSize2);
     acg_ax.XColor = 'none';
     acg_ax.YColor = 'none';
 
@@ -164,7 +203,7 @@ function panel_example_ISI(t, g, tile_num, cell_type)
     hold(wf_ax, 'on');
     y = min(g.cell_metrics.waveforms.filt{cellID}) * 1.2;
     plot(wf_ax, [33 48], [y y], 'k', 'LineWidth', 2);
-    text(wf_ax, 40, y*1.2, '0.5 ms', 'HorizontalAlignment', 'center', 'FontSize', g.fontSize2-2);
+    text(wf_ax, 40, y*1.2, '0.5 ms', 'HorizontalAlignment', 'center', 'FontSize', g.fontSize2);
     wf_ax.XColor = 'none';
     wf_ax.YColor = 'none';
 end
@@ -243,8 +282,8 @@ function panel_normalized_waveforms(t, g, tile_num)
         [mean_PN + std_PN, fliplr(mean_PN - std_PN)], ...
         g.colors.PN_secondary, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
     plot(ax, timeaxis(13:48), mean_PN, 'Color', g.colors.PN_primary, 'LineWidth', 3);
-    text(ax, 0.2, -2, ['PN (n=' num2str(sum(idx_PN)) ')'], 'Color', g.colors.PN_primary, 'FontSize', g.fontSize2-1);
-    text(ax, 0.2, -2.5, ['IN (n=' num2str(sum(idx_IN)) ')'], 'Color', g.colors.IN_primary, 'FontSize', g.fontSize2-1);
+    text(ax, 0.2, -2, ['PN (n=' num2str(sum(idx_PN)) ')'], 'Color', g.colors.PN_primary, 'FontSize', g.fontSize2);
+    text(ax, 0.2, -2.5, ['IN (n=' num2str(sum(idx_IN)) ')'], 'Color', g.colors.IN_primary, 'FontSize', g.fontSize2);
     xlabel(ax, 'Time (ms)', 'FontSize', g.fontSize2);
     ylabel(ax, 'Z-score', 'FontSize', g.fontSize2);
     xlim_curr = xlim(ax);
@@ -277,13 +316,13 @@ function panel_firing_rate_distribution(t, g, tile_num, brain_region)
         hold(ax, 'on');
         histogram(ax, firing_rate_PN, 'BinEdges', bin_edges, 'FaceColor', g.colors.PN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
         histogram(ax, firing_rate_IN, 'BinEdges', bin_edges, 'FaceColor', g.colors.IN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2-1, 'Location', 'northeast');
+        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast');
     else
         % All neurons together
         firing_rate = g.cell_metrics.firingRate(idx_region);
         bin_edges = logspace(log10(0.1), log10(30), 20);
         histogram(ax, firing_rate, 'BinEdges', bin_edges, 'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2-1);
+        text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2);
     end
 
     xlabel(ax, 'Firing Rate (Hz)', 'FontSize', g.fontSize2);
@@ -320,13 +359,13 @@ function panel_burst_index_distribution(t, g, tile_num, brain_region)
         hold(ax, 'on');
         histogram(ax, burst_index_PN, 'BinEdges', bin_edges, 'FaceColor', g.colors.PN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
         histogram(ax, burst_index_IN, 'BinEdges', bin_edges, 'FaceColor', g.colors.IN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2-1, 'Location', 'northeast');
+        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast');
     else
         % All neurons together
         burst_index = g.cell_metrics.burstIndex_Royer2012(idx_region);
         bin_edges = logspace(log10(0.1), log10(100), 20);
         histogram(ax, burst_index, 'BinEdges', bin_edges, 'FaceColor', [0.5 0.5 0.5], 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2-1);
+        text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2);
     end
 
     xlabel(ax, 'Burst Index', 'FontSize', g.fontSize2);

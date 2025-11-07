@@ -196,113 +196,106 @@ All scripts generate publication-ready figures with `tiledlayout` for multi-pane
 ## Dependencies
 Requires functions from `../BA_fear_cond_project/` (BAfc toolbox) and Open Ephys analysis tools.
 
-## Gergo_figure_1_claude.m - Publication-Ready Figure Configuration
+## Gergo_figure_1_claude.m - Publication-Ready Individual Panel Export
 
-Located in `Gergo_claude/Gergo_figure_1_claude.m`, this is an optimized version of `Gergo_figure_1.m` for publication export.
+Located in `Gergo_claude/Gergo_figure_1_claude.m`, this is an optimized version of `Gergo_figure_1.m` that exports individual panels as separate PNG files for publication assembly.
 
 ### Figure Specifications
 
-**Figure 1 (Main)**: 60×25 cm at 300 DPI
-- 2×4 tile layout comparing BA→PFC vs BA→DMS projection neurons
-- Panels: A-H (raster examples, heatmaps, population activity, responsive percentages)
+**Output**: 14 separate PNG files (8 main + 4 supplementary + 2 colorbars) at 300 DPI
+- **Panel dimensions**: 5×4.4 cm (sized so 4 panels fit side-by-side in Word)
+- **Colorbar dimensions**: 3×4.4 cm (narrower panels)
+- **Output folder**: `Gergo_claude/` subfolder
+- All panels are identically sized for consistent layout
 
-**Figure 2 (Supplementary)**: 45×25 cm at 300 DPI
-- 2×3 tile layout for optotagging validation
-- Panels: A-F (rasters, light response heatmaps, z-scored activity)
+### Font and Style Settings
+Optimized for small panel size with no labels:
+- `g.fontSize2 = 10`: Axis tick labels (Arial)
+- `g.fontSize1 = 10`: Not used (titles removed)
+- `g.xlinewidth = 1.5`: Stimulus marker line
+- `g.axisLineWidth = 1`: Axis lines
+- `g.markerSize = 3`: Raster dots
+- **Percentage labels on bar charts**: FontSize 8
+- **No titles, no axis labels** (removed for clean appearance)
 
-### Font Sizing for Export
-All fonts scaled for 60×25 cm figure that will be resized in Word:
-- `g.fontSize2 = 22`: Axis labels (scales to ~6-7pt)
-- `g.fontSize1 = 25`: Titles (scales to ~8pt)
-- `g.xlinewidth = 3`: Stimulus marker line
-- `g.axisLineWidth = 2`: Axis lines
-- `g.markerSize = 8`: Raster dots
+### Panel Layout Details
 
-### Figure Layout Details
+**Main Figure (8 panels)**:
+- **Panel 1**: PFC example raster (first 80 trials, black dashed line at t=0)
+- **Panel 2**: PFC US response heatmap (no colorbar, neurons sorted by onset)
+- **Panel 3**: PFC population firing rate (Hz) with SEM shading
+- **Panel 4**: PFC responsiveness bar chart (stacked: gray=non-responsive, red=responsive)
+  - Percentage labels: 8pt font
+  - Sample size text: positioned at (0.80, 0.45) in normalized coordinates
+  - No legend
+- **Panel 5**: DMS example raster (first 80 trials)
+- **Panel 6**: DMS US response heatmap (no colorbar)
+- **Panel 7**: DMS population firing rate with SEM
+- **Panel 8**: DMS responsiveness bar chart (same style as Panel 4)
 
-**Panel A/E**: Example rasters (BA→PFC / BA→DMS)
-- Black dashed line at stimulus onset (time 0)
-- Red lightning symbol (⚡) at x=-0.05, positioned slightly left of dashed line
-- Limited to first 80 trials for both panels
-- Marker size: 8 (scales appropriately when exported)
-- Y-label: Two lines with "BA→PFC"/"BA→DMS" (bold, fontSize2+8) on top, "Trials" (normal, fontSize2) below
+**Supplementary Figure (4 panels)**:
+- **Panel S1**: PFC optotagging raster (light blue shaded area 0-10ms)
+- **Panel S2**: PFC light response heatmap (no colorbar, ±20ms window)
+- **Panel S3**: DMS optotagging raster
+- **Panel S4**: DMS light response heatmap (±20ms window)
 
-**Panel B/F**: US response heatmaps
-- Black dashed vertical line at time 0
-- Red lightning symbol (⚡) at x=-0.05, near top of panel (y = size-2)
-- Colorbar on right side showing z-score scale
-- Titles: "US response" (non-bold, normal weight)
-- Neurons sorted by onset latency (earliest first)
+**Separate Colorbar Panels (2 panels)**:
+- **Colorbar_1_US_response.png**: For main heatmaps (Panels 2, 6)
+- **Colorbar_2_Opto_response.png**: For supplementary heatmaps (Panels S2, S4)
+- Both: 3 cm wide, white background, Z-score label, Arial 10pt
 
-**Panel C/G**: Population activity traces
-- Firing rate (Hz) with SEM shading
-- Red lightning symbol (⚡) at x=-0.05, y=60 (top of plot)
-- Line width: 3 for visibility after scaling
-- Titles: "Population activity" (non-bold, normal weight)
-
-**Panel D/H**: Stacked bar charts (responsive percentages)
-- **Stacking order**: Non-responsive (gray) at bottom, responsive (red) on top
-- Legend direction reversed to match visual order
-- Shows total neuron count: `(n=X)` positioned at (0.85, 0.55) in normalized coordinates
-- Only displays percentage labels if they round to ≥1% (avoids showing "0%")
-- Titles: "Responsiveness to US" (non-bold, normal weight)
-
-### Optotagging (Figure 2)
-
-**Figure 2 (Supplementary)**: 35×25 cm at 300 DPI
-- 2×2 tile layout (z-score panels removed)
-- Panels: A-D (rasters and light response heatmaps only)
-
-**Panels A/C**: Optotagging rasters (BA→PFC / BA→DMS)
-- Y-axis limited to actual number of trials plotted
-- Black dashed line at light stimulus onset
-- Light blue shaded area from 0-10ms indicating blue light pulse duration
-- Y-label: Two lines with "BA→PFC"/"BA→DMS" (bold, fontSize2+8) on top, "Trials" (normal, fontSize2) below
-- Titles: "Optotagging" (non-bold, normal weight)
-
-**Panels B/D**: Light response heatmaps
-- Black dashed vertical line at time 0
-- Colorbar showing z-score scale
-- Titles: "Light response" (non-bold, normal weight)
+### Axes Positioning
+All panels use standardized axes positions for consistency:
+- `axes_pos_standard = [0.30 0.25 0.60 0.65]`: Used for all 12 panels and both colorbars
+- This ensures all plot areas are identical in size regardless of panel type
+- Previously used separate `axes_pos_heatmap` for heatmaps with embedded colorbars, but now all use standard position since colorbars are separate files
 
 ### Key Parameter Settings
 ```matlab
-g.pre_time = 1;
-g.post_time = 1;
-g.bin_time = 0.001;
-g.smoothvalue = 201;
-g.test_time = 0.6;
-g.exctestvalue = 2;
-g.inhtestvalue = 2;
+% Panel dimensions
+panel_width = 5;          % cm (4 panels fit across ~17cm Word page)
+panel_height = 4.4;       % cm
+
+% PSTH parameters
+g.pre_time = 1;           % seconds before stimulus
+g.post_time = 1;          % seconds after stimulus
+g.bin_time = 0.001;       % 1 ms bins
+g.smoothvalue = 201;      % Savitzky-Golay smoothing window
+g.test_time = 0.6;        % Response analysis window
+g.exctestvalue = 2;       % Z-score threshold for excitation
+g.inhtestvalue = 2;       % Z-score threshold for inhibition
+
+% Optotagging parameters
+g.optopre = 0.02;         % 20 ms before light
+g.optopost = 0.02;        % 20 ms after light
+g.optobin = 0.001;        % 1 ms bins
 ```
 
-### Export Instructions
-1. Run script to generate figures
-2. Use `exportgraphics(gcf, 'figure_name.tiff', 'Resolution', 300)`
-3. Insert into Word/PowerPoint
-4. Resize to desired final dimensions (~18-20 cm width)
-5. Fonts will scale appropriately to publication standards
+### Usage Instructions
+1. Run `Gergo_figure_1_claude` in MATLAB
+2. Script generates 14 PNG files in `Gergo_claude/` folder
+3. Insert panels into Word/PowerPoint as needed
+4. Add panel labels (A, B, C, etc.) manually in Word
+5. Place colorbar panels adjacent to corresponding heatmaps
 
 ### Design Decisions
-- **Black dashed lines** at stimulus onset (time 0) for all plots - more visible than gray
-- **Baseline z-scoring**: Z-score calculated from baseline period only (pre-stimulus) for US response
-- **Color scale**: Uses percentile clipping (0.5-99.5%) to avoid extreme value dominance
-- **Neuron sorting**: By onset latency (earliest responders first) for clearer temporal patterns
-- **Consistent styling**: All panels use same line widths, fonts, and marker sizes for uniformity
-- **Lightning symbols**: Red lightning symbols (⚡) rendered as figure-level annotations using `annotation('textbox',...)` to ensure they appear on top of all plot elements including dashed lines. Positioned at x=-0.05 (slightly left of stimulus line) using normalized figure coordinates calculated from axes positions.
+- **Individual panels**: All panels saved separately for flexible assembly in publications
+- **No embedded labels**: Titles and axis labels removed for clean appearance
+- **Uniform sizing**: All 12 data panels are identical dimensions (5×4.4 cm)
+- **Separate colorbars**: Heatmap colorbars exported as standalone files for flexibility
+- **Black dashed lines**: At stimulus onset (time 0) for clear temporal reference
+- **Baseline z-scoring**: Z-score calculated from pre-stimulus baseline period only
+- **Color scale**: Uses percentile clipping (0.5-99.5%) to avoid outlier dominance
+- **Neuron sorting**: By onset latency (earliest responders first)
 
 ### Sample Sizes
 - BA→PFC neurons: n=15
 - BA→DMS neurons: n=17
 
-### Lightning Symbol Implementation
-Lightning symbols are placed on panels A, B, C, E, F, G using figure-level annotations after all axes elements are drawn. This ensures they appear on top of everything (raster dots, heatmap data, traces, and dashed lines). Example positioning:
-```matlab
-annotation('textbox', [0.14, 0.925, 0.01, 0.01], ...
-    'String', '\bf\fontsize{35}\color{red}⚡', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FitBoxToText', 'off');
-```
-Normalized figure coordinates are manually adjusted for each panel to position at shock onset.
+### MATLAB Compatibility Notes
+- Uses `caxis()` instead of `clim()` for older MATLAB versions (pre-R2022a)
+- Uses `set(ax, 'CLim', ...)` for colorbar panels
+- Uses `exportgraphics()` which requires MATLAB R2020a or later
 
 ## Publication Materials
 

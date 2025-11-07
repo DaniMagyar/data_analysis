@@ -1,95 +1,69 @@
-% BAfc_figure_monosynaptic.m
-clear all
-%% ===== USER CONFIGURATION =====
+function BAfc_plot_monosynaptic_heatmaps(cell_metrics, responsive_results, ttl, params)
+% BAfc_plot_monosynaptic_heatmaps - Plot monosynaptic response heatmaps
+%
+% SYNTAX:
+%   BAfc_plot_monosynaptic_heatmaps(cell_metrics, responsive_results, ttl, params)
+%
+% INPUTS:
+%   cell_metrics       - Cell metrics structure from BAfc_load_neurons
+%   responsive_results - Results from BAfc_identify_responsive_neurons_v2
+%   ttl                - Cell array of TTL event types
+%   params             - Parameters from BAfc_monosyn_params (optional)
+%
+% DESCRIPTION:
+%   Creates heatmap visualization of monosynaptic responses across:
+%   - Brain regions (from responsive_results.analyzed_regions)
+%   - Cell types (PN, IN)
+%   - Stimuli (CS, US, CS+US)
+%
+%   Neurons are sorted by category:
+%   1. CS only (sorted by CS latency)
+%   2. US only (sorted by US latency)
+%   3. Both CS and US (sorted by CS+US latency)
+%
+% AUTHOR: Claude Code
+% DATE: 2025-10-28
 
-recordings = {...
-    'MD292_002_kilosort',...
-    'MD293_001_kilosort',...
-    'MD294_001_kilosort',...
-    'MD295_001_kilosort',...
-    'MD296_001_kilosort',...
-    'MD297_001_kilosort',...
-    'MD298_001_kilosort',...
-    'MD299_001_kilosort',...
-    'MD300_001_kilosort',...
-    'MD304_001_kilosort',...
-    'MD305_001_kilosort',...
-    'MD307_001_kilosort',...
-    'MD309_001_kilosort',...
-    'MD310_001_kilosort',...
-    'MD311_002_kilosort',...
-    'MD312_001_kilosort',...
-    'MD313_001_kilosort',...
-    'MD314_001_kilosort',...
-    'MD315_001_kilosort',...
-    'MD316_002_kilosort',...
-    'MD317_001_kilosort',...
-    'MD318_001_kilosort',...
-    'MD318_002_kilosort',...
-    'MD319_003_kilosort'};
+%% Validate inputs
+if nargin < 4
+    params = BAfc_monosyn_params();
+end
 
-% Stimulus selection
-ttl = {'triptest_sound_only','triptest_shocks_only', 'triptest_both'};
+%% Setup parameters
+g.bin_time = params.bin_time;
+g.pre_time = params.pre_time;
+g.post_time = params.post_time;
+g.plotwin = [params.heatmap_plotwin params.heatmap_plotwin];
+g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
+g.clim = params.heatmap_clim;
+g.smoothvalue = params.smoothvalue;
+g.colors = BAfc_colors;
+g.fontSize1 = params.fontSize_title;
+g.fontSize2 = params.fontSize_axis;
+g.xlinewidth = params.linewidth_stimulus;
 
-%% ===== LOAD DATA =====
-
-fprintf('\nLoading neural data...\n');
-g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', ttl);
-g.cell_metrics = BAfc_match_celltypes('cell_metrics', g.cell_metrics);
-
-%% ===== PARAMETERS =====
-
-fprintf('\nLoading default parameters...\n');
-
-% Get default parameters (modify BAfc_optogenetics_params.m to change defaults)
-params = BAfc_optogenetics_params();
-g.params = params;
-% Override specific parameters here if needed for this figure
-% params.zscore_threshold = 8;  % Example: use lower threshold
-% params.bR = 'LA';             % Example: only analyze LA neurons
-
-fprintf('\nIdentifying responsive neurons...\n');
-responsive_results = BAfc_identify_responsive_neurons(g.cell_metrics, ttl, params);
-
-% BAfc_monosyn_raster_ui(g, responsive_results, ttl);
-
-%% ===== FIGURE: MONOSYNAPTIC RESPONSE HEATMAPS =====
-
-% Define brain regions and cell types to plot
-brain_regions = {'LA', 'BA'};
+% Get brain regions and cell types from results
+brain_regions = responsive_results.analyzed_regions;
 cell_types = {'PN', 'IN'};
 stimulus_names = {'CS (Sound)', 'US (Shock)', 'CS+US (Both)'};
 
-% Heatmap parameters
-g.bin_time = params.bin_time;
-g.pre_time = 5;
-g.post_time = 5;
-g.plotwin = [0.1 0.1];  % -0.1 to 0.1s window
-g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
-g.clim = [-5.5 13];
-g.smoothvalue = 5;
-g.colors = BAfc_colors;
-g.fontSize1 = 13;
-g.fontSize2 = 12;
-g.xlinewidth = 2;
-
-% Calculate PSTHs ONCE for all stimuli (much faster)
+%% Calculate PSTHs once for all stimuli
 fprintf('\nCalculating PSTHs for all stimuli...\n');
 psth_all = cell(1, length(ttl));
 for stim_idx = 1:length(ttl)
     fprintf('  %s...\n', ttl{stim_idx});
-    psth_spx = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{stim_idx}, ...
+    psth_spx = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{stim_idx}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
     psth_spx = zscore(psth_spx, 0, 2);
     psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
     psth_all{stim_idx} = psth_spx;
 end
 
-% First, identify all neurons responsive to ANY stimulus for each group
+%% Identify and sort neurons for each group
 fprintf('\nIdentifying neurons responsive to ANY stimulus...\n');
 group_neurons = struct();
-
 group_idx = 1;
+
 for br_idx = 1:length(brain_regions)
     for ct_idx = 1:length(cell_types)
         br = brain_regions{br_idx};
@@ -107,8 +81,8 @@ for br_idx = 1:length(brain_regions)
             if ~isempty(responsive_idx)
                 % Get all neuron indices and filter by brain region and cell type
                 all_neuron_idx = responsive_results.(ttl_fn).all_neuron_idx(responsive_idx);
-                all_brain_regions = g.cell_metrics.brainRegion(all_neuron_idx);
-                all_cell_types = g.cell_metrics.putativeCellType(all_neuron_idx);
+                all_brain_regions = cell_metrics.brainRegion(all_neuron_idx);
+                all_cell_types = cell_metrics.putativeCellType(all_neuron_idx);
 
                 % Find neurons matching this brain region and cell type
                 group_mask = strcmp(all_brain_regions, br) & strcmp(all_cell_types, ct);
@@ -182,9 +156,8 @@ for br_idx = 1:length(brain_regions)
                 category_2 = [category_2; neuron_idx];
                 latency_2 = [latency_2; us_latencies(neuron_idx)];
             elseif is_cs && is_us
-                % Category 3: Both CS and US - sort by CS+US latency
+                % Category 3: Both CS and US
                 category_3 = [category_3; neuron_idx];
-                % Check if neuron is responsive to CS+US, otherwise use CS latency as fallback
                 if isKey(csus_latencies, neuron_idx)
                     latency_3 = [latency_3; csus_latencies(neuron_idx)];
                 else
@@ -193,7 +166,7 @@ for br_idx = 1:length(brain_regions)
             end
         end
 
-        % Sort within each category by latency (ascending - earliest first)
+        % Sort within each category by latency
         sorted_neurons = [];
         if ~isempty(category_1)
             [~, sort_idx] = sort(latency_1, 'ascend');
@@ -220,19 +193,19 @@ for br_idx = 1:length(brain_regions)
     end
 end
 
-% Create figure: 4 groups x 3 stimuli
-fig = figure('Position', [50 50 1400 1000]);
-t = tiledlayout(fig, 4, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+%% Create heatmap figure
+n_groups = length(group_neurons);
+fig = figure('Position', [50 50 1400 max(600, n_groups * 250)]);
+t = tiledlayout(fig, n_groups, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-% Now plot heatmaps with consistent neuron ordering
 fprintf('\nGenerating heatmaps...\n');
-for group_idx = 1:length(group_neurons)
+for group_idx = 1:n_groups
     br = group_neurons(group_idx).br;
     ct = group_neurons(group_idx).ct;
     neuron_list = group_neurons(group_idx).neurons;
 
     if isempty(neuron_list)
-        % No neurons for this group - create empty tiles
+        % No neurons for this group
         for stim_idx = 1:length(ttl)
             nexttile(t, (group_idx-1)*3 + stim_idx);
             text(0.5, 0.5, sprintf('No %s %s neurons', br, ct), 'HorizontalAlignment', 'center');
@@ -248,10 +221,10 @@ for group_idx = 1:length(group_neurons)
         % Use pre-calculated PSTH
         psth_spx = psth_all{stim_idx};
 
-        % Extract data for the group neurons (already sorted)
+        % Extract data for the group neurons
         psth_group = psth_spx(neuron_list, :);
 
-        % Extract plot window (-0.1 to 0.1s)
+        % Extract plot window
         plot_bins = round((g.pre_time - g.plotwin(1))/g.bin_time + 1 : (g.pre_time + g.plotwin(2))/g.bin_time);
         matrix = psth_group(:, plot_bins);
 
@@ -273,7 +246,7 @@ for group_idx = 1:length(group_neurons)
             title(stimulus_names{stim_idx}, 'FontSize', g.fontSize1);
         end
 
-        if group_idx == 4
+        if group_idx == n_groups
             xlabel('Time from Stimulus Onset (s)', 'FontSize', g.fontSize2);
         end
 
@@ -287,7 +260,9 @@ ylabel(cb, 'Z-score Firing Rate', 'FontSize', g.fontSize2);
 cb.Layout.Tile = 'east';
 
 % Overall title
-t.Title.String = 'Monosynaptically Responsive Neurons (-0.1 to 0.1s)';
+region_str = strjoin(brain_regions, ', ');
+t.Title.String = sprintf('Monosynaptically Responsive Neurons: %s (%.0f to %.0f ms)', ...
+    region_str, -g.plotwin(1)*1000, g.plotwin(2)*1000);
 t.Title.FontSize = g.fontSize1 + 2;
 
 fprintf('\nHeatmap figure complete!\n');
@@ -319,7 +294,7 @@ for br_idx = 1:length(brain_regions)
         group_name = sprintf('%s_%s', br, ct);
 
         % Get all neurons in this group
-        all_idx = find(strcmp(g.cell_metrics.brainRegion, br) & strcmp(g.cell_metrics.putativeCellType, ct));
+        all_idx = find(strcmp(cell_metrics.brainRegion, br) & strcmp(cell_metrics.putativeCellType, ct));
 
         % Find responsive neurons
         cs_group = intersect(cs_responsive, all_idx);
@@ -425,8 +400,8 @@ for stim_idx = 1:length(ttl)
 
             % Get responsive neurons for this group
             all_neuron_idx = responsive_results.(ttl_fn).all_neuron_idx(responsive_results.(ttl_fn).responsive_idx);
-            all_brain_regions = g.cell_metrics.brainRegion(all_neuron_idx);
-            all_cell_types = g.cell_metrics.putativeCellType(all_neuron_idx);
+            all_brain_regions = cell_metrics.brainRegion(all_neuron_idx);
+            all_cell_types = cell_metrics.putativeCellType(all_neuron_idx);
 
             group_mask = strcmp(all_brain_regions, br) & strcmp(all_cell_types, ct);
 
@@ -437,7 +412,6 @@ for stim_idx = 1:length(ttl)
             % Get latency data
             mean_latencies = responsive_results.(ttl_fn).mean_latency(group_mask);
 
-            % Note: std_latency not available in responsive_results
             % Using latency variability across population as proxy for temporal precision
             population_latency_std = std(mean_latencies);
 
@@ -665,13 +639,13 @@ for stim_idx = 1:length(ttl)
             if isfield(temporal_stats, group_name) && isfield(temporal_stats.(group_name), ttl_fn)
                 % Get latencies for this group
                 all_neuron_idx = responsive_results.(ttl_fn).all_neuron_idx(responsive_results.(ttl_fn).responsive_idx);
-                all_brain_regions = g.cell_metrics.brainRegion(all_neuron_idx);
-                all_cell_types = g.cell_metrics.putativeCellType(all_neuron_idx);
+                all_brain_regions = cell_metrics.brainRegion(all_neuron_idx);
+                all_cell_types = cell_metrics.putativeCellType(all_neuron_idx);
 
                 group_mask = strcmp(all_brain_regions, br) & strcmp(all_cell_types, ct);
                 latencies = responsive_results.(ttl_fn).mean_latency(group_mask);
 
-                all_latencies.(group_name) = latencies;  % Already in ms from responsive_results
+                all_latencies.(group_name) = latencies;
             end
         end
     end
@@ -680,8 +654,17 @@ for stim_idx = 1:length(ttl)
     ax = nexttile(t_lat, stim_idx);
     hold on;
 
-    colors_plot = struct('LA_PN', [0 0.4470 0.7410], 'LA_IN', [0.8500 0.3250 0.0980], ...
-                        'BA_PN', [0.4940 0.1840 0.5560], 'BA_IN', [0.4660 0.6740 0.1880]);
+    % Dynamic color assignment for any brain region
+    default_colors = lines(length(brain_regions) * 2);  % Generate enough colors
+    colors_plot = struct();
+    color_idx = 1;
+    for br_idx = 1:length(brain_regions)
+        for ct_idx = 1:length(cell_types)
+            group_name = sprintf('%s_%s', brain_regions{br_idx}, cell_types{ct_idx});
+            colors_plot.(group_name) = default_colors(color_idx, :);
+            color_idx = color_idx + 1;
+        end
+    end
 
     for br_idx = 1:length(brain_regions)
         for ct_idx = 1:length(cell_types)
@@ -705,6 +688,18 @@ for stim_idx = 1:length(ttl)
 end
 
 % Plot latency comparison for dual-responsive neurons
+% Generate colors once for all panels
+default_colors = lines(length(brain_regions) * 2);
+colors_plot = struct();
+color_idx = 1;
+for br_idx = 1:length(brain_regions)
+    for ct_idx = 1:length(cell_types)
+        group_name = sprintf('%s_%s', brain_regions{br_idx}, cell_types{ct_idx});
+        colors_plot.(group_name) = default_colors(color_idx, :);
+        color_idx = color_idx + 1;
+    end
+end
+
 for stim_idx = 1:2
     ax = nexttile(t_lat, 3 + stim_idx);
     hold on;
@@ -715,8 +710,8 @@ for stim_idx = 1:2
             for ct_idx = 1:length(cell_types)
                 group_name = sprintf('%s_%s', brain_regions{br_idx}, cell_types{ct_idx});
                 if isfield(latency_stats, group_name)
-                    cs_lat = latency_stats.(group_name).cs_latencies;  % Already in ms
-                    us_lat = latency_stats.(group_name).us_latencies;  % Already in ms
+                    cs_lat = latency_stats.(group_name).cs_latencies;
+                    us_lat = latency_stats.(group_name).us_latencies;
                     scatter(cs_lat, us_lat, 40, colors_plot.(group_name), 'filled', 'MarkerFaceAlpha', 0.6);
                 end
             end
@@ -730,9 +725,8 @@ for stim_idx = 1:2
         axis square;
         grid on;
     else
-        % Latency difference by group - use scatter plot instead of boxplot
+        % Latency difference by group - use scatter plot
         group_labels = {};
-        latency_diffs_all = [];
         group_positions = [];
         group_colors_all = [];
 
@@ -742,7 +736,7 @@ for stim_idx = 1:2
                 group_name = sprintf('%s_%s', brain_regions{br_idx}, cell_types{ct_idx});
                 if isfield(latency_stats, group_name)
                     group_labels{end+1} = strrep(group_name, '_', ' ');
-                    diffs = latency_stats.(group_name).latency_diff;  % Already in ms
+                    diffs = latency_stats.(group_name).latency_diff;
 
                     % Add jitter to x-axis for visibility
                     x_jitter = pos + 0.2*(rand(size(diffs))-0.5);
@@ -1005,7 +999,7 @@ fprintf('\n--- 8. CELL TYPE AND REGION COMPARISONS ---\n');
 % Compare convergence rates
 fprintf('\nConvergence Rate Comparisons:\n');
 
-% LA vs BA
+% LA vs BA (if both present)
 la_convergence = [];
 ba_convergence = [];
 for ct_idx = 1:length(cell_types)
@@ -1023,8 +1017,12 @@ for ct_idx = 1:length(cell_types)
     end
 end
 
-fprintf('  LA convergence rate: %.3f ± %.3f (n=%d groups)\n', mean(la_convergence), std(la_convergence), length(la_convergence));
-fprintf('  BA convergence rate: %.3f ± %.3f (n=%d groups)\n', mean(ba_convergence), std(ba_convergence), length(ba_convergence));
+if ~isempty(la_convergence)
+    fprintf('  LA convergence rate: %.3f ± %.3f (n=%d groups)\n', mean(la_convergence), std(la_convergence), length(la_convergence));
+end
+if ~isempty(ba_convergence)
+    fprintf('  BA convergence rate: %.3f ± %.3f (n=%d groups)\n', mean(ba_convergence), std(ba_convergence), length(ba_convergence));
+end
 
 % PN vs IN
 pn_convergence = [];
@@ -1073,14 +1071,10 @@ end
 % Compare integration indices
 fprintf('\nIntegration Index Comparisons:\n');
 
-all_integration = [];
-all_groups = {};
 for br_idx = 1:length(brain_regions)
     for ct_idx = 1:length(cell_types)
         group_name = sprintf('%s_%s', brain_regions{br_idx}, cell_types{ct_idx});
         if isfield(integration_stats, group_name)
-            all_integration{end+1} = integration_stats.(group_name).integration_index;
-            all_groups{end+1} = group_name;
             fprintf('  %s: %.3f ± %.3f\n', strrep(group_name, '_', ' '), ...
                    mean(integration_stats.(group_name).integration_index), ...
                    std(integration_stats.(group_name).integration_index));
@@ -1091,6 +1085,8 @@ end
 fprintf('\n========================================\n');
 fprintf('ANALYSIS COMPLETE\n');
 fprintf('========================================\n');
+
+end
 
 % Helper function for significance stars
 function sig_str = get_sig_str(p)

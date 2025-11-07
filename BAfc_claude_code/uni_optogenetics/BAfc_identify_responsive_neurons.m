@@ -91,7 +91,8 @@ end
 % Filter for brain region
 if strcmp(params.bR, 'All')
     idx_region = strcmp(cell_metrics.brainRegion, 'LA') | ...
-                 strcmp(cell_metrics.brainRegion, 'BA');
+                 strcmp(cell_metrics.brainRegion, 'BA') | ...
+                 strcmp(cell_metrics.brainRegion, 'Astria');
 else
     idx_region = strcmp(cell_metrics.brainRegion, params.bR);
 end

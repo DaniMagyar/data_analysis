@@ -199,8 +199,8 @@ Final publication figure with modular panel organization. A4-optimized layout (1
 
 **Fonts**: All text 10pt (titles, axes, labels, legends, annotations)
 
-### BAfc_figure_2.m (figures/figure_2/, updated 2025-11-06)
-Multi-region comparison: 4 rows (LA/BA/Astria/CeA) × 5 cols (1000×800px).
+### BAfc_figure_2.m (figures/figure_2/, updated 2025-11-07)
+Multi-region comparison: 4 rows (LA/BA/AStria/CeA) × 5 cols (1000×700px).
 
 **Layout**: Cols 1-2 nested CS+US heatmaps (z-score, 99th percentile limits), col 3 stacked bar (cluster proportions), cols 4-5 separate CS/US lineplots (Hz).
 
@@ -226,18 +226,24 @@ Multi-region comparison: 4 rows (LA/BA/Astria/CeA) × 5 cols (1000×800px).
 - **FDR correction**: Benjamini-Hochberg for pairwise comparisons
 - **All 4 regions included**: LA, BA, Astria, CeA
 
+**Figure Formatting** (2025-11-07):
+- **Brain region labels**: Bold ylabel on CS heatmap (LA, BA, **AStria**, CeA)
+- **Colorbar**: Left side (cb_left=0.033, cb_bottom=0.01, cb_height=0.10, cb_width=0.010)
+- **Fonts**: All 10pt (g.fontSize1=10, g.fontSize2=10)
+- **Note**: Variable names remain "Astria" for data compatibility, display shows "AStria"
+
 **Separate Figures**:
 
 1. **US Metrics Figure** (`fig_US`, 1000×250px, 1×4 layout):
    - **Column 1**: Chi-square p-values matrix (4×4, all regions)
-     - Binary color: White (p≤0.001), Light grey (p>0.001)
+     - **Color coding**: White (n.s., p≥0.05), Light grey [0.80] (0.001≤p<0.05), Dark grey [0.50] (p<0.001)
      - No colorbar, p-values and significance stars overlaid
-   - **Columns 2-4**: US response metrics bar charts (3 regions only: LA, BA, Astria)
-     - ΔnSpikes, ΔPeak FR (Hz), Response Length (ms)
+   - **Columns 2-4**: US response metrics bar charts (3 regions only: LA, BA, **AStria**)
+     - ΔnSpikes, ΔPeak FR (Hz), Response length (ms)
      - US-selective and Multisensory neurons only (clusters 2 & 3)
      - Simple grey bars [0.6 0.6 0.6], mean ± SEM
-     - Wilcoxon rank-sum tests (3 pairwise comparisons: LA-BA, LA-Astria, BA-Astria)
-     - No y-labels (titles indicate metrics)
+     - Wilcoxon rank-sum tests (3 pairwise comparisons: LA-BA, LA-AStria, BA-AStria)
+     - No y-labels (titles indicate metrics), all titles 10pt
 
 2. **Supplementary Statistical Figure** (`fig_stats`, 1000×300px, 1×4 layout):
    - **Panel 1**: Permutation test distribution
@@ -248,23 +254,25 @@ Multi-region comparison: 4 rows (LA/BA/Astria/CeA) × 5 cols (1000×800px).
 **Heatmaps**: Black cluster lines (1pt), manual colorbar (left, 0.01 width). **Bars**: Vertical stacked (BarWidth 0.5), percentages on segments. **Lineplots**: Hz (psth_spx/trials/bin_time), separate y-limits (clusters 1-4 vs 5: 2.2× multiplier), scalebars 20/5 Hz.
 
 ### BAfc_figure_3.m (figures/figure_3/, updated 2025-11-07)
-CS+US convergence for LA/Astria responsive neurons (clusters 1-3 only). 6×2 grid (1000×1000px).
+CS+US convergence for LA/AStria responsive neurons (clusters 1-3 only). 6×2 grid (1000×1000px).
 
 **Layout**:
 - Rows 1-3: Heatmaps and lineplots (2×6 tiledlayout with tight spacing, 50% of figure)
   - Row 1: LA (6 panels)
-  - Row 2: Astria (6 panels)
+  - Row 2: AStria (6 panels)
   - Columns 1-3: CS, US, CS+US heatmaps
   - Columns 4-6: CS, US, CS+US lineplots (3 clusters stacked in nested 3×1 layouts)
 - Rows 4-6: Metrics bar charts (3×3 nested, 50% of figure)
 
-**Heatmaps**: Same neurons across CS/US/CS+US, global 99th percentile limits, onset/offset dots (MarkerSize 4), manual colorbar (Astria left, [0.025, 0.52], 0.01×0.15).
+**Heatmaps**: Same neurons across CS/US/CS+US, global 99th percentile limits, onset/offset dots (MarkerSize 4), manual colorbar (AStria left, [0.033, 0.50], 0.010×0.10).
 
-**Lineplots**: 3 stimuli × 3 clusters stacked (nested tiledlayouts), Hz (psth_spx/trials/bin_time), shared y-limits, 20 Hz scalebar on cluster 3 of CS+US panel.
+**Lineplots**: 3 stimuli × 3 clusters stacked, Hz (psth_spx/trials/bin_time), shared y-limits, 20 Hz scalebar on cluster 3 of CS+US panel.
+- **Titles**: Use regular `title()` function (not tiledlayout title) on first cluster for consistent font size with heatmaps
 
 **Bar Charts** (3 metrics): ΔnSpikes, ΔPeak FR, Response length (onset-to-offset window, baseline-subtracted).
-- **Positions**: LA [2 3 4], Astria [7 8 9]
-- **Colors**: LA darker (0.7×), Astria lighter (+0.5 blend)
+- **Positions**: LA [2 3 4], AStria [7 8 9]
+- **Colors**: LA darker (0.7×), AStria lighter (+0.5 blend)
+- **Labels**: Bold ylabel on first heatmap (LA/AStria), text labels on bar charts
 - **Error bars**: SEM (appropriate for group mean comparisons with statistical tests)
 - **Y-limits**: ΔnSpikes [0 40], ΔPeak FR [0 120], Response length [0 500] (adjustable - positioning is dynamic)
 - **Stats**: Wilcoxon signed-rank (CS vs US, CS vs CS+US, US vs CS+US), separate per region
@@ -334,17 +342,22 @@ CS vs US heatmaps with PNs/INs clustered separately (PNs top, INs bottom).
 
 ## Publication Figures (figures/figure_4/)
 
-### BAfc_figure_4.m (2025-10-29)
+### BAfc_figure_4.m (2025-10-29, updated 2025-11-07)
 
 Comprehensive monosynaptic response figure with heatmaps, bar charts, and latency analysis.
 
 **Layout**: 4×5 grid (1500×1200px)
 - **Heatmaps**: Rows 1-4, Columns 1-3
   - LA: Row 1 (spanning 2 rows), tiles 1, 2, 3
-  - Astria: Row 3 (spanning 2 rows), tiles 11, 12, 13
+  - AStria: Row 3 (spanning 2 rows), tiles 11, 12, 13
   - Shows PNs and INs separately (PNs top, INs bottom with white separator line)
 - **Bar charts**: Rows 1-3, Columns 4-5 (ΔMean FR, ΔPeak FR)
 - **Latency boxplots**: Row 4, Columns 4-5 (spanning 2 columns)
+
+**Figure Formatting** (2025-11-07):
+- **Brain region labels**: Bold ylabel on first stimulus (CS) - LA, **AStria**
+- **Fonts**: All 10pt (g.fontSize1=10, g.fontSize2=10)
+- **Note**: Variable names remain "Astria" for data compatibility, display shows "AStria"
 
 **Clustering & Sorting**:
 - **Categories**: CS-selective, US-selective, Multisensory
@@ -359,16 +372,16 @@ Comprehensive monosynaptic response figure with heatmaps, bar charts, and latenc
 - **Gray shaded overlay**: 0-10ms on all heatmaps (30% transparency)
 - **Lightning bolt symbol** (⚡): Yellow, FontSize 16, only on US and CS+US heatmaps at top
 
-**Bar Charts** (LA-PN and Astria, no INs):
+**Bar Charts** (LA-PN and AStria, no INs):
 - **Metrics**: ΔMean FR (ylim [0 200]), ΔPeak FR (ylim [0 300])
 - **Window**: 12ms to `g.monosyn_window` (adjustable, default 25ms)
-- **Positions**: LA-PN [2 3 4], Astria [7 8 9]
-- **Colors**: LA-PN 0.7× cluster, Astria +0.5 blend
+- **Positions**: LA-PN [2 3 4], AStria [7 8 9]
+- **Colors**: LA-PN 0.7× cluster, AStria +0.5 blend
 - **Stats**: Wilcoxon signed-rank (CS vs US, US vs CS+US, CS vs CS+US)
-- **Labels**: Cluster names only (left column)
+- **Labels**: Cluster names only (left column), LA/AStria labels on top row
 
 **Latency Boxplots** (ylim [0 50]):
-- **4 pairs**: LA CS, Astria CS, LA US, Astria US (Selective vs Multisensory)
+- **4 pairs**: LA CS, AStria CS, LA US, AStria US (Selective vs Multisensory)
 - **Scatter**: Jittered (gray=selective, purple=multisensory)
 - **Stats**: Ranksum per pair, shows stars or "n.s."
 
@@ -452,11 +465,11 @@ Supplementary figure showing light-inhibited neurons' responses to CS and US (no
 - Tests ALL LA and Astria neurons across all light conditions
 - Neuron marked as inhibited if detected in ANY light condition
 
-**Layout**: 4×4 grid (1200×1400px)
-- **Row 1** (LA-CS): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
-- **Row 2** (LA-US): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
-- **Row 3** (Astria-CS): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
-- **Row 4** (Astria-US): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
+**Layout**: 4×4 grid (1000×800px), reorganized by region
+- **Row 1**: LA heatmaps (CS no-light, CS light, US no-light, US light)
+- **Row 2**: LA lineplots (CS no-light, CS light, US no-light, US light)
+- **Row 3**: Astria heatmaps (CS no-light, CS light, US no-light, US light)
+- **Row 4**: Astria lineplots (CS no-light, CS light, US no-light, US light)
 
 **Clustering & Sorting**:
 - 5 clusters based on no-light responses: CS-sel, US-sel, Multi, Non-resp, Inhibited

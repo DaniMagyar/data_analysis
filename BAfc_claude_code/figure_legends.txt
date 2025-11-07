@@ -1,0 +1,268 @@
+FIGURE LEGENDS FOR BA FEAR CONDITIONING PROJECT
+================================================
+
+FIGURE 1: Basal amygdala neuron characterization and basic electrophysiological properties
+
+(A) Experimental setup: Schematic showing recording configuration in basal amygdala (BA) during fear conditioning paradigm.
+
+(B-C) Example traces: Representative raw extracellular recordings and peri-stimulus time histograms (PSTHs) showing spike activity aligned to stimulus presentation.
+
+(D-E) Interspike interval (ISI) distributions: Representative examples of putative principal neurons (PNs, panel D) and interneurons (INs, panel E) showing characteristic ISI patterns. Insets show autocorrelograms (ACG) and normalized waveforms for each cell type. PNs display longer ISIs consistent with lower firing rates, while INs show shorter ISIs reflecting higher firing rates.
+
+(F) Spike feature classification: Scatter plot showing trough-to-peak duration (ms) versus firing rate (Hz) for all recorded neurons. Dashed lines form an L-shape (horizontal at 10 Hz from left to 0.4 ms, vertical at 0.4 ms from 10 Hz upward) separating fast-spiking high-firing-rate neurons (upper left quadrant, putative INs) from regular-spiking low-firing-rate neurons (lower right quadrant, putative PNs). Color-coded by cell type.
+
+(G) Normalized waveforms: Average normalized spike waveforms for PNs (one color) and INs (another color) across all recordings, showing distinct temporal profiles. Line width 3 pt, symbols marker size 6.
+
+(H-K) Firing rate distributions: Log-scaled histograms showing firing rate distributions (Hz) for neurons recorded in lateral amygdala (LA, panel H), basal amygdala (BA, panel I), anterior striatum (Astria, panel J), and central amygdala (CeA, panel K). PNs and INs plotted together with color coding. Three tick labels: minimum, midpoint, maximum.
+
+(L-O) Burst index distributions: Log-scaled histograms showing burst index (Royer 2012 method) distributions for LA (panel L), BA (panel M), Astria (panel N), and CeA (panel O). PNs typically show lower burst indices while INs display higher propensity for burst firing. Three tick labels: minimum, midpoint, maximum.
+
+Figure layout: 4×4 tile grid (1500×1500 pixels, A4-optimized). Title font 14 pt, axis font 12 pt. All neurons from 24 recording sessions across multiple animals.
+
+
+FIGURE 2: Regional comparison of CS and US responses across basal amygdala subregions
+
+Multi-region analysis showing stimulus-evoked response patterns across four basal amygdala subregions: lateral amygdala (LA, row 1), basal amygdala (BA, row 2), anterior striatum (Astria, row 3), and central amygdala (CeA, row 4). Figure dimensions: 1500×3000 pixels.
+
+For each region (rows 1-4):
+(Columns 1-2) Nested z-score heatmaps: Two side-by-side heatmaps showing neural responses to conditioned stimulus (CS, left) and unconditioned stimulus (US, right). Each neuron is represented as a horizontal line, with color intensity indicating z-scored firing rate relative to baseline. Heatmaps use 99th percentile normalization for color limits. Time window: ±2 seconds around stimulus onset (0s). Neurons sorted by k-means clustering (5 clusters per region) and ordered by rank score within each cluster. Black horizontal lines (1 pt) separate clusters. Manual colorbar positioned on left side (width 0.01). Smoothing: Savitzky-Golay filter (window 201).
+
+(Column 3) Cluster proportions: Vertical stacked bar chart showing percentage of neurons in each of 5 functional clusters:
+- CS-selective (red, 0.8 0.2 0.2): Excited by CS only
+- US-selective (blue, 0.2 0.4 0.8): Excited by US only
+- Multisensory (purple, 0.6 0.2 0.6): Excited by both CS and US
+- Non-responsive (gray, 0.6 0.6 0.6): No significant response
+- Inhibited (green, 0.2 0.6 0.3): Firing rate decreased by ≥50%
+Bar width 0.5, percentages labeled on segments.
+
+(Columns 4-5) Cluster firing rates: Line plots showing mean population firing rate (Hz) for each cluster in response to CS (column 4) and US (column 5). Y-axis shows firing rate converted from PSTH spike counts (psth_spx / trials / bin_time). Separate y-axis limits used for clusters 1-4 versus cluster 5 (inhibited, using 2.2× multiplier). Scale bars: 20 Hz for excitatory clusters, 5 Hz for inhibited cluster. Time window matches heatmaps (±2s).
+
+Excitation criterion: z-score ≥ 2 in response window (0-1s post-stimulus)
+Inhibition criterion: ≥50% firing rate drop from baseline
+Bin time: 1 ms
+Smoothing: Savitzky-Golay filter (window 201)
+
+Regional differences in cluster proportions and response magnitudes reveal functional specialization across basal amygdala subregions during fear conditioning.
+
+
+FIGURE 3: Convergence of CS and US inputs in LA and Astria responsive neurons
+
+Analysis of CS+US convergence for lateral amygdala (LA) and anterior striatum (Astria) excitatory neurons (clusters 1-3: CS-selective, US-selective, and Multisensory only). Figure dimensions: 1500×3000 pixels. Layout: 7 rows × 2 columns.
+
+Rows 1-2 (LA):
+(Column 1) Three nested z-score heatmaps: Stacked heatmaps showing the same LA neurons' responses to CS (top), US (middle), and CS+US (bottom). Same neurons displayed across all three stimuli to visualize convergence. Onset (circle) and offset (circle) latencies marked with dots (MarkerSize 4). Color limits normalized to global 99th percentile across all three stimuli. Manual colorbar positioned on left for Astria panels ([0.025, 0.48], width 0.01×0.15).
+
+(Column 2) Line plots: Three panels showing mean firing rate (Hz) traces for LA neurons, separated by cluster (CS-selective, US-selective, Multisensory) and by stimulus (CS, US, CS+US). Stacked vertically with shared y-axis limits. 20 Hz scale bar shown on bottom panel (cluster 3). Firing rate calculated as psth_spx / trials / bin_time.
+
+Rows 3-4 (Astria):
+Same layout as LA panels but for Astria neurons. Column 1 shows three nested heatmaps (CS, US, CS+US), column 2 shows stacked line plots by cluster.
+
+Rows 5-7 (Quantitative metrics):
+Six bar charts arranged in 3×2 nested grid (left half of figure only):
+- Tiles [2 3 4]: LA ΔMean FR and ΔPeak FR for three clusters
+- Tiles [7 8 9]: Astria ΔMean FR and ΔPeak FR for three clusters
+
+Bar charts show:
+- ΔMean FR: Baseline-subtracted mean firing rate change during response window (onset to offset)
+- ΔPeak FR: Baseline-subtracted peak firing rate change during response window
+
+Three bars per panel representing CS (red), US (blue), CS+US (purple) for each cluster
+LA colors: 0.7× darker than standard cluster colors
+Astria colors: +0.5 blend with white (lighter)
+Error bars: mean ± SEM
+Y-axis limits extended 50-60% above data to accommodate significance markers
+
+Statistics: Wilcoxon signed-rank tests (non-parametric paired test) comparing:
+- CS vs US
+- CS vs CS+US
+- US vs CS+US
+Analyzed separately per region (LA and Astria)
+Significance markers positioned at two levels: Level 1 at 8% above max, Level 2 at 25% above max
+
+Time window: ±2 seconds around stimulus onset
+Bin time: 1 ms
+Smoothing: Savitzky-Golay filter (window 201)
+Baseline period: All time before stimulus (t < 0)
+
+This analysis reveals how individual neurons integrate convergent CS and US inputs, and whether integration is linear, supralinear (CS+US > CS + US), or sublinear (CS+US < CS + US).
+
+
+FIGURE 4: Monosynaptic responses to CS and US in LA and Astria
+
+Comprehensive analysis of monosynaptic responses (0-50 ms latency) to conditioned (CS) and unconditioned (US) stimuli in lateral amygdala (LA) and anterior striatum (Astria). Figure dimensions: 1500×1200 pixels, 4×5 grid layout.
+
+Columns 1-3: Z-scored heatmaps showing monosynaptic responses
+- LA heatmaps (rows 1-2, spanning 2 rows): Tiles 1, 2, 3 showing CS, US, CS+US responses
+- Astria heatmaps (rows 3-4, spanning 2 rows): Tiles 11, 12, 13 showing CS, US, CS+US responses
+
+Each heatmap displays principal neurons (PNs, top) and interneurons (INs, bottom) separated by white line (LineWidth 1). Neurons categorized and sorted by rank score (onset_latency + α × duration, where α=0.0):
+- CS-selective: Neurons responding only to CS, sorted by CS rank score
+- US-selective: Neurons responding only to US, sorted by US rank score
+- Multisensory: Neurons responding to both CS and US, sorted by CS+US rank score
+
+Time window: -0.05 to +0.05 s relative to stimulus onset (±50 ms)
+Z-score colormap limits: [-5.5, 13]
+Gray shaded overlay: 0-10 ms indicating artifact period (30% transparency)
+Lightning bolt symbol (⚡): Yellow, FontSize 16, marks US and CS+US heatmaps at top to indicate shock artifact
+Artifact exclusion: 12 ms (hardcoded for shock stimuli)
+Detection window: 0-50 ms post-stimulus (g.monosyn_window = 0.025s, adjustable)
+Smoothing: Savitzky-Golay filter (window 7)
+Bin time: 1 ms
+
+Offset handling: If no offset detected, uses end of response window as offset latency
+
+Columns 4-5, Rows 1-3: Bar charts showing firing rate changes
+Six bar charts (ΔMean FR and ΔPeak FR) for LA-PN and Astria neurons only (INs excluded):
+- LA-PN bars positioned at tiles [2 3 4]
+- Astria bars positioned at tiles [7 8 9]
+
+Metrics calculated in window from 12 ms to g.monosyn_window (default 25 ms):
+- ΔMean FR: Mean firing rate change from baseline, y-axis [0 200] Hz
+- ΔPeak FR: Peak firing rate change from baseline, y-axis [0 300] Hz
+
+Three bars per panel: CS-selective, US-selective, Multisensory
+Colors: LA-PN (0.7× cluster colors, darker), Astria (+0.5 blend, lighter)
+Error bars: mean ± SEM
+Statistics: Wilcoxon signed-rank tests (CS vs US, US vs CS+US, CS vs CS+US)
+Significance shown as stars or "n.s." (not significant)
+Labels: Cluster names shown on left column only
+
+Columns 4-5, Row 4: Latency boxplots (spanning 2 columns)
+Four paired comparisons of response latencies (y-axis [0 50] ms):
+1. LA CS: Selective vs Multisensory
+2. Astria CS: Selective vs Multisensory
+3. LA US: Selective vs Multisensory
+4. Astria US: Selective vs Multisensory
+
+Box plots overlaid with jittered scatter points (gray=selective, purple=multisensory)
+Statistics: Ranksum test (non-parametric unpaired test) for each pair
+Significance displayed as stars or "n.s."
+
+Colorbar: Positioned left of Astria heatmap, manual axes (width 0.010×0.15, position [0.025, 0.51]), using g.colors.Heatmap
+
+Detection criteria:
+- One-rule method: z-score ≥ 5 (g.zscore_threshold_one_rule = 5)
+- Onset threshold: z-score ≥ 5 sustained for minimum consecutive bins (g.min_consec_bins = 1)
+- Response window: 0-50 ms (g.monosyn_window = 0.025s)
+
+Helper function: compute_onset_offset_latency() - if no offset detected, uses g.monosyn_window end time
+
+Monosynaptic responses reveal direct synaptic connections and temporal precision of sensory processing in amygdala fear conditioning circuits.
+
+
+FIGURE 5: Optogenetic inhibition of parvalbumin interneurons affects monosynaptic responses
+
+Analysis of optogenetic manipulation effects on monosynaptic CS and US responses in LA and Astria. Compares neuronal activity during baseline trials versus trials with optogenetic inhibition of parvalbumin-positive (PV+) interneurons. Figure dimensions: 1500×800 pixels, 4×4 grid layout.
+
+Top-left (rows 1-2, columns 1-2): Injection site diagram
+Image showing viral injection location and optic fiber placement for optogenetic manipulation of PV+ interneurons in basal amygdala.
+
+Bottom-left (rows 3-4, columns 1-2): Example neuron raster plots
+Nested tiledlayout (3 rows × 4 columns) showing four representative neurons:
+- Column 1: MD309_001/cellID=20 (CS response)
+- Column 2: MD307_001/cellID=13 (US response)
+- Column 3: MD318_001/cellID=46 (CS response)
+- Column 4: MD317_001/cellID=43 (US response)
+
+For each neuron:
+- Row 1: Raster plot without optogenetic light (baseline condition)
+- Row 2: Raster plot with optogenetic light (PV+ inhibition)
+- Row 3: Firing rate line plot comparing both conditions
+
+Raster plots:
+- Time window: ±50 ms around stimulus (xlim [-50 50])
+- Each dot represents a spike, rows represent individual trials
+- Red vertical line (LineWidth 2) marks stimulus onset (time 0)
+- MarkerSize 6 for spike dots
+- Y-axis: Trial number (ylabel shown on first column only)
+- Titles: Animal/cellID and stimulus type (CS or US)
+
+Firing rate line plots:
+- Black line: No-light condition
+- Red line (0.8 0.2 0.2): Light condition
+- Y-axis: FR (Hz), range [-10 300]
+- Red vertical line (LineWidth 2) at time 0 marks stimulus onset
+- Shaded regions: mean ± SEM (gray for no-light with 0.3 alpha, red for light with 0.3 alpha)
+- X-axis: Time (ms), shown on bottom row only
+- Legend (first plot only): "No light" and "Light"
+
+Right side (rows 1-4, columns 3-4): Population analysis
+Nested tiledlayout (3 rows × 4 columns, tight spacing) showing LA and Astria responses to CS and US:
+
+Row 1 - Pie charts (4 panels):
+- LA CS (n=total responsive neurons)
+- LA US (n=total responsive neurons)
+- Astria CS (n=total responsive neurons)
+- Astria US (n=total responsive neurons)
+
+Each pie chart shows proportion of:
+- Enhanced neurons (red, 0.8 0.2 0.2): Increased firing with light
+- Non-enhanced neurons (gray, 0.7 0.7 0.7): Decreased or unchanged firing with light
+
+Row 2 - Slope graphs (4 panels):
+Individual neuron trajectories showing ΔPeak FR (baseline-subtracted peak firing rate) change from no-light to light condition. Each line represents one enhanced neuron.
+- X-axis: No light (position 1) vs Light (position 2)
+- Y-axis: ΔPeak FR (Hz) - only labeled on first panel (LA CS)
+- Gray scatter points (position 1): No-light condition, filled circles (alpha 0.6)
+- Red scatter points (position 2): Light condition, filled circles (alpha 0.6)
+- Red lines (alpha 0.3): Individual neuron trajectories
+- Black thick line (LineWidth 3): Population mean trajectory
+- Black filled circles: Mean values at each condition
+Title: "Enhanced (n=X)" where X is number of enhanced neurons
+
+ΔPeak FR calculated in neuron-specific optimal response window:
+- Window start: 12 ms (artifact exclusion)
+- Window end: Varies per neuron (their most significant window from multi-window testing)
+- Multi-window testing: 28 windows tested with 1 ms increments (12-13ms, 12-14ms, ..., 12-40ms)
+
+Row 3 - Population firing rate plots (4 panels):
+Mean firing rate traces for all enhanced neurons in each region/stimulus combination:
+- Black line + gray shading: No-light condition (mean ± SEM, alpha 0.3)
+- Red line + red shading: Light condition (mean ± SEM, alpha 0.3)
+- Y-axis: FR (Hz), range [-10 300] - only labeled on first panel (LA CS)
+- X-axis: Time (ms), range [-50 50]
+- Red vertical line (LineWidth 2): Stimulus onset
+- Title: "n=X" where X is number of enhanced neurons
+
+Detection method:
+- Responsive neurons identified in EITHER condition (no-light OR light) using monosynaptic window (0-50 ms)
+- Two-rule detection system:
+  - Rule 1: z-score ≥ 3 AND response probability ≥ 0.25
+  - Rule 2: z-score ≥ 10 AND response probability ≥ 0.1
+  - Neuron classified as responsive if Rule 1 OR Rule 2 satisfied
+
+Statistical testing:
+- Wilcoxon signed-rank test (paired, non-parametric) on trial-by-trial spike counts
+- 28 time windows tested independently (1 ms increments from 12-40 ms)
+- Enhanced: ANY window with p<0.05 and positive change
+- Decreased: ANY window with p<0.05 and negative change (no increased windows)
+- Unchanged: NO windows reach p<0.05
+
+Rationale for multi-window testing: Different neurons may show optogenetic effects at different latencies within the monosynaptic window. Testing multiple overlapping windows with fine temporal resolution (1 ms steps) ensures no effects are missed due to specific window choice.
+
+TTL conditions analyzed:
+- CS: triptest_sound_only vs triptest_sound_only_light
+- US: triptest_shocks_only vs triptest_shocks_only_light
+
+Key parameters:
+- Monosynaptic detection window: 0-50 ms (g.monosyn_window = 0.05s)
+- Z-score threshold (Rule 1): 3 (lowered from 5 for CS+US analysis)
+- Use two-rule detection: true
+- Artifact exclusion: 12 ms (hardcoded for shock artifacts)
+- Bin time: 1 ms
+- Smoothing: Savitzky-Golay filter (window 7)
+
+Console output includes detailed summary with neuron counts and cellIDs for each category (Increased/Decreased/Unchanged) per region, with minimum p-value and corresponding window reported for each neuron.
+
+This figure reveals how optogenetic inhibition of PV+ interneurons modulates monosynaptic sensory responses, providing insight into local circuit mechanisms of fear conditioning.
+
+
+Notes:
+- All figures use consistent color schemes defined in BAfc_colors()
+- PN = Putative Principal Neuron (excitatory)
+- IN = Putative Interneuron (inhibitory)
+- CS = Conditioned Stimulus (sound)
+- US = Unconditioned Stimulus (shock)
+- PSTH = Peri-Stimulus Time Histogram
+- Z-score normalization: (firing rate - baseline mean) / baseline std
+- Baseline period: All time before stimulus onset (t < 0)

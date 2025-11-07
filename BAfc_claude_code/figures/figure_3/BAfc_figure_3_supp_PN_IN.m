@@ -1,7 +1,8 @@
-% BAfc_figure_3
+% BAfc_figure_3_supp_PN_IN
+% Supplementary figure for BAfc_figure_3
 % Compare CS-selective, US-selective, and Multisensory neurons identified from CS and US
 % Show their responses to CS+US (both) stimulus
-% 4 brain regions (LA, BA, Astria, CeA) with heatmaps showing CS+US responses
+% LA only, separated by cell type (PN vs IN)
 
 clear all; close all
 
@@ -60,9 +61,8 @@ g.plotwin = [2 2];
 g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
 g.roi = g.pre_time/g.bin_time+1:(g.pre_time+g.test_time)/g.bin_time;
 
-% Brain regions and cell types to analyze
-brain_regions = {'LA', 'Astria'};
-cell_type_filter = {'all', 'all'};
+% LA only, separated by cell type
+cell_types = {'PN', 'IN'};
 
 cluster_colors = [
     0.8 0.2 0.2;    % CS-selective
@@ -96,18 +96,14 @@ for hmp = 1:numel(ttl)
     psthZ_full{hmp} = psth_spx;
 end
 
-%% Process each brain region
+%% Process each cell type (PN and IN)
 results_all = cell(1, 2);
 
-for br = 1:2
-    fprintf('\nProcessing %s...\n', brain_regions{br});
+for ct = 1:2
+    fprintf('\nProcessing LA %s...\n', cell_types{ct});
 
-    % Get neuron indices
-    if strcmp(cell_type_filter{br}, 'PN')
-        idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br}) & strcmp(g.cell_metrics.putativeCellType, 'PN');
-    else
-        idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br});
-    end
+    % Get neuron indices for LA and specific cell type
+    idx_neurons = strcmp(g.cell_metrics.brainRegion, 'LA') & strcmp(g.cell_metrics.putativeCellType, cell_types{ct});
 
     n_neurons = sum(idx_neurons);
     fprintf('  %d neurons\n', n_neurons);
@@ -209,21 +205,21 @@ for br = 1:2
     end
 
     % Store results
-    results_all{br}.Clusters = Clusters;
-    results_all{br}.leafOrder = leafOrder;
-    results_all{br}.psth_CS = psth_CS;
-    results_all{br}.psth_US = psth_US;
-    results_all{br}.psth_Both = psth_Both;
-    results_all{br}.psth_CS_Hz = psth_CS_Hz;
-    results_all{br}.psth_US_Hz = psth_US_Hz;
-    results_all{br}.psth_Both_Hz = psth_Both_Hz;
-    results_all{br}.CS_onset_lat = CS_onset_lat;
-    results_all{br}.CS_offset_lat = CS_offset_lat;
-    results_all{br}.US_onset_lat = US_onset_lat;
-    results_all{br}.US_offset_lat = US_offset_lat;
-    results_all{br}.Both_onset_lat = Both_onset_lat;
-    results_all{br}.Both_offset_lat = Both_offset_lat;
-    results_all{br}.n_neurons = n_neurons;
+    results_all{ct}.Clusters = Clusters;
+    results_all{ct}.leafOrder = leafOrder;
+    results_all{ct}.psth_CS = psth_CS;
+    results_all{ct}.psth_US = psth_US;
+    results_all{ct}.psth_Both = psth_Both;
+    results_all{ct}.psth_CS_Hz = psth_CS_Hz;
+    results_all{ct}.psth_US_Hz = psth_US_Hz;
+    results_all{ct}.psth_Both_Hz = psth_Both_Hz;
+    results_all{ct}.CS_onset_lat = CS_onset_lat;
+    results_all{ct}.CS_offset_lat = CS_offset_lat;
+    results_all{ct}.US_onset_lat = US_onset_lat;
+    results_all{ct}.US_offset_lat = US_offset_lat;
+    results_all{ct}.Both_onset_lat = Both_onset_lat;
+    results_all{ct}.Both_offset_lat = Both_offset_lat;
+    results_all{ct}.n_neurons = n_neurons;
 end
 
 %% Create figure
@@ -232,15 +228,15 @@ t = tiledlayout(fig, 6, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Determine global color limits across all heatmaps (CS, US, and CS+US)
 all_values = [];
-for br = 1:2
-    if ~isempty(results_all{br})
+for ct = 1:2
+    if ~isempty(results_all{ct})
         for stim = 1:3
             if stim == 1
-                psth_sorted = results_all{br}.psth_CS(results_all{br}.leafOrder, :);
+                psth_sorted = results_all{ct}.psth_CS(results_all{ct}.leafOrder, :);
             elseif stim == 2
-                psth_sorted = results_all{br}.psth_US(results_all{br}.leafOrder, :);
+                psth_sorted = results_all{ct}.psth_US(results_all{ct}.leafOrder, :);
             else
-                psth_sorted = results_all{br}.psth_Both(results_all{br}.leafOrder, :);
+                psth_sorted = results_all{ct}.psth_Both(results_all{ct}.leafOrder, :);
             end
             matrix = psth_sorted(:, (g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
             all_values = [all_values; matrix(:)];
@@ -257,16 +253,16 @@ t_plots.Layout.Tile = 1;  % Start at row 1, col 1
 t_plots.Layout.TileSpan = [3 2];  % Span rows 1-3, cols 1-2
 
 % Column arrangement: CS_hmp, US_hmp, Both_hmp, CS_line, US_line, Both_line
-% Row 1: LA
-% Row 2: Astria
+% Row 1: PN
+% Row 2: IN
 
-%% Plot each brain region (rows) × heatmaps+lineplots (columns)
-for br = 1:2
-    if isempty(results_all{br})
+%% Plot each cell type (rows) × heatmaps+lineplots (columns)
+for ct = 1:2
+    if isempty(results_all{ct})
         continue;
     end
 
-    res = results_all{br};
+    res = results_all{ct};
 
     % Get cluster boundaries for responsive clusters only (1, 2, 3)
     Clusters_sorted = res.Clusters(res.leafOrder);
@@ -291,8 +287,8 @@ for br = 1:2
             stim_title = 'CS+US';
         end
 
-        % Heatmap - tile position: br=row, stim=column
-        tile_idx = (br-1)*6 + stim;
+        % Heatmap - tile position: ct=row, stim=column
+        tile_idx = (ct-1)*6 + stim;
         ax = nexttile(t_plots, tile_idx);
         matrix = psth_sorted(:, (g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
         imagesc(g.timeaxis_hmp, 1:size(matrix, 1), matrix);
@@ -301,25 +297,19 @@ for br = 1:2
         xline(0, '--k', 'LineWidth', g.xlinewidth);
 
         % Labels
-        if br == 1
-            title(stim_title, 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+        if ct == 1
+            title(stim_title, 'FontSize', g.fontSize1);
+        end
+
+        if stim == 1 && ct == 1
+            ylabel('Neuron #', 'FontSize', g.fontSize2);
         end
 
         % Set yticks to first and last
         n_neurons_plot = size(matrix, 1);
         yticks([1, n_neurons_plot]);
 
-        % Add brain region as ylabel (only on first column)
-        if stim == 1
-            % Display AStria instead of Astria
-            if strcmp(brain_regions{br}, 'Astria')
-                ylabel('AStria', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-            else
-                ylabel(brain_regions{br}, 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-            end
-        end
-
-        if br == 2
+        if ct == 2
             xlabel('Time (s)', 'FontSize', g.fontSize2);
             xticks([-1 0 1]);
         else
@@ -363,6 +353,11 @@ for br = 1:2
         end
 
         hold off;
+
+        % Add cell type label (only on first column)
+        if stim == 1
+            text(-0.9, sum(responsive_mask)/2, cell_types{ct}, 'FontSize', g.fontSize1, 'FontWeight', 'bold', 'HorizontalAlignment', 'center', 'Rotation', 90);
+        end
     end
 
     % Plot lineplots (columns 4-6) - stacked by cluster within each stimulus
@@ -374,7 +369,7 @@ for br = 1:2
         time_vec = linspace(-g.plotwin(1), g.plotwin(2), length(plot_idx));
     end
 
-    % Calculate global y-limits for this brain region (only clusters 1-3)
+    % Calculate global y-limits for this cell type (only clusters 1-3)
     y_max = 0;
     y_min = 0;
     for c = [1 2 3]
@@ -388,31 +383,33 @@ for br = 1:2
         end
     end
 
-    fprintf('  %s lineplots: y_min = %.2f, y_max = %.2f\n', brain_regions{br}, y_min*1.1, y_max*1.1);
+    fprintf('  %s lineplots: y_min = %.2f, y_max = %.2f\n', cell_types{ct}, y_min*1.1, y_max*1.1);
 
     % Create nested tiledlayouts for each stimulus column (4, 5, 6)
     for stim = 1:3  % CS, US, CS+US
         % Create nested 3×1 layout for this stimulus
-        tile_idx = (br-1)*6 + stim + 3;
+        tile_idx = (ct-1)*6 + stim + 3;
         t_nested = tiledlayout(t_plots, 3, 1, 'TileSpacing', 'none', 'Padding', 'tight');
         t_nested.Layout.Tile = tile_idx;
+
+        % Add title on top row
+        if ct == 1
+            if stim == 1
+                t_nested.Title.String = 'CS';
+            elseif stim == 2
+                t_nested.Title.String = 'US';
+            else
+                t_nested.Title.String = 'CS+US';
+            end
+            t_nested.Title.FontSize = g.fontSize1;
+            t_nested.Title.FontWeight = 'bold';
+        end
 
         % Plot each cluster in separate row
         for c = [1 2 3]
             clust_idx = find(res.Clusters == c);
 
             ax_line = nexttile(t_nested, c);
-
-            % Add title on first cluster of top row
-            if br == 1 && c == 1
-                if stim == 1
-                    title('CS', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-                elseif stim == 2
-                    title('US', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-                else
-                    title('CS+US', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-                end
-            end
             hold on;
             xline(0, '--k', 'LineWidth', g.xlinewidth);
 
@@ -431,7 +428,7 @@ for br = 1:2
             xlim([time_vec(1) time_vec(end)]);
             ylim([y_min*1.1 y_max*1.1]);
 
-            if br == 2 && c == 3
+            if ct == 2 && c == 3
                 xlabel('Time (s)', 'FontSize', g.fontSize2);
                 set(gca, 'XColor', 'k');
                 xticks([-1 0 1]);
@@ -462,12 +459,12 @@ for br = 1:2
     end
 end
 
-% Add colorbar - manually create with full control, positioned at bottom heatmap (Astria)
+% Add colorbar - manually create with full control, positioned at bottom heatmap (IN)
 drawnow;  % Ensure all positions are updated
 cb_width = 0.010;
-cb_left = 0.033;
-cb_bottom = 0.50;  % Aligned with Astria heatmap (rows 2-3 in 6-row layout)
-cb_height = 0.10;
+cb_left = 0.040;
+cb_bottom = 0.52;  % Aligned with IN heatmap (rows 2-3 in 6-row layout)
+cb_height = 0.15;
 cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
@@ -476,34 +473,34 @@ set(cb_ax, 'XTick', [], 'YAxisLocation', 'left');
 ylabel(cb_ax, 'Z-score', 'FontSize', g.fontSize2);
 cb_ax.FontSize = g.fontSize2;
 
-%% Add metric bar charts (3 rows × 3 columns in bottom section)
-% Rows 4-6: CS-sel, US-sel, Multisensory
+%% Add metric bar charts (2 rows × 3 columns in bottom section)
+% Rows 4-5: US-sel, Multisensory (CS-sel removed)
 % Columns span width of figure, divided into 3 metrics
 
 % Create nested tiledlayout for all metrics (3 columns now)
-t_metrics = tiledlayout(t, 3, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_metrics = tiledlayout(t, 2, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
 t_metrics.Layout.Tile = 7;  % Start at row 4, column 1
 t_metrics.Layout.TileSpan = [3 2];  % Span 3 rows × 2 columns
 
 metric_names = {'ΔnSpikes', 'ΔPeak FR (Hz)', 'Response length (ms)'};
 
-for c = [1 2 3]  % CS-selective, US-selective, Multisensory
+for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
     for metric = 1:3  % ΔnSpikes, ΔPeak FR, Response length
-        ax_metric = nexttile(t_metrics, (c-1)*3 + metric);
+        ax_metric = nexttile(t_metrics, (c-2)*3 + metric);
 
-        % Collect data for LA and Astria
-        data_LA = [];
-        data_Astria = [];
+        % Collect data for PN and IN
+        data_PN = [];
+        data_IN = [];
 
-        for br = 1:2
-            if isempty(results_all{br})
+        for ct = 1:2
+            if isempty(results_all{ct})
                 continue;
             end
 
-            res = results_all{br};
+            res = results_all{ct};
             clust_idx = find(res.Clusters == c);
 
-            fprintf('Cluster %d, Metric %d, Region %s: %d neurons\n', c, metric, brain_regions{br}, length(clust_idx));
+            fprintf('Cluster %d, Metric %d, CellType %s: %d neurons\n', c, metric, cell_types{ct}, length(clust_idx));
 
             if ~isempty(clust_idx)
                 if metric == 1  % ΔnSpikes between onset and offset (change from baseline)
@@ -628,51 +625,51 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
                     end
                 end
 
-                if br == 1
-                    data_LA = [CS_metric, US_metric, Both_metric];
+                if ct == 1
+                    data_PN = [CS_metric, US_metric, Both_metric];
                 else
-                    data_Astria = [CS_metric, US_metric, Both_metric];
+                    data_IN = [CS_metric, US_metric, Both_metric];
                 end
             end
         end
 
-        % Plot grouped bars - LA bars [2 3 4], Astria bars [7 8 9] with larger gap
+        % Plot grouped bars - PN bars [2 3 4], IN bars [7 8 9] with larger gap
         hold on;
 
-        if ~isempty(data_LA) && ~isempty(data_Astria)
-            means_LA = mean(data_LA, 1, 'omitnan');
-            means_Astria = mean(data_Astria, 1, 'omitnan');
-            sems_LA = std(data_LA, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_LA(:,1))));
-            sems_Astria = std(data_Astria, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_Astria(:,1))));
+        if ~isempty(data_PN) && ~isempty(data_IN)
+            means_PN = mean(data_PN, 1, 'omitnan');
+            means_IN = mean(data_IN, 1, 'omitnan');
+            sems_PN = std(data_PN, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_PN(:,1))));
+            sems_IN = std(data_IN, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_IN(:,1))));
 
-            % LA bars at positions 2, 3, 4 (narrower bars) - use cluster color for dark version
-            bar_color_LA = cluster_colors(c, :) * 0.7;  % Darker version
-            bar([2 3 4], means_LA, 0.6, 'FaceColor', bar_color_LA, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([2 3 4], means_LA, sems_LA, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
+            % PN bars at positions 2, 3, 4 (narrower bars) - use cluster color for dark version
+            bar_color_PN = cluster_colors(c, :) * 0.7;  % Darker version
+            bar([2 3 4], means_PN, 0.6, 'FaceColor', bar_color_PN, 'EdgeColor', 'k', 'LineWidth', 1);
+            errorbar([2 3 4], means_PN, sems_PN, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
-            % Astria bars at positions 7, 8, 9 (gap at positions 5, 6) - use cluster color for light version
-            bar_color_Astria = cluster_colors(c, :) + (1 - cluster_colors(c, :)) * 0.5;  % Lighter version
-            bar([7 8 9], means_Astria, 0.6, 'FaceColor', bar_color_Astria, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([7 8 9], means_Astria, sems_Astria, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
+            % IN bars at positions 7, 8, 9 (gap at positions 5, 6) - use cluster color for light version
+            bar_color_IN = cluster_colors(c, :) + (1 - cluster_colors(c, :)) * 0.5;  % Lighter version
+            bar([7 8 9], means_IN, 0.6, 'FaceColor', bar_color_IN, 'EdgeColor', 'k', 'LineWidth', 1);
+            errorbar([7 8 9], means_IN, sems_IN, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
-        elseif ~isempty(data_LA)
-            means_LA = mean(data_LA, 1, 'omitnan');
-            sems_LA = std(data_LA, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_LA(:,1))));
-            bar_color_LA = cluster_colors(c, :) * 0.7;  % Darker version
-            bar([2 3 4], means_LA, 0.6, 'FaceColor', bar_color_LA, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([2 3 4], means_LA, sems_LA, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
-        elseif ~isempty(data_Astria)
-            means_Astria = mean(data_Astria, 1, 'omitnan');
-            sems_Astria = std(data_Astria, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_Astria(:,1))));
-            bar_color_Astria = cluster_colors(c, :) + (1 - cluster_colors(c, :)) * 0.5;  % Lighter version
-            bar([7 8 9], means_Astria, 0.6, 'FaceColor', bar_color_Astria, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([7 8 9], means_Astria, sems_Astria, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
+        elseif ~isempty(data_PN)
+            means_PN = mean(data_PN, 1, 'omitnan');
+            sems_PN = std(data_PN, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_PN(:,1))));
+            bar_color_PN = cluster_colors(c, :) * 0.7;  % Darker version
+            bar([2 3 4], means_PN, 0.6, 'FaceColor', bar_color_PN, 'EdgeColor', 'k', 'LineWidth', 1);
+            errorbar([2 3 4], means_PN, sems_PN, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
+        elseif ~isempty(data_IN)
+            means_IN = mean(data_IN, 1, 'omitnan');
+            sems_IN = std(data_IN, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_IN(:,1))));
+            bar_color_IN = cluster_colors(c, :) + (1 - cluster_colors(c, :)) * 0.5;  % Lighter version
+            bar([7 8 9], means_IN, 0.6, 'FaceColor', bar_color_IN, 'EdgeColor', 'k', 'LineWidth', 1);
+            errorbar([7 8 9], means_IN, sems_IN, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
         end
 
         hold off;
 
         % Statistical comparisons - Wilcoxon signed rank test (paired data)
-        % Compare CS vs US, CS vs CS+US, US vs CS+US within each region
+        % Compare CS vs US, CS vs CS+US, US vs CS+US within each cell type
 
         % Set fixed spacing for significance levels based on metric type
         if metric == 1  % ΔnSpikes
@@ -683,31 +680,31 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             sig_spacing = 50;  % Fixed absolute spacing (10% of 500)
         end
 
-        % LA comparisons
-        if ~isempty(data_LA)
+        % PN comparisons
+        if ~isempty(data_PN)
             % CS vs US
-            [p_LA_CS_US, ~] = signrank(data_LA(:,1), data_LA(:,2));
+            [p_PN_CS_US, ~] = signrank(data_PN(:,1), data_PN(:,2));
             % CS vs CS+US
-            [p_LA_CS_Both, ~] = signrank(data_LA(:,1), data_LA(:,3));
+            [p_PN_CS_Both, ~] = signrank(data_PN(:,1), data_PN(:,3));
             % US vs CS+US
-            [p_LA_US_Both, ~] = signrank(data_LA(:,2), data_LA(:,3));
+            [p_PN_US_Both, ~] = signrank(data_PN(:,2), data_PN(:,3));
 
-            % Add significance markers for LA
-            y_max_LA = max(means_LA + sems_LA);
+            % Add significance markers for PN
+            y_max_PN = max(means_PN + sems_PN);
             curr_ylim = ylim;
             y_range = curr_ylim(2) - curr_ylim(1);
             hold on;
 
             % Level 1: Short comparisons (CS vs US, US vs CS+US)
             % Position above data with fixed absolute distance
-            y_pos_level1 = y_max_LA + 0.08 * y_range;
+            y_pos_level1 = y_max_PN + 0.08 * y_range;
 
             % CS vs US
-            if p_LA_CS_US < 0.001
+            if p_PN_CS_US < 0.001
                 sig_text = '***';
-            elseif p_LA_CS_US < 0.01
+            elseif p_PN_CS_US < 0.01
                 sig_text = '**';
-            elseif p_LA_CS_US < 0.05
+            elseif p_PN_CS_US < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -718,11 +715,11 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             end
 
             % US vs CS+US
-            if p_LA_US_Both < 0.001
+            if p_PN_US_Both < 0.001
                 sig_text = '***';
-            elseif p_LA_US_Both < 0.01
+            elseif p_PN_US_Both < 0.01
                 sig_text = '**';
-            elseif p_LA_US_Both < 0.05
+            elseif p_PN_US_Both < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -736,11 +733,11 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             y_pos_level2 = y_pos_level1 + sig_spacing;
 
             % CS vs CS+US
-            if p_LA_CS_Both < 0.001
+            if p_PN_CS_Both < 0.001
                 sig_text = '***';
-            elseif p_LA_CS_Both < 0.01
+            elseif p_PN_CS_Both < 0.01
                 sig_text = '**';
-            elseif p_LA_CS_Both < 0.05
+            elseif p_PN_CS_Both < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -753,31 +750,31 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             hold off;
         end
 
-        % Astria comparisons
-        if ~isempty(data_Astria)
+        % IN comparisons
+        if ~isempty(data_IN)
             % CS vs US
-            [p_Astria_CS_US, ~] = signrank(data_Astria(:,1), data_Astria(:,2));
+            [p_IN_CS_US, ~] = signrank(data_IN(:,1), data_IN(:,2));
             % CS vs CS+US
-            [p_Astria_CS_Both, ~] = signrank(data_Astria(:,1), data_Astria(:,3));
+            [p_IN_CS_Both, ~] = signrank(data_IN(:,1), data_IN(:,3));
             % US vs CS+US
-            [p_Astria_US_Both, ~] = signrank(data_Astria(:,2), data_Astria(:,3));
+            [p_IN_US_Both, ~] = signrank(data_IN(:,2), data_IN(:,3));
 
-            % Add significance markers for Astria
-            y_max_Astria = max(means_Astria + sems_Astria);
+            % Add significance markers for IN
+            y_max_IN = max(means_IN + sems_IN);
             curr_ylim = ylim;
             y_range = curr_ylim(2) - curr_ylim(1);
             hold on;
 
             % Level 1: Short comparisons (CS vs US, US vs CS+US)
             % Position above data with fixed absolute distance
-            y_pos_level1 = y_max_Astria + 0.08 * y_range;
+            y_pos_level1 = y_max_IN + 0.08 * y_range;
 
             % CS vs US
-            if p_Astria_CS_US < 0.001
+            if p_IN_CS_US < 0.001
                 sig_text = '***';
-            elseif p_Astria_CS_US < 0.01
+            elseif p_IN_CS_US < 0.01
                 sig_text = '**';
-            elseif p_Astria_CS_US < 0.05
+            elseif p_IN_CS_US < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -788,11 +785,11 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             end
 
             % US vs CS+US
-            if p_Astria_US_Both < 0.001
+            if p_IN_US_Both < 0.001
                 sig_text = '***';
-            elseif p_Astria_US_Both < 0.01
+            elseif p_IN_US_Both < 0.01
                 sig_text = '**';
-            elseif p_Astria_US_Both < 0.05
+            elseif p_IN_US_Both < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -806,11 +803,11 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
             y_pos_level2 = y_pos_level1 + sig_spacing;
 
             % CS vs CS+US
-            if p_Astria_CS_Both < 0.001
+            if p_IN_CS_Both < 0.001
                 sig_text = '***';
-            elseif p_Astria_CS_Both < 0.01
+            elseif p_IN_CS_Both < 0.01
                 sig_text = '**';
-            elseif p_Astria_CS_Both < 0.05
+            elseif p_IN_CS_Both < 0.05
                 sig_text = '*';
             else
                 sig_text = '';
@@ -829,18 +826,18 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
 
         % Set fixed y-limits based on metric type
         if metric == 1  % ΔnSpikes
-            ylim([0 32]);
-            y_ticks = [0 16 32];
-        elseif metric == 2  % ΔPeak FR
             ylim([0 100]);
             y_ticks = [0 50 100];
+        elseif metric == 2  % ΔPeak FR
+            ylim([0 300]);
+            y_ticks = [0 150 300];
         else  % metric == 3, Response length
-            ylim([0 500]);
-            y_ticks = [0 250 500];
+            ylim([0 700]);
+            y_ticks = [0 350 700];
         end
 
         % Add title on top row
-        if c == 1
+        if c == 2
             title(metric_names{metric}, 'FontSize', g.fontSize1, 'FontWeight', 'bold', 'Interpreter', 'tex');
         end
 
@@ -854,12 +851,12 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
         % Set y-ticks
         yticks(y_ticks);
 
-        % Add LA/AStria labels on top row
-        if c == 1
+        % Add PN/IN labels on top row
+        if c == 2
             curr_ylim = ylim;
             y_pos = curr_ylim(2) * 0.95;  % Position at 95% of y-max
-            text(3, y_pos, 'LA', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-            text(8, y_pos, 'AStria', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+            text(3, y_pos, 'PN', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+            text(8, y_pos, 'IN', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
         end
 
         % Add cluster name label only on first column

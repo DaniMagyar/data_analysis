@@ -15,7 +15,10 @@
       "Read(//c/Users/dmagyar/Documents/data_analysis/**)",
       "WebFetch(domain:www.researchgate.net)",
       "Bash(git checkout:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(nul)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

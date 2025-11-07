@@ -1,7 +1,6 @@
 function [potential_duplicates_phy, idx_remove] = BAfc_xcorr_neurons(varargin)
 
-% Finds double detected neurons. The brainRegion of these neurons should be
-% labeled as 'SKIP_double' or something.
+% save [potential_duplicates_phy] into a .mat file, then BAfc_match_celltypes can handle it afterwards.
 % Daniel Magyar 4/2/2025.
 
 prs = inputParser;
