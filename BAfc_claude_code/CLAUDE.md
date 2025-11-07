@@ -151,85 +151,37 @@ results = BAfc_identify_responsive_neurons(cell_metrics, ttl, params);
 ## Monosynaptic Response Visualization (uni_monosynaptic/)
 
 ### BAfc_figure_monosynaptic.m
-Comprehensive monosynaptic response analysis with heatmaps and quantitative metrics.
+Monosynaptic analysis with heatmaps and quantitative metrics.
 
-**Figure 1: Heatmap Visualization** (4×3 grid)
-- **Groups**: LA-PN, LA-IN, BA-PN, BA-IN (rows)
-- **Stimuli**: CS (Sound), US (Shock), CS+US (Both) (columns)
-- **Time window**: -0.1 to 0.1s around stimulus onset
-- **Neuron inclusion**: Union of all neurons responsive to ANY stimulus within each group
-- **Consistent ordering**: Same neuron list and order across all 3 stimuli within each group
-- **Performance**: Pre-calculates all PSTHs once (3 total vs 12), ~4x faster
-- **Color scale**: Z-score [-5.5, 13], standard BAfc heatmap colormap
+**Fig 1 (4×3)**: LA-PN/IN, BA-PN/IN × CS/US/CS+US heatmaps. Sorting: CS-only (CS latency), US-only (US latency), Both (CS+US latency). Z-score [-5.5, 13], -0.1 to 0.1s window.
 
-**Sorting logic** (within each group, top to bottom):
-1. **Category 1 (CS only)**: Neurons responsive to CS but not US, sorted by CS latency (earliest first)
-2. **Category 2 (US only)**: Neurons responsive to US but not CS, sorted by US latency (earliest first)
-3. **Category 3 (Both CS and US)**: Neurons responsive to both, sorted by CS+US latency (earliest first, CS latency fallback)
+**Fig 2 (2×3)**: Latency histograms (0-50ms) and CS vs US scatter plots.
 
-**Figure 2: Population Latency Analysis** (2×3 grid)
-- Row 1: Latency histograms for CS, US, CS+US (0-50ms, 1ms bins)
-- Row 2: CS vs US latency scatter, latency difference scatter plot
+**Fig 3 (3×3)**: Convergence proportions, integration type (supralinear/linear/sublinear), selectivity index, response magnitude comparisons.
 
-**Figure 3: Convergence, Integration, and Selectivity** (3×3 grid)
-- **Convergence proportions**: Stacked bars (CS only/US only/Both %)
-- **Integration type**: Stacked bars (Supralinear/Linear/Sublinear %)
-- **Selectivity index**: Stacked bars (CS-selective/Non-selective/US-selective %)
-- **Response magnitude**: Scatter+errorbar comparing CS vs US vs CS+US peak z-scores
-- **Integration index scatter**: Individual neurons with thresholds (±0.2)
-- **Selectivity index scatter**: Individual neurons with thresholds (±0.2)
-
-**Quantitative Analyses** (printed to console):
-
-1. **CS-US Convergence Metrics**
-   - % neurons: CS only, US only, Both
-   - Convergence index per group
-
-2. **Integration Type Analysis** (dual-responsive neurons)
-   - Supralinear: CS+US > (CS+US) by >20%
-   - Linear: CS+US ≈ (CS+US) within ±20%
-   - Sublinear: CS+US < (CS+US) by >20%
-   - Integration index = (CS+US_actual - CS+US_predicted) / CS+US_predicted
-
-3. **Temporal Precision & Reliability**
-   - Mean latency ± SEM per stimulus/group
-   - Population latency SD (variability across neurons)
-   - Response probability (mean across neurons)
-
-4. **Latency Comparisons** (dual-responsive neurons)
-   - CS vs US latency difference (paired t-test)
-   - % neurons with faster CS vs US response
-
-5. **Response Magnitude Analysis** (dual-responsive neurons)
-   - Peak z-scores: CS, US, CS+US (0-50ms window)
-   - Statistical comparisons (paired t-tests)
-   - Summation test: CS+US_actual vs CS+US_predicted
-
-6. **Selectivity Index** (dual-responsive neurons)
-   - Selectivity = (CS - US) / (CS + US)
-   - Positive (>0.2) = CS-selective
-   - Negative (<-0.2) = US-selective
-   - Near-zero (±0.2) = Non-selective
-
-7. **Cell Type/Region Comparisons**
-   - LA vs BA convergence rates
-   - PN vs IN convergence rates
-   - Latency comparisons per group
-   - Integration index comparisons
-
-**Console output**: Category breakdown, statistics with significance stars (*, **, ***)
+**Console Stats**: Convergence metrics, integration analysis (±20% thresholds), temporal precision, latency comparisons (paired t-tests), selectivity index ((CS-US)/(CS+US), ±0.2 thresholds), cell type/region comparisons.
 
 ## Publication Figures (figures/figure_1/)
 
-### BAfc_figure_1.m
-Final publication figure with modular panel organization. A4-optimized layout (1500×1500px).
+### BAfc_figure_1.m (updated 2025-11-06)
+Final publication figure with modular panel organization. A4-optimized layout (1000×1000px).
 
 **Structure**: 4×4 tile layout, each panel in separate function
 
-**Row 1**: Experimental setup (2 cols), Example traces (duplicated, 1 col each)
+**Row 1**: Experimental setup (2 cols), Example CS response (tile 3), Example US response (tile 4)
 **Row 2**: PN ISI, IN ISI, Spike features, Normalized waveforms
 **Row 3**: Firing rate distributions (LA, BA, Astria, CeA)
 **Row 4**: Burst index distributions (LA, BA, Astria, CeA)
+
+**Example Traces** (Row 1, tiles 3-4):
+- **Example CS response**: MD312_001, channel 122, `triptest_sound_only([2 3 4 5 6])`, time window [-40, +60]ms
+  - Y-limits: [-0.12, 0.1], yticks: [-0.1, 0, 0.1]
+  - Red speaker symbol (🔊) at x=7ms, top of plot
+- **Example US response**: MD292_002, channel 32, `shocks([5 7 36 41 43 47])`, time window [-40, +60]ms
+  - Y-limits: [-0.5, 0.3], yticks: [-0.5, -0.1, 0.3]
+  - Gray shaded area (0-10ms, artifact period)
+  - Red lightning bolt (⚡) at x=5ms, top of plot, FontSize 20
+- **Both examples**: Dashed black line at x=0, X-axis label "Time (ms)", title "Example CS/US response"
 
 **Key features**:
 - PN/IN plotted together with color coding
@@ -245,238 +197,115 @@ Final publication figure with modular panel organization. A4-optimized layout (1
 - Dashed lines: L-shape (horizontal from left to 0.4 at y=10, vertical from 10 to top at x=0.4)
 - Separates fast-spiking high-FR neurons (upper left) from regular-spiking low-FR (lower right)
 
-**Fonts**: Title 14pt, Axis 12pt
+**Fonts**: All text 10pt (titles, axes, labels, legends, annotations)
 
-### BAfc_figure_2.m (figures/figure_2/)
-Multi-region comparison figure with heatmaps, cluster PSTHs, and proportion analysis.
+### BAfc_figure_2.m (figures/figure_2/, updated 2025-11-06)
+Multi-region comparison: 4 rows (LA/BA/Astria/CeA) × 5 cols (1000×800px).
 
-**Layout**: 4 rows (LA, BA, Astria, CeA) × 5 columns
-- Columns 1-2: Nested CS+US heatmaps (z-score, side-by-side, spanning 2 cols)
-- Column 3: Stacked bar chart (half width)
-- Columns 4-5: Separate CS and US lineplots (firing rate Hz, spanning 2 cols)
+**Layout**: Cols 1-2 nested CS+US heatmaps (z-score, 99th percentile limits), col 3 stacked bar (cluster proportions), cols 4-5 separate CS/US lineplots (Hz).
 
-**Brain region filters**:
-- LA: all neurons
-- BA: all neurons
-- Astria: all neurons
-- CeA: all neurons
+**Clustering**: 5 clusters (CS-sel red, US-sel blue, Multi purple, Non-resp gray, Inhibited green). Rank score sorting. Excitation z≥2. Smoothing: Savitzky-Golay (201).
 
-**Clustering**: Same 5-cluster manual system as comparison_heatmap_005
-- Cluster 1: CS-selective (red: 0.8 0.2 0.2)
-- Cluster 2: US-selective (blue: 0.2 0.4 0.8)
-- Cluster 3: Multisensory (purple: 0.6 0.2 0.6)
-- Cluster 4: Non-responsive (gray: 0.6 0.6 0.6)
-- Cluster 5: Inhibited (green: 0.2 0.6 0.3)
-- Rank score sorting within clusters
-- Inhibition: 50% FR drop threshold
-- Excitation: z-score ≥2
+**Inhibition Detection (Two-Rule System)**:
+- **Rule 1**: ≥50% FR drop in 0-0.2s window (short, transient inhibition)
+- **Rule 2**: ≥50% FR drop in 0-1.0s window (long, sustained inhibition)
+- Neuron classified as inhibited if **EITHER** rule satisfied (OR logic)
+- Parameters: `g.inhibition_fr_drop` (0.50), `g.inhibition_window_short` (0.2s), `g.inhibition_window_long` (1.0s)
+- Console output shows breakdown: Rule1-only, Rule2-only, Both rules
 
-**Heatmaps** (columns 1-2):
-- CS and US heatmaps nested horizontally with compact spacing
-- Titles: "CS" and "US" (bold)
-- Shared global color limits (99th percentile)
-- Black cluster boundary lines (1pt)
-- Brain region labels (vertical, left side, FontSize 16, bold)
-- Y-ticks: first and last neuron only
-- Y-label: "Neuron #" (LA only)
-- X-ticks: [-1 0 1] (bottom row only)
-- Manual colorbar (left side, width 0.01, "Z-score" label)
+**Within-Region Cluster Merging**:
+- Adaptive minimum cluster size: 2% of neurons in each brain region (`g.min_cluster_percent = 2`)
+- Merges small clusters (<2% threshold) into nearest cluster by centroid distance (Euclidean on concatenated CS+US PSTHs)
+- Region-specific thresholds prevent overly strict/lenient requirements
+- Fallback: If all clusters small, merge into cluster 4 (Non-responsive)
+- Console output shows cluster sizes (absolute + percentage) and merge operations
 
-**Stacked bar chart** (column 3):
-- Vertical stacked bar (BarWidth: 0.5, positioned left at x=0.5, xlim [0 2])
-- Order: bottom-to-top matches heatmap (cluster 5→1)
-- Percentage labels on segments (white, bold)
-- Colored text legend (right side, matching lineplot rows, FontSize 12, bold)
-- Only shows clusters present in that brain region
-- Total n at bottom center
-- No axes visible
+**Statistical Analysis**:
+- **Chi-square test**: Contingency table (4 regions × 5 clusters) with permutation testing (10,000 iterations)
+- **Cramér's V**: Global and pairwise effect sizes
+- **FDR correction**: Benjamini-Hochberg for pairwise comparisons
+- **All 4 regions included**: LA, BA, Astria, CeA
 
-**Cluster lineplots** (columns 4-5):
-- Separate CS (col 4) and US (col 5) panels with titles (bold)
-- **Firing rate in Hz** (converted: psth_spx / (num_trials * bin_time))
-- 5 stacked panels per column (1 per cluster)
-- Mean firing rate trace per cluster (LineWidth 2.5, cluster color)
-- **Separate y-limits**: clusters 1-4 (responsive) vs cluster 5 (inhibited, doubled: 2.2× multiplier)
-- Dashed vertical line at t=0 (LineWidth 2)
-- Y-axis hidden, no labels
-- X-axis: [-1 0 1] on bottom panels only (CeA, cluster 5)
-- Empty clusters: axis kept (for continuous dashed line), no trace
-- **Scalebars**: 20 Hz on cluster 4 (non-responsive), 5 Hz on cluster 5 (inhibited), positioned near top
+**Separate Figures**:
 
-**Key features**:
-- Figure size: 1500×3000px (tall)
-- Global color limits (99th percentile) across all heatmaps
-- Firing rate properly calculated (Hz): `psth_spx / (num_trials * bin_time)`
-- Smoothing: Savitzky-Golay (201 points)
-- Time window: ±2s display
+1. **US Metrics Figure** (`fig_US`, 1000×250px, 1×4 layout):
+   - **Column 1**: Chi-square p-values matrix (4×4, all regions)
+     - Binary color: White (p≤0.001), Light grey (p>0.001)
+     - No colorbar, p-values and significance stars overlaid
+   - **Columns 2-4**: US response metrics bar charts (3 regions only: LA, BA, Astria)
+     - ΔnSpikes, ΔPeak FR (Hz), Response Length (ms)
+     - US-selective and Multisensory neurons only (clusters 2 & 3)
+     - Simple grey bars [0.6 0.6 0.6], mean ± SEM
+     - Wilcoxon rank-sum tests (3 pairwise comparisons: LA-BA, LA-Astria, BA-Astria)
+     - No y-labels (titles indicate metrics)
 
-**Fonts**: Title 14pt, Axis 12pt, Lineplot axis 12pt, Scalebar label 10pt
+2. **Supplementary Statistical Figure** (`fig_stats`, 1000×300px, 1×4 layout):
+   - **Panel 1**: Permutation test distribution
+   - **Panel 2**: Contingency table (4 regions × 5 clusters, shows χ² statistic)
+   - **Panel 3**: Cramér's V effect size matrix (4×4, `parula` colormap, clim [0, 0.5])
+   - **Panel 4**: FDR correction scatter plot (uncorrected vs corrected p-values)
 
-### BAfc_figure_3.m (figures/figure_3/)
-CS+US convergence figure showing responsive neurons (CS-selective, US-selective, Multisensory) with quantitative metrics.
+**Heatmaps**: Black cluster lines (1pt), manual colorbar (left, 0.01 width). **Bars**: Vertical stacked (BarWidth 0.5), percentages on segments. **Lineplots**: Hz (psth_spx/trials/bin_time), separate y-limits (clusters 1-4 vs 5: 2.2× multiplier), scalebars 20/5 Hz.
 
-**TTL**: `triptest_sound_only`, `triptest_shocks_only`, `triptest_both`
+### BAfc_figure_3.m (figures/figure_3/, updated 2025-11-07)
+CS+US convergence for LA/Astria responsive neurons (clusters 1-3 only). 6×2 grid (1000×1000px).
 
-**Layout**: 7×2 grid (1500×3000px)
-- **Rows 1-2**: LA heatmaps (col 1, span 2 rows) | LA lineplots (col 2, span 2 rows)
-- **Rows 3-4**: Astria heatmaps (col 1, span 2 rows) | Astria lineplots (col 2, span 2 rows)
-- **Rows 5-7**: Metrics bar charts (span both columns, nested 3×3 grid)
+**Layout**:
+- Rows 1-3: Heatmaps and lineplots (2×6 tiledlayout with tight spacing, 50% of figure)
+  - Row 1: LA (6 panels)
+  - Row 2: Astria (6 panels)
+  - Columns 1-3: CS, US, CS+US heatmaps
+  - Columns 4-6: CS, US, CS+US lineplots (3 clusters stacked in nested 3×1 layouts)
+- Rows 4-6: Metrics bar charts (3×3 nested, 50% of figure)
 
-**Brain regions**: LA, Astria only
+**Heatmaps**: Same neurons across CS/US/CS+US, global 99th percentile limits, onset/offset dots (MarkerSize 4), manual colorbar (Astria left, [0.025, 0.52], 0.01×0.15).
 
-**Clustering**: Identical to figure 2 (all 5 clusters computed)
-- Classification based on CS and US responses only (not CS+US)
-- Same rank score sorting as figure 2
-- **Only clusters 1-3 plotted** (CS-selective, US-selective, Multisensory)
-- Same neuron ordering as figure 2 for first 3 clusters
+**Lineplots**: 3 stimuli × 3 clusters stacked (nested tiledlayouts), Hz (psth_spx/trials/bin_time), shared y-limits, 20 Hz scalebar on cluster 3 of CS+US panel.
 
-**Heatmaps** (column 1):
-- Shows CS, US, and CS+US responses for same neurons (3 nested heatmaps horizontally)
-- Same neurons in same order across all 3 stimuli
-- Global color limits (99th percentile) across all 6 heatmaps (LA and Astria combined)
-- Black cluster boundary lines (1pt)
-- Brain region labels (vertical, left side, first heatmap only)
-- Y-ticks: first and last neuron only
-- Y-label: "Neuron #" (LA first heatmap only)
-- X-label: "Time (s)" (Astria only)
-- X-ticks: [-1 0 1] (Astria only)
-- Manual colorbar (left side of Astria heatmap, cb_left=0.025, cb_bottom=0.48, width 0.01, height 0.15, "Z-score" label)
+**Bar Charts** (3 metrics): ΔnSpikes, ΔPeak FR, Response length (onset-to-offset window, baseline-subtracted).
+- **Positions**: LA [2 3 4], Astria [7 8 9]
+- **Colors**: LA darker (0.7×), Astria lighter (+0.5 blend)
+- **Error bars**: SEM (appropriate for group mean comparisons with statistical tests)
+- **Y-limits**: ΔnSpikes [0 40], ΔPeak FR [0 120], Response length [0 500] (adjustable - positioning is dynamic)
+- **Stats**: Wilcoxon signed-rank (CS vs US, CS vs CS+US, US vs CS+US), separate per region
+- **Significance lines** (2025-11-05 optimization):
+  - Level 1 (neighbor comparisons): 8% of y-range above data max, narrower lines [x±0.4]
+  - Level 2 (two-side comparisons): Fixed spacing above Level 1 (ΔnSpikes: 4 units, ΔPeak: 12 units, Response length: 50 units)
+  - Stars positioned 5% of y-range above lines with `VerticalAlignment: 'middle'` for optimal spacing
+  - Dynamic positioning: scales automatically with any ylim changes via `y_range = curr_ylim(2) - curr_ylim(1)`
+- **Fonts**: All 10pt (titles, axes, labels)
 
-**Lineplots** (column 2):
-- 3 stimuli (CS, US, CS+US) × 3 clusters (stacked)
-- Titles: "CS", "US", "CS+US" (LA only, bold)
-- **Firing rate in Hz** (converted: psth_spx / (num_trials * bin_time))
-- Mean firing rate trace per cluster (LineWidth 2.5, cluster color)
-- Shared y-limits across all 3 stimuli (CS, US, CS+US)
-- 20 Hz scalebar on cluster 3 (Multisensory) of CS+US panel, positioned near top
+### BAfc_figure_3_supp_PN_IN.m (figures/figure_3/, 2025-11-07)
+Supplementary figure: LA cell type comparison (PN vs IN). Same structure as BAfc_figure_3 but separates PNs and INs.
 
-**Metrics bar charts** (rows 5-7, nested 3×3 grid):
-- **Rows**: CS-sel, US-sel, Multisensory (cluster names on left column only)
-- **Columns**: Response AUC, Response Peak, Peak Time (titles on top row, bold)
-- **Bar arrangement**: LA bars [2 3 4], gap, Astria bars [7 8 9]
-  - Position 2/7: CS response
-  - Position 3/8: US response
-  - Position 4/9: CS+US response
-  - Bar colors: Cluster-specific (CS-sel red, US-sel blue, Multi purple)
-    - LA: Darker version (cluster_color × 0.7)
-    - Astria: Lighter version (cluster_color + (1-cluster_color) × 0.5)
-  - Bar width: 0.6 (narrower)
-  - xlim: [0.5 10.5] (margins on both sides)
-  - Gap between LA and Astria: 2 positions
-- **X-tick labels**: Only on bottom row (Multisensory), "CS/US/CS+US" repeated twice
-- **Y-axis**:
-  - Left column (AUC): ylabel = "CS-sel/US-sel/Multi\nZ-score"
-  - Middle column (Peak): ylabel = "Z-score"
-  - Right column (Time): ylabel = "Time (ms)"
-  - Y-ticks: Bottom, middle, top (rounded to 1 decimal) on all columns
-- **Calculations**:
-  - Response AUC: sum of positive z-scores in ROI
-  - Response Peak: max z-score in ROI
-  - Peak Time: latency to max z-score in ROI (ms)
-- **Statistics**: Mean ± SEM with error bars (LineWidth 1.5, CapSize 4)
-- **LA/Astria labels**: Text inside top row panels
-  - Column 1 (AUC): 5% from top
-  - Columns 2-3 (Peak, Time): 10% from top (lower position)
-  - Top row ylim extended by 15% to accommodate labels
+**Layout**: 6×2 grid (1000×1000px), identical to main Figure 3
+- Rows 1-3: Heatmaps and lineplots (50% of figure)
+  - Row 1: LA-PN (6 panels)
+  - Row 2: LA-IN (6 panels)
+  - Columns 1-3: CS, US, CS+US heatmaps
+  - Columns 4-6: CS, US, CS+US lineplots (3 clusters stacked)
+- Rows 4-6: Bar charts (2 rows × 3 metrics, 50% of figure)
+  - **US-selective and Multisensory only** (CS-selective excluded)
+  - Row 1: US-selective
+  - Row 2: Multisensory
 
-**Key features**:
-- Figure size: 1500×3000px (adjustable height)
-- **Figure visibility**: Use `'Visible', 'off'` to create figures larger than screen resolution
-- **Position order**: Must set 'Units' before 'Position': `figure('Units', 'pixels', 'Position', [...])`
-- Same clustering and sorting as figure 2
-- Shows CS+US integration for responsive neurons
-- Quantitative metrics for cross-region comparison
-- Smoothing: Savitzky-Golay (201 points)
-- Time window: ±2s display
+**Clustering**: Same as main Figure 3 (z≥2 excitation, 50% FR drop inhibition, clusters 1-3 responsive)
 
-**Fonts**: Title 14pt, Axis 12pt
+**Bar Charts**: ΔnSpikes, ΔPeak FR, Response length
+- **Positions**: PN [2 3 4], IN [7 8 9]
+- **Colors**: PN darker (0.7×), IN lighter (+0.5 blend)
+- **Y-limits**: ΔnSpikes [0 100], ΔPeak FR [0 300], Response length [0 700]
+- **Stats**: Wilcoxon signed-rank within each cell type (CS vs US, CS vs CS+US, US vs CS+US)
+- **Significance lines**: Same 2-level system as main Figure 3
 
 ## Clustering Analysis (BAfc_claude_code/)
 
-### comparison_heatmap_004.m
-Clean heatmap-only comparison of CS vs US responses. PNs and INs clustered separately, plotted together (PNs top, INs bottom).
+### comparison_heatmap_004.m & 005.m
+CS vs US heatmaps with PNs/INs clustered separately (PNs top, INs bottom).
 
-**Two clustering methods**:
+**004**: Two methods: (1) K-means (5 clusters, ±0.5s ROI, sorted by onset→offset→distance), (2) Manual (CS-sel, US-sel, Multi, Inhibited, Non-resp). Excitation z≥2, Inhibition z≤-2. 99th percentile limits, smoothing 101, latency detection ≥20ms sustained.
 
-**1. K-means clustering** (data-driven)
-- Clusters: 5 (adjustable via `g.clustnum`)
-- ROI: ±0.5s around stimulus onset
-- Sorting: onset latency → offset latency → distance to centroid
-
-**2. Manual clustering** (hypothesis-driven)
-- Cluster 1: CS-selective (CS excited, US not)
-- Cluster 2: US-selective (US excited, CS not)
-- Cluster 3: Multisensory (both CS and US excited)
-- Cluster 4: Inhibited (not excited, but inhibited by ≥1 stimulus)
-- Cluster 5: Non-responsive (neither excited nor inhibited)
-- Sorting: onset latency → offset latency → peak response
-
-**Key parameters**:
-- `g.excitation_threshold = 2` (z-score)
-- `g.inhibition_threshold = -2` (z-score)
-- `g.use_percentile = true` (colormap limits)
-- `g.clim_percentile = 99` (2.5th to 97.5th percentile)
-- `g.smoothvalue = 101` (Savitzky-Golay filter)
-
-**Z-scoring**: Baseline-only (pre-stimulus period) mean/SD used
-
-**Performance**: PSTHs calculated once at start, reused throughout
-
-**Latency detection**:
-- Onset: First sustained crossing above threshold (≥20ms)
-- Offset: First sustained return below threshold after onset
-- Both used for sorting within clusters
-
-**Output**: Two figures (k-means and manual), side-by-side CS/US heatmaps, thick black line separating PNs/INs, colored lines separating clusters
-
-### comparison_heatmap_005.m
-Rank score-sorted manual clustering with improved inhibition detection.
-
-**Manual clustering**:
-- Cluster 1: CS-selective (CS excited, US not)
-- Cluster 2: US-selective (US excited, CS not)
-- Cluster 3: Multisensory (both CS and US excited)
-- Cluster 4: Non-responsive (neither excited nor inhibited)
-- Cluster 5: Inhibited (firing rate drop ≥30%)
-
-**Cluster ordering**: 1 → 2 → 3 → 4 → 5 (inhibited at bottom, just above INs)
-
-**Sorting criteria** (rank score method):
-- **Rank score**: `onset_latency + α * duration`, where `duration = offset_latency - onset_latency`
-- **α = 0.8** (adjustable weight)
-- Cluster 1: CS rank score (ascending)
-- Cluster 2: US rank score (ascending)
-- Cluster 3: Mean of CS and US rank scores (ascending)
-- Cluster 4/5: Mean z-score during test time (descending)
-
-**Inhibition detection** (firing rate-based):
-- Compares baseline (−5 to 0s) vs test time (0 to +0.5s) in **Hz** (not z-score)
-- `FR_drop = (baseline_FR - test_FR) / baseline_FR`
-- Threshold: `g.inhibition_fr_drop = 0.30` (30% drop)
-- Stored in `psthHz_full` (smoothed raw firing rates)
-
-**INs classification**:
-- Separated into responsive vs non-responsive
-- Responsive: sorted by mean rank score (CS+US)
-- Non-responsive: sorted by firing rate (descending)
-- Gray line separates groups
-
-**Key parameters**:
-- `g.excitation_threshold = 2` (z-score for excitation)
-- `g.inhibition_fr_drop = 0.30` (30% FR drop)
-- `g.alpha = 0.8` (duration weight)
-- `g.onset_threshold = 2` (z-score)
-- `g.min_consec_bins = 20` (20ms sustained response)
-- `g.plotwin = [1 1]` (±1s display)
-- `g.smoothvalue = 101` (Savitzky-Golay)
-- `g.clim_percentile = 95`
-
-**Visual styling**:
-- Cluster colors: Softer palette (0.8 0.2 0.2 for CS-sel, 0.2 0.4 0.8 for US-sel, etc.)
-- Cluster borders: 2pt, PN/IN separator: 4pt black, IN separator: 2pt dark gray
-- Colormap: `parula` or `g.colors.Heatmap`
-
-**Output**: Side-by-side CS/US heatmaps, PNs top/INs bottom, colored cluster boundaries, rank score-sorted within clusters
+**005**: Rank score sorting (`onset + α*duration`, α=0.8). Inhibition: FR-based (30% drop, Hz not z-score). Clusters ordered 1→5 (inhibited at bottom). INs: responsive (mean rank score) vs non-responsive (FR descending), gray separator. Excitation z≥2, clim 95th percentile, softer colors (CS-sel 0.8 0.2 0.2, US-sel 0.2 0.4 0.8, Multi 0.6 0.2 0.6).
 
 ## Common Modifications
 
@@ -492,3 +321,319 @@ Rank score-sorted manual clustering with improved inhibition detection.
 - Neuron ordering: onset latency (primary) → offset latency (secondary) → response magnitude/distance to centroid
 - Scripts are standalone (not functions), clear workspace on run
 - Baseline period: all time before stimulus (t < 0)
+
+## Monosynaptic Response Analysis - Clean Version (uni_monosyn_opto/, 2025-10-28)
+
+**Bug Fix**: Original `BAfc_identify_responsive_neurons.m` hardcoded LA/BA only, excluded Astria/CeA when `params.bR='All'`.
+
+**New Files**: `BAfc_monosyn_params.m` (centralized params, `brain_regions` not `bR`, supports 'All'/string/cell array), `BAfc_identify_responsive_neurons_v2.m` (fixed region filtering, returns `analyzed_regions`), `BAfc_plot_monosynaptic_heatmaps.m` (plots regions×cell types×stimuli, 3 categories: CS-only/US-only/Both sorted by latency, z-score [-5.5,13], -0.1 to +0.1s), `example_monosyn_analysis.m` (5 examples), `README.md`.
+
+**Usage**: Load data → `params=BAfc_monosyn_params()` → `results=BAfc_identify_responsive_neurons_v2(cell_metrics,ttl,params)` → `BAfc_plot_monosynaptic_heatmaps()`.
+
+**BAfc_plot_monosynaptic_heatmaps**: 8 analysis sections (convergence, integration ±20%, temporal precision, latency comparisons, response magnitude, selectivity (CS-US)/(CS+US) ±0.2, latency distributions, convergence/integration grid). 3 figures + console stats. Dynamic colors for any regions.
+
+## Publication Figures (figures/figure_4/)
+
+### BAfc_figure_4.m (2025-10-29)
+
+Comprehensive monosynaptic response figure with heatmaps, bar charts, and latency analysis.
+
+**Layout**: 4×5 grid (1500×1200px)
+- **Heatmaps**: Rows 1-4, Columns 1-3
+  - LA: Row 1 (spanning 2 rows), tiles 1, 2, 3
+  - Astria: Row 3 (spanning 2 rows), tiles 11, 12, 13
+  - Shows PNs and INs separately (PNs top, INs bottom with white separator line)
+- **Bar charts**: Rows 1-3, Columns 4-5 (ΔMean FR, ΔPeak FR)
+- **Latency boxplots**: Row 4, Columns 4-5 (spanning 2 columns)
+
+**Clustering & Sorting**:
+- **Categories**: CS-selective, US-selective, Multisensory
+- **Sorting by rank score**: `onset_latency + g.alpha * duration`
+  - CS-selective: sorted by CS rank score
+  - US-selective: sorted by US rank score
+  - Multisensory: sorted by CS+US rank score
+- **Offset handling**: If no offset detected, uses end of response window (`g.monosyn_window`)
+- **Separate PN/IN clustering**: LA shows both cell types on heatmaps (white LineWidth 1 separator)
+
+**Artifact Indication**:
+- **Gray shaded overlay**: 0-10ms on all heatmaps (30% transparency)
+- **Lightning bolt symbol** (⚡): Yellow, FontSize 16, only on US and CS+US heatmaps at top
+
+**Bar Charts** (LA-PN and Astria, no INs):
+- **Metrics**: ΔMean FR (ylim [0 200]), ΔPeak FR (ylim [0 300])
+- **Window**: 12ms to `g.monosyn_window` (adjustable, default 25ms)
+- **Positions**: LA-PN [2 3 4], Astria [7 8 9]
+- **Colors**: LA-PN 0.7× cluster, Astria +0.5 blend
+- **Stats**: Wilcoxon signed-rank (CS vs US, US vs CS+US, CS vs CS+US)
+- **Labels**: Cluster names only (left column)
+
+**Latency Boxplots** (ylim [0 50]):
+- **4 pairs**: LA CS, Astria CS, LA US, Astria US (Selective vs Multisensory)
+- **Scatter**: Jittered (gray=selective, purple=multisensory)
+- **Stats**: Ranksum per pair, shows stars or "n.s."
+
+**Colorbar**: Left of Astria heatmap, manual axes (0.010×0.15, [0.025, 0.51]), `g.colors.Heatmap`
+
+**Parameters**: `g.monosyn_window=0.025` (adjustable), `g.bin_time=0.001`, `g.smoothvalue=7`, `g.plotwin=[0.05 0.05]`, `g.onset_threshold=5`, `g.min_consec_bins=1`, `g.alpha=0.0`, `g.use_two_rule=false`, `g.zscore_threshold_one_rule=5`
+
+**Helper**: `compute_onset_offset_latency()` - if no offset, uses `g.monosyn_window` end
+
+## Publication Figures (figures/figure_5/)
+
+### BAfc_figure_5.m (2025-10-30)
+Optogenetic manipulation effects on monosynaptic responses. Compares CS ± light and US ± light.
+
+**TTLs**: `triptest_sound_only`, `triptest_sound_only_light`, `triptest_shocks_only`, `triptest_shocks_only_light`
+
+**Detection**: Identifies monosynaptically responsive neurons in each condition separately, then compares light vs no-light effects.
+
+**Statistics**: Wilcoxon signed-rank test on trial-by-trial spike counts in response window (12ms to `g.monosyn_window`).
+
+**Output**: Compatible with `BAfc_monosyn_raster_ui` for visual inspection. Detailed summary with cellIDs for each category (Increased/Decreased/Unchanged).
+
+### BAfc_figure_5_v2.m (2025-10-30, updated 2025-10-30)
+Optogenetic effects on CS+US responses with fine-grained multi-window statistical testing.
+
+**TTLs**: `triptest_both`, `triptest_both_light` (or `triptest_sound_only`, `triptest_shocks_only` variants)
+
+**Key Feature - Fine-Grained Multi-Window Testing**: Tests for optogenetic effects in 28 time windows with 1ms increments:
+- **Windows**: 12-13ms, 12-14ms, 12-15ms, ..., 12-40ms (28 windows total)
+- **Artifact exclusion**: 12ms (hardcoded for shock stimuli)
+- **Window generation**: `window_ends = 0.013:0.001:0.040` (1ms steps)
+
+**Detection Strategy**:
+1. Identify neurons responsive to EITHER condition (no-light OR light) using `g.monosyn_window`
+2. For each responsive neuron, test all 28 windows separately
+3. Classify as **Increased** if ANY window shows p<0.05 with positive change
+4. Classify as **Decreased** if ANY window shows p<0.05 with negative change (no increased windows)
+5. Classify as **Unchanged** if no windows reach significance
+
+**Rationale**: Fine-grained temporal resolution captures precise timing of optogenetic effects. Different neurons may show effects at different latencies (e.g., early 12-20ms vs late 25-40ms). Testing multiple overlapping windows ensures no effects are missed due to specific window choice.
+
+**Statistics**: Wilcoxon signed-rank test (paired, non-parametric) on trial-by-trial spike counts for each window independently.
+
+**Visualization**: Pie charts and bar charts showing proportions (Increased/Decreased/Unchanged) for LA and Astria regions. Colors: red (increased), blue (decreased), gray (unchanged).
+
+**Output Format**: For each neuron, reports minimum p-value and corresponding window:
+```
+neuron_idx=123, cellID=45, animal=MD298_001, min_p=0.0023 (12-18ms)
+```
+
+**UI Compatibility**: Outputs `g_ui` and `monosyn_results` structures for `BAfc_monosyn_raster_ui(g_ui, monosyn_results, ttl)`. Display window adjustable via `g_ui.params.pre_time_short` and `g_ui.params.post_time_short` (default 0.1s = ±100ms).
+
+**Key Parameters**:
+- `g.monosyn_window`: Detection window (e.g., 0.05s = 0-50ms)
+- `g.zscore_threshold_rule1`: 3 (Rule 1 z-score threshold, lowered from 5 for CS+US)
+- `g.use_two_rule`: true (two-rule detection: Rule 1 OR Rule 2)
+- Artifact exclusion: 12ms (hardcoded)
+- Test windows: 12-13ms to 12-40ms in 1ms steps (28 windows total)
+
+**Output Summary**: Console printout with neuron counts and cellIDs for each category per region. Example:
+```
+LA: 45 responsive neurons (in either condition)
+  Increased (p<0.05): 12 (26.7%)
+  Decreased (p<0.05): 3 (6.7%)
+  Unchanged (p>=0.05): 30 (66.7%)
+```
+
+### BAfc_figure_5_supp_light_inhibited.m (2025-11-07)
+Supplementary figure showing light-inhibited neurons' responses to CS and US (no-light vs light).
+
+**Purpose**: Visualize how neurons inhibited by pre-stimulus light respond to CS and US stimuli with and without optogenetic manipulation.
+
+**TTLs**:
+- No-light: `triptest_sound_only`, `triptest_shocks_only`
+- Light: `triptest_sound_only_light`, `triptest_shocks_only_light`
+
+**Light-Inhibited Detection** (matching BAfc_figure_2.m):
+- **Method**: Wilcoxon ranksum test + FR drop threshold
+- **Criteria**: p<0.05 (ranksum, right-tailed) AND FR drop ≥50%
+- **Windows**: Recent (−0.5 to 0s) vs Baseline (−5 to −0.5s)
+- Tests ALL LA and Astria neurons across all light conditions
+- Neuron marked as inhibited if detected in ANY light condition
+
+**Layout**: 4×4 grid (1200×1400px)
+- **Row 1** (LA-CS): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
+- **Row 2** (LA-US): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
+- **Row 3** (Astria-CS): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
+- **Row 4** (Astria-US): No-light heatmap | Light heatmap | No-light lineplot | Light lineplot
+
+**Clustering & Sorting**:
+- 5 clusters based on no-light responses: CS-sel, US-sel, Multi, Non-resp, Inhibited
+- Same classification and sorting as BAfc_figure_2/3 (z≥2 excitation, 50% FR drop inhibition)
+- Sorted by rank score (onset + 0.5×duration) within clusters
+
+**Heatmaps**:
+- Z-scored, 99th percentile color limits
+- Black cluster lines (LineWidth 1)
+- Onset/offset markers (black dots, MarkerSize 4) for both conditions
+- Time window: ±2s, smoothing: Savitzky-Golay (201)
+
+**Lineplots**:
+- Population mean (Hz) for all light-inhibited neurons in that region
+- Green line (no-light), Red line (light)
+- Same time window as heatmaps
+
+**Row Labels**: Brain region + "Neuron #" (left ylabel on first stimulus per region)
+
+**Colorbar**: Manual axes, left side ([0.025, 0.40], 0.010×0.20), Z-score
+
+**Key Parameters**:
+- `g.light_inhib_window_recent = 0.5` (0-0.5s before stimulus)
+- `g.light_inhib_window_baseline = 4.5` (4.5s baseline)
+- `g.light_inhib_p_threshold = 0.05`
+- `g.light_inhib_fr_drop = 0.5` (50% threshold)
+- `g.excitation_threshold = 2`, `g.inhibition_fr_drop = 0.50`
+
+**File Location**: `figures/figure_5/BAfc_figure_5_supp_light_inhibited.m`
+
+### BAfc_figure_5.m - Current Production Version (2025-10-31)
+Comprehensive optogenetic manipulation figure analyzing CS and US separately. Processes all 4 TTL conditions in single run.
+
+**Layout**: 4×4 grid (1500×800px)
+- **Top-left (rows 1-2, cols 1-2)**: Injection site image (`drawed_injection.png`)
+- **Bottom-left (rows 3-4, cols 1-2)**: Example neuron rasters (3×4 nested)
+- **Right side (rows 1-4, cols 3-4)**: Population analysis (3×4 nested, tight spacing)
+
+**TTLs Analyzed**: All 4 conditions in single run
+- CS: `triptest_sound_only` vs `triptest_sound_only_light`
+- US: `triptest_shocks_only` vs `triptest_shocks_only_light`
+
+**Results Storage**: `results_all{region, stimulus}` where stimulus: 1=CS, 2=US
+
+**Multi-Window Statistical Testing**: 28 windows tested (12-13ms to 12-40ms, 1ms increments)
+- Wilcoxon signed-rank test on trial-by-trial spike counts per window
+- Enhanced: ANY window p<0.05 with positive change
+- Decreased: ANY window p<0.05 with negative change (no increased windows)
+- Unchanged: NO windows p<0.05
+
+**Example Neurons** (Bottom-left rasters, 3 rows × 4 columns):
+- Row 1: No-light rasters (4 neurons: MD309_001/20 CS, MD307_001/13 US, MD318_001/46 CS, MD317_001/43 US)
+- Row 2: Light rasters (same neurons, light conditions)
+- Row 3: FR line plots (black=no-light, red=light, ylim [-10 300])
+
+Raster parameters:
+- Time window: ±50ms, xlim [-50 50]
+- MarkerSize 6, red vertical line (LineWidth 2) at time 0
+- Y-labels: First column only (Trial/Trial/FR(Hz))
+- X-labels: Bottom row only (Time (ms))
+
+**Population Analysis** (Right side, 3 rows × 4 columns, tight spacing):
+
+Row 1 - Pie charts (LA-CS, LA-US, Astria-CS, Astria-US):
+- Enhanced (red 0.8 0.2 0.2): Increased with light
+- Non-enhanced (gray 0.7 0.7 0.7): Decreased + Unchanged combined
+- Data stored separately (n_increased, n_decreased, n_unchanged) but visualized as Enhanced vs Non-enhanced
+
+Row 2 - Slope graphs (ΔPeak FR trajectories):
+- Individual enhanced neurons: Red lines (alpha 0.3) connecting no-light to light
+- Gray scatter (position 1): No-light ΔPeak FR
+- Red scatter (position 2): Light ΔPeak FR
+- Black thick line (LineWidth 3): Population mean trajectory
+- Y-label: Only first panel (LA-CS) shows "\DeltaPeak FR (Hz)"
+- ΔPeak FR calculated in neuron-specific optimal window (12ms to their most significant window_end)
+
+Row 3 - Population FR plots (mean ± SEM for all enhanced neurons):
+- Black line + gray shading (alpha 0.3): No-light condition
+- Red line + red shading (alpha 0.3): Light condition
+- Red vertical line: Stimulus onset
+- Y-label: Only first panel (LA-CS) shows "FR (Hz)"
+- ylim [-10 300], xlim [-50 50]
+
+**Detection Parameters**:
+- Two-rule system: Rule 1 (z≥3, p≥0.25) OR Rule 2 (z≥10, p≥0.1)
+- `g.monosyn_window`: 0.05s (0-50ms)
+- `g.zscore_threshold_rule1`: 3 (lowered from 5 for better sensitivity)
+- `g.use_two_rule`: true
+- Artifact exclusion: 12ms (hardcoded)
+- Smoothing: Savitzky-Golay (window 7)
+- Bin time: 1ms
+
+**Spacing Optimization** (2025-10-31):
+- Right nested layout: `'TileSpacing', 'tight'` (changed from 'compact')
+- Y-axis labels minimized: Only first panel in each row shows ylabel
+- Slope graphs: `YTickLabel` cleared for panels after first
+- Population FR plots: `YTickLabel` cleared for panels after first
+
+**Console Output**: Detailed summary per region/stimulus with neuron indices, cellIDs, animals, minimum p-value, and corresponding window for each category (Increased/Decreased/Unchanged).
+
+## Figure Legends (2025-10-31)
+
+Comprehensive figure legends created for all 5 publication figures in `figure_legends.txt`:
+
+**Figure 1**: Neuron characterization across 4 brain regions (LA/BA/Astria/CeA)
+- Row 1: Experimental setup, example traces
+- Row 2: ISI distributions (PN/IN), spike features (trough-to-peak vs FR with L-shape), normalized waveforms
+- Row 3-4: Firing rate and burst index distributions per region
+- 4×4 layout, 1500×1500px, A4-optimized
+
+**Figure 2**: Regional CS/US response comparison (4 regions × 5 columns, 1500×3000px)
+- Cols 1-2: Nested z-score heatmaps (CS/US, 99th percentile)
+- Col 3: Stacked bar (5 cluster proportions)
+- Cols 4-5: Firing rate line plots (Hz) per cluster
+- 5 clusters: CS-sel, US-sel, Multi, Non-resp, Inhibited
+- Savitzky-Golay smoothing (201)
+
+**Figure 3**: CS+US convergence in LA/Astria responsive neurons (7×2 grid, 1500×3000px)
+- Rows 1-2: LA (3 nested heatmaps + lineplots)
+- Rows 3-4: Astria (3 nested heatmaps + lineplots)
+- Rows 5-7: ΔMean FR and ΔPeak FR bar charts (3×2 nested)
+- Wilcoxon signed-rank stats, mean±SEM
+
+**Figure 4**: Monosynaptic responses (4×5 grid, 1500×1200px)
+- Cols 1-3: Heatmaps (LA rows 1-2, Astria rows 3-4) showing PNs/INs, CS/US/CS+US
+- Cols 4-5 rows 1-3: ΔMean/ΔPeak FR bar charts
+- Cols 4-5 row 4: Latency boxplots (Selective vs Multisensory)
+- Artifact overlay 0-10ms, lightning bolt on US/CS+US
+- Z-score [-5.5, 13], window ±50ms
+
+**Figure 5**: Optogenetic manipulation (4×4 grid, 1500×800px)
+- Top-left: Injection site
+- Bottom-left: 4 example neurons (3 rows: no-light rasters, light rasters, FR plots)
+- Right: 3×4 nested (pie charts, slope graphs, population FR)
+- Multi-window testing (28 windows, 1ms increments)
+- Enhanced vs Non-enhanced categories
+
+All legends include panel descriptions, technical parameters, statistical methods, color schemes, dimensions, and key analysis details. File location: `C:\Users\dmagyar\Documents\data_analysis\BAfc_claude_code\figure_legends.txt`
+
+## Supplementary Figures (figures/supplementary_stability/)
+
+### BAfc_supp_stability.m (2025-11-04, updated 2025-11-06)
+
+Response stability analysis showing neuronal responses remained stable throughout experiment.
+
+**Purpose**: Demonstrate that neuronal responses did not change over time during the recording session.
+
+**Method**:
+- Identifies responsive neurons (clusters 1-3: CS-selective, US-selective, Multisensory) using same criteria as BAfc_figure_3
+- Divides trials into 10 blocks per neuron (adaptive block size based on total trial count)
+- Calculates ΔFR (response FR - baseline FR) for each block
+  - Baseline: -5 to 0s window (all trials)
+  - Response: 0 to 1s window (per block)
+- Mean ± SEM across neurons for each block
+
+**Layout**: 1×3 grid (1500×500px), 'tight' TileSpacing
+- Panel 1: CS responses
+- Panel 2: US responses
+- Panel 3: CS+US responses
+
+**Brain Regions**:
+- LA (red line): All 3 stimuli
+- BA (green line): US and CS+US only (no CS)
+- Astria (blue line): All 3 stimuli
+
+**Plot Details**:
+- X-axis: Block # (1-10)
+- Y-axis: ΔFiring Rate (Hz), ylim [0 30]
+- Line: Mean ΔFR (LineWidth 3)
+- Shaded area: SEM (FaceAlpha 0.3, excluded from legend via 'HandleVisibility', 'off')
+- Legend: CS+US panel only, shows region and neuron count
+
+**Key Parameters**:
+- `g.excitation_threshold = 2` (z-score)
+- `g.inhibition_fr_drop = 0.50` (50% FR drop)
+- `g.test_time = 1` (response window 0-1s)
+- `g.pre_time = 5` (baseline window -5 to 0s)
+- `g.bin_time = 0.001` (1ms bins)
+
+**File Location**: `figures/supplementary_stability/BAfc_supp_stability.m`
