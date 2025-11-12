@@ -149,9 +149,6 @@ for br = 1:4
         continue;
     end
 
-    % Store indices for later use
-    results_all{br}.idx_neurons = find(idx_neurons);
-
     % Extract PSTHs
     psth_CS = psthZ_full{1}(idx_neurons, :);
     psth_US = psthZ_full{2}(idx_neurons, :);
@@ -390,19 +387,6 @@ for br = 1:4
     n_clu = find(diff(Clusters_sorted) ~= 0);
     fprintf('    %s: Unique clusters in heatmap: %s\n', brain_regions{br}, mat2str(unique(Clusters_sorted)));
 
-    % Print all neurons in heatmap order
-    fprintf('\n=== %s Heatmap Neurons (in display order) ===\n', brain_regions{br});
-    for n = 1:length(res.leafOrder)
-        global_idx = res.idx_neurons(res.leafOrder(n));
-        animal_id = g.cell_metrics.animal{global_idx};
-        cell_id = g.cell_metrics.cellID(global_idx);
-        brain_region = g.cell_metrics.brainRegion{global_idx};
-        cluster_id = res.Clusters(res.leafOrder(n));
-        fprintf('  Heatmap row %3d: Animal=%s, CellID=%d, Region=%s, Cluster=%d (%s)\n', ...
-            n, animal_id, cell_id, brain_region, cluster_id, cluster_names{cluster_id});
-    end
-    fprintf('\n');
-
     % Heatmap CS
     ax1 = nexttile(t_heatmaps, 1);
     psth_sorted = res.psth_CS(res.leafOrder, :);
@@ -616,12 +600,12 @@ for br = 1:4
             curr_ylim = ylim;
             y_range = curr_ylim(2) - curr_ylim(1);
             scalebar_size = 20;
-            x_pos = time_vec(end) - 0.85;  % Moved slightly more left
+            x_pos = time_vec(end) - 0.3;
             y_pos = curr_ylim(2) - scalebar_size - 0.05*y_range;
 
             hold on;
             plot([x_pos x_pos], [y_pos y_pos+scalebar_size], 'k-', 'LineWidth', 3);
-            text(x_pos+0.1, y_pos+scalebar_size/2, sprintf('%dHz', scalebar_size), ...
+            text(x_pos+0.2, y_pos+scalebar_size/2, sprintf('%d Hz', scalebar_size), ...
                 'FontSize', g.fontSize2, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
             hold off;
         end
@@ -630,12 +614,12 @@ for br = 1:4
             curr_ylim = ylim;
             y_range = curr_ylim(2) - curr_ylim(1);
             scalebar_size = 5;
-            x_pos = time_vec(end) - 0.85;  % Moved slightly more left
+            x_pos = time_vec(end) - 0.3;
             y_pos = curr_ylim(2) - scalebar_size - 0.05*y_range;
 
             hold on;
             plot([x_pos x_pos], [y_pos y_pos+scalebar_size], 'k-', 'LineWidth', 3);
-            text(x_pos+0.1, y_pos+scalebar_size/2, sprintf('%dHz', scalebar_size), ...
+            text(x_pos+0.2, y_pos+scalebar_size/2, sprintf('%d Hz', scalebar_size), ...
                 'FontSize', g.fontSize2, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
             hold off;
         end
@@ -644,10 +628,10 @@ end
 
 % Add colorbar
 drawnow;
-cb_width = 0.008;
-cb_left = 0.41;
-cb_bottom = 0.07;
-cb_height = 0.08;
+cb_width = 0.006;
+cb_left = 0.5;
+cb_bottom = 0.1;
+cb_height = 0.06;
 cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
@@ -812,9 +796,9 @@ for r1 = 1:4
         if r1 ~= r2
             p_val = p_value_matrix(r1, r2);
             if p_val < 0.001
-                color_matrix(r1, r2, :) = [0.65 0.65 0.65];  % Lighter grey for p<0.001
+                color_matrix(r1, r2, :) = [0.50 0.50 0.50];
             elseif p_val < 0.05
-                color_matrix(r1, r2, :) = [0.80 0.80 0.80];  % Light grey for 0.001<=p<0.05
+                color_matrix(r1, r2, :) = [0.80 0.80 0.80];
             end
         end
     end
@@ -862,7 +846,7 @@ hold(ax_pval, 'off');
 
 % Columns 2-4: US response metrics (OPTIMIZED - pre-calculate all metrics)
 clusters_to_use = [2, 3];
-metric_names = {'\DeltanSpikes', '\DeltaFR (Hz)', 'Response length (ms)'};
+metric_names = {'\DeltanSpikes', '\DeltaPeak FR (Hz)', 'Response length (ms)'};
 
 % Pre-calculate all metrics for all regions (using already computed latencies)
 all_metric_data = cell(3, 3);
@@ -1017,8 +1001,8 @@ end
 %% Combined statistical figures
 fprintf('\n=== Creating Combined Statistical Figures ===\n');
 
-fig_stats = figure('Position', [200, 100, 1000, 250]);
-t_stats = tiledlayout(fig_stats, 1, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+fig_stats = figure('Position', [200, 100, 1000, 300]);
+t_stats = tiledlayout(fig_stats, 1, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Panel 1: Permutation distribution
 ax1 = nexttile(t_stats, 1);
@@ -1031,41 +1015,36 @@ title(sprintf('Permutation Test (p=%.4f)', p_perm), 'FontSize', g.fontSize1);
 legend({'Permuted', 'Observed'}, 'Location', 'northeast');
 hold off;
 
-% Panels 2-3: Contingency table (spanning 2 columns)
-ax_table = nexttile(t_stats, 2, [1 2]);
+% Panel 2: Contingency table
+ax_table = nexttile(t_stats, 2);
 axis off;
 
 table_text = {'Region', 'CS-sel', 'US-sel', 'CS&US', 'Non-resp', 'Inhib'};
-y_pos = 0.85;  % Start lower to avoid overlap with title
+y_pos = 1.0;
 y_step = 0.15;
 
-% Define x positions for each column to ensure proper spacing
-x_positions = [0.05, 0.22, 0.38, 0.54, 0.70, 0.86];
-
-% Header row
 for col = 1:6
-    text(ax_table, x_positions(col), y_pos, table_text{col}, ...
+    text(ax_table, (col-1)*0.16, y_pos, table_text{col}, ...
         'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
 end
 
-% Data rows
 y_pos = y_pos - y_step;
 for br = 1:4
-    text(ax_table, x_positions(1), y_pos, region_names_stat{br}, ...
+    text(ax_table, 0, y_pos, region_names_stat{br}, ...
         'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
     for c = 1:5
-        text(ax_table, x_positions(c+1), y_pos, sprintf('%d', contingency_table(br, c)), ...
+        text(ax_table, (c)*0.16, y_pos, sprintf('%d', contingency_table(br, c)), ...
             'FontSize', g.fontSize2, 'HorizontalAlignment', 'center');
     end
     y_pos = y_pos - y_step;
 end
 
-xlim(ax_table, [0 1.0]);
-ylim(ax_table, [0 1.0]);
+xlim(ax_table, [-0.1 1.0]);
+ylim(ax_table, [0 1.2]);
 title(ax_table, sprintf('Contingency Table (\\chi^2=%.2f)', chi2_obs), 'FontSize', g.fontSize1, 'FontWeight', 'bold');
 
-% Panels 4-5: Cramér's V matrix (spanning 2 columns)
-ax3 = nexttile(t_stats, 4, [1 2]);
+% Panel 3: Cramér's V matrix
+ax3 = nexttile(t_stats, 3);
 imagesc(ax3, cramers_v_matrix);
 colormap(ax3, parula);
 cb3 = colorbar(ax3);
@@ -1094,9 +1073,11 @@ for r1 = 1:4
                 sig_str = 'n.s.';
             end
 
+            text_color = ternary(cramers_v_matrix(r1, r2) > 0.3, 'w', 'k');
+
             text(ax3, r2, r1, {val_str, sig_str}, ...
                 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
-                'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Color', 'k');
+                'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Color', text_color);
         else
             text(ax3, r2, r1, '-', ...
                 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
@@ -1105,6 +1086,27 @@ for r1 = 1:4
     end
 end
 hold(ax3, 'off');
+
+% Panel 4: FDR correction
+ax4 = nexttile(t_stats, 4);
+hold on;
+plot([0 1], [0 1], 'k--', 'LineWidth', 1);
+scatter(pairwise_p_values, p_adjusted, 100, 'filled', 'MarkerFaceColor', [0.3 0.3 0.7]);
+
+sig_mask = p_adjusted < 0.05;
+scatter(pairwise_p_values(sig_mask), p_adjusted(sig_mask), 100, 'filled', ...
+    'MarkerFaceColor', [0.8 0.2 0.2], 'MarkerEdgeColor', 'k', 'LineWidth', 1.5);
+
+plot([0 1], [0.05 0.05], 'r--', 'LineWidth', 1.5);
+hold off;
+xlabel('Uncorrected p-value', 'FontSize', g.fontSize2);
+ylabel('FDR-corrected p-value', 'FontSize', g.fontSize2);
+title('FDR Correction', 'FontSize', g.fontSize1, 'FontWeight', 'bold');
+axis square;
+xlim([0 max(pairwise_p_values)*1.1]);
+ylim([0 max(p_adjusted)*1.1]);
+legend({'Unity', 'Non-sig', 'Significant', 'FDR=0.05'}, 'Location', 'northwest', 'FontSize', g.fontSize2);
+set(gca, 'FontSize', g.fontSize2);
 
 fprintf('\nDone.\n');
 

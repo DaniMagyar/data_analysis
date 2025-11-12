@@ -64,6 +64,11 @@ psthZ_full = cell(1,4);
 psthHz_full = cell(1,4);
 baseline_bins = round(g.pre_time / g.bin_time);
 
+% Calculate Savitzky-Golay filter delay correction
+filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
+fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
+    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
+
 for hmp = 1:4
     psth_spx_og = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{hmp}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
@@ -72,16 +77,25 @@ for hmp = 1:4
     num_trials = size(cell_metrics.general.(ttl{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
     psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-    psthHz_full{hmp} = psth_hz_smooth;
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_hz_corrected = zeros(size(psth_hz_smooth));
+    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
+    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
+    psthHz_full{hmp} = psth_hz_corrected;
 
     % Z-score using baseline period only
     baseline_mean = mean(psth_spx_og(:, 1:baseline_bins), 2);
     baseline_std = std(psth_spx_og(:, 1:baseline_bins), 0, 2);
     baseline_std(baseline_std == 0) = 1;
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
+    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
 
-    psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-    psthZ_full{hmp} = psth_spx;
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_spx_corrected = zeros(size(psth_spx_smooth));
+    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
+    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
+    psthZ_full{hmp} = psth_spx_corrected;
 end
 
 %% Monosynaptic detection for each brain region and stimulus type
@@ -371,7 +385,7 @@ fprintf('\n=== Statistical Comparison: Light vs No-Light ===\n');
 
 % Fine-grained multi-window testing
 artifact_end = 0.012;  % 12ms artifact exclusion
-window_ends = 0.013:0.001:0.040;  % 13ms to 40ms in 1ms steps
+window_ends = 0.013:0.001:g.monosyn_window;  % 13ms to monosyn_window in 1ms steps
 n_windows = length(window_ends);
 
 comparison_results = struct();
@@ -508,28 +522,23 @@ for br = 1:2
 end
 
 %% Visualization: Main figure with nested pie charts and slope graphs
-fig_comparison = figure('Units', 'pixels', 'Position', [100, 100, 1500, 1000], 'Visible', 'on');
-t_main = tiledlayout(fig_comparison, 4, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
+fig_comparison = figure('Units', 'pixels', 'Position', [100, 100, 1000, 500], 'Visible', 'on');
+t_main = tiledlayout(fig_comparison, 2, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-% Add injection image (rows 1-2, columns 1-2)
-ax_injection = nexttile(t_main, 1, [2 2]);
-img_injection = imread('C:\Users\dmagyar\Desktop\BA_fear_cond\drawed_injection.png');
-imshow(img_injection, 'Parent', ax_injection);
-axis(ax_injection, 'off');
-set(ax_injection, 'XTick', [], 'YTick', []);
-
-% Create nested tiledlayout for raster plots (rows 3-4, columns 1-2)
-t_nested_left = tiledlayout(t_main, 3, 4, 'TileSpacing', 'tight', 'Padding', 'tight');
-t_nested_left.Layout.Tile = 9;  % Start at tile 9 (row 3, column 1)
+% Create nested tiledlayout for raster plots (rows 1-2, columns 1-2)
+t_nested_left = tiledlayout(t_main, 3, 4, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_nested_left.Layout.Tile = 1;  % Start at tile 1 (row 1, column 1)
 t_nested_left.Layout.TileSpan = [2 2];  % Span 2 rows, 2 columns
+title(t_nested_left, 'Example neurons', 'FontSize', 11, 'FontWeight', 'bold');
 
-% Create nested tiledlayout for pie charts and slope graphs (rows 3-4, columns 3-4)
-t_nested_right = tiledlayout(t_main, 2, 4, 'TileSpacing', 'tight', 'Padding', 'tight');
-t_nested_right.Layout.Tile = 11;  % Start at tile 11 (row 3, column 3)
+% Create nested tiledlayout for pie charts and slope graphs (rows 1-2, columns 3-4)
+t_nested_right = tiledlayout(t_main, 2, 4, 'TileSpacing', 'tight', 'Padding', 'compact');
+t_nested_right.Layout.Tile = 3;  % Start at tile 3 (row 1, column 3)
 t_nested_right.Layout.TileSpan = [2 2];  % Span 2 rows, 2 columns
 
 region_names = {'LA', 'Astria'};
 stim_names = {'CS', 'US'};
+spaghetti_titles = {'LA CS', 'LA US', 'AStria CS', 'AStria US'};
 
 for r = 1:2
     for s = 1:2
@@ -552,11 +561,16 @@ for r = 1:2
         colors = [0.8 0.2 0.2; 0.7 0.7 0.7];
 
         if sum(pie_data) > 0
-            pie(ax_pie, pie_data);
+            % Create custom labels with counts and percentages
+            percentages = 100 * pie_data / sum(pie_data);
+            labels = arrayfun(@(x, p) sprintf('%d (%.1f%%)', x, p), pie_data, percentages, 'UniformOutput', false);
+            pie(ax_pie, pie_data, labels);
             colormap(ax_pie, colors);
         end
 
-        title(sprintf('%s %s (n=%d)', region_names{r}, stim_names{s}, n_total), ...
+        % Add title using spaghetti_titles
+        plot_idx = (r-1)*2 + s;
+        title(ax_pie, spaghetti_titles{plot_idx}, ...
             'FontSize', g.fontSize1, 'FontWeight', 'bold');
 
         % Slope graph - Delta Peak FR for enhanced neurons (row 2 of nested layout)
@@ -576,16 +590,13 @@ for r = 1:2
             ttl_nolight_idx = s*2 - 1;
             ttl_light_idx = s*2;
 
-            % Get Hz data
-            psth_nolight_Hz = psthHz_full{ttl_nolight_idx};
-            psth_light_Hz = psthHz_full{ttl_light_idx};
+            % Get trial-by-trial data
+            postAP_norm_nolight = res.postAP_norm_nolight;
+            postAP_norm_light = res.postAP_norm_light;
 
-            % Baseline indices
-            baseline_idx = 1:baseline_bins;
-
-            % Calculate delta peak FR for each enhanced neuron in their most significant window
-            delta_peak_nolight = zeros(n_enhanced, 1);
-            delta_peak_light = zeros(n_enhanced, 1);
+            % Calculate mean spike counts for each enhanced neuron in their most significant window
+            mean_spikes_nolight = zeros(n_enhanced, 1);
+            mean_spikes_light = zeros(n_enhanced, 1);
 
             for i = 1:n_enhanced
                 idx = increased_idx(i);
@@ -598,48 +609,59 @@ for r = 1:2
                     window_end = window_ends(min_window_idx);
 
                     % Define response window (12ms to window_end)
-                    response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                    response_end_bin = round((g.pre_time + window_end) / g.bin_time);
+                    test_window = [artifact_end, window_end];
 
-                    % Calculate baseline FR
-                    baseline_fr = mean(psth_nolight_Hz(idx, baseline_idx));
+                    % Get spike counts for no-light trials
+                    spikes_nolight_trials = [];
+                    if ~isempty(postAP_norm_nolight{idx})
+                        for trial = 1:length(postAP_norm_nolight{idx})
+                            trial_spikes = postAP_norm_nolight{idx}{trial};
+                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                            spikes_nolight_trials = [spikes_nolight_trials; spike_count];
+                        end
+                    end
+                    mean_spikes_nolight(i) = mean(spikes_nolight_trials);
 
-                    % Calculate peak FR in response window
-                    peak_fr_nolight = max(psth_nolight_Hz(idx, response_start_bin:response_end_bin));
-                    delta_peak_nolight(i) = peak_fr_nolight - baseline_fr;
-
-                    peak_fr_light = max(psth_light_Hz(idx, response_start_bin:response_end_bin));
-                    delta_peak_light(i) = peak_fr_light - baseline_fr;
+                    % Get spike counts for light trials
+                    spikes_light_trials = [];
+                    if ~isempty(postAP_norm_light{idx})
+                        for trial = 1:length(postAP_norm_light{idx})
+                            trial_spikes = postAP_norm_light{idx}{trial};
+                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                            spikes_light_trials = [spikes_light_trials; spike_count];
+                        end
+                    end
+                    mean_spikes_light(i) = mean(spikes_light_trials);
                 end
             end
 
-            % Create slope graph for Peak FR
+            % Create slope graph for spike counts
             hold(ax_slope_peak, 'on');
 
             % Plot mean trajectory with thicker line (underneath)
-            mean_peak_nolight = mean(delta_peak_nolight);
-            mean_peak_light = mean(delta_peak_light);
-            plot(ax_slope_peak, [1 2], [mean_peak_nolight mean_peak_light], ...
+            mean_spikes_nolight_avg = mean(mean_spikes_nolight);
+            mean_spikes_light_avg = mean(mean_spikes_light);
+            plot(ax_slope_peak, [1 2], [mean_spikes_nolight_avg mean_spikes_light_avg], ...
                 'k-', 'LineWidth', 3);
 
             % Plot individual neuron trajectories
             for i = 1:n_enhanced
-                plot(ax_slope_peak, [1 2], [delta_peak_nolight(i) delta_peak_light(i)], ...
+                plot(ax_slope_peak, [1 2], [mean_spikes_nolight(i) mean_spikes_light(i)], ...
                     '-', 'Color', [0.8 0.2 0.2 0.3], 'LineWidth', 1);
             end
 
             % Add scatter points on top
-            scatter(ax_slope_peak, ones(n_enhanced, 1), delta_peak_nolight, 30, ...
+            scatter(ax_slope_peak, ones(n_enhanced, 1), mean_spikes_nolight, 30, ...
                 [0.5 0.5 0.5], 'filled', 'MarkerFaceAlpha', 0.6);
-            scatter(ax_slope_peak, 2*ones(n_enhanced, 1), delta_peak_light, 30, ...
+            scatter(ax_slope_peak, 2*ones(n_enhanced, 1), mean_spikes_light, 30, ...
                 [0.8 0.2 0.2], 'filled', 'MarkerFaceAlpha', 0.6);
 
             % Add mean markers
-            scatter(ax_slope_peak, 1, mean_peak_nolight, 80, 'k', 'filled');
-            scatter(ax_slope_peak, 2, mean_peak_light, 80, 'k', 'filled');
+            scatter(ax_slope_peak, 1, mean_spikes_nolight_avg, 80, 'k', 'filled');
+            scatter(ax_slope_peak, 2, mean_spikes_light_avg, 80, 'k', 'filled');
 
-            % Population-level Wilcoxon test on enhanced neurons
-            [p_pop, ~, ~] = signrank(delta_peak_nolight, delta_peak_light);
+            % Population-level paired t-test on enhanced neurons
+            [~, p_pop, ~, ~] = ttest(mean_spikes_nolight, mean_spikes_light);
             if p_pop < 0.001
                 sig_str = '***';
             elseif p_pop < 0.01
@@ -651,7 +673,7 @@ for r = 1:2
             end
 
             % Add significance line and text above the plot
-            y_max = max([delta_peak_nolight; delta_peak_light]);
+            y_max = max([mean_spikes_nolight; mean_spikes_light]);
             y_pos = y_max + y_max * 0.15;
             plot(ax_slope_peak, [1 2], [y_pos y_pos], 'k-', 'LineWidth', 1.5);
             text(ax_slope_peak, 1.5, y_pos, sig_str, 'HorizontalAlignment', 'center', ...
@@ -659,18 +681,20 @@ for r = 1:2
 
             hold(ax_slope_peak, 'off');
 
-            % Set y-limits to accommodate significance markers
-            y_min = min([delta_peak_nolight; delta_peak_light]);
-            ylim(ax_slope_peak, [y_min, y_pos + y_max * 0.15]);
+            % Set common y-limits for all spaghetti plots
+            ylim(ax_slope_peak, [0 2.4]);
+            yticks(ax_slope_peak, [0 1.2 2.4]);
 
             xlim(ax_slope_peak, [0.5 2.5]);
             xticks(ax_slope_peak, [1 2]);
             xticklabels(ax_slope_peak, {'No light', 'Light'});
             if r == 1 && s == 1
-                ylabel(ax_slope_peak, '\DeltaPeak FR (Hz)', 'FontSize', g.fontSize2);
+                ylabel(ax_slope_peak, 'Mean spike count', 'FontSize', g.fontSize2);
             end
 
-            title(ax_slope_peak, sprintf('Enhanced (n=%d)', n_enhanced), 'FontSize', g.fontSize2);
+            % Add title using spaghetti_titles
+            plot_idx = (r-1)*2 + s;
+            title(ax_slope_peak, spaghetti_titles{plot_idx}, 'FontSize', g.fontSize2);
             set(ax_slope_peak, 'FontSize', g.fontSize2);
             box(ax_slope_peak, 'off');
         else
@@ -687,7 +711,7 @@ end
 % Define example neurons: [animal, cellID, stimulus_type, stimulus_type_light]
 examples = {
     'MD309_001', 20, 'triptest_sound_only', 'triptest_sound_only_light';   % CS-only
-    'MD307_001', 13, 'triptest_shocks_only', 'triptest_shocks_only_light';  % US-only
+    'MD309_001', 20, 'triptest_shocks_only', 'triptest_shocks_only_light';  % US-only
     'MD318_001', 46, 'triptest_sound_only', 'triptest_sound_only_light';   % CS-only
     'MD317_001', 43, 'triptest_shocks_only', 'triptest_shocks_only_light'   % US-only
 };
@@ -739,19 +763,15 @@ for ex = 1:4
             ylim(ax_raster_nolight, [0 n_trials+1]);
             set(ax_raster_nolight, 'XTickLabel', []);
             if ex == 1
-                ylabel(ax_raster_nolight, 'Trial', 'FontSize', g.fontSize2);
+                ylabel(ax_raster_nolight, 'Trial# (laser OFF)', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             else
                 set(ax_raster_nolight, 'YTickLabel', []);
             end
 
-            % Title with animal and cellID
-            if contains(ttl_type, 'sound')
-                stim_label = 'CS';
-            else
-                stim_label = 'US';
-            end
-            title(ax_raster_nolight, sprintf('%s/%d (%s)', animal_name, target_cellID, stim_label), ...
-                'FontSize', g.fontSize2, 'Interpreter', 'none');
+            % Title only for upper row
+            raster_titles = {'LA CS', 'LA US', 'AStria CS', 'AStria US'};
+            title(ax_raster_nolight, raster_titles{ex}, ...
+                'FontSize', g.fontSize2);
             set(ax_raster_nolight, 'FontSize', g.fontSize2);
             box(ax_raster_nolight, 'off');
         else
@@ -804,18 +824,12 @@ for ex = 1:4
             ylim(ax_raster_light, [0 n_trials+1]);
             set(ax_raster_light, 'XTickLabel', []);
             if ex == 1
-                ylabel(ax_raster_light, 'Trial', 'FontSize', g.fontSize2);
+                ylabel(ax_raster_light, 'Trial# (laser ON)', 'Color', 'r', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             else
                 set(ax_raster_light, 'YTickLabel', []);
             end
 
-            % Title with light label
-            if contains(ttl_type_light, 'sound')
-                stim_label = 'CS + Light';
-            else
-                stim_label = 'US + Light';
-            end
-            title(ax_raster_light, stim_label, 'FontSize', g.fontSize2);
+            % No title for lower row (light condition)
             set(ax_raster_light, 'FontSize', g.fontSize2);
             box(ax_raster_light, 'off');
         else
@@ -877,7 +891,11 @@ for ex = 1:4
 
             % Add legend only for first plot
             if ex == 1
-                legend(ax_lineplot, {'No light', 'Light'}, 'Location', 'northeast', 'FontSize', g.fontSize2);
+                leg = legend(ax_lineplot, {'No light', 'Light'}, 'Location', 'northeast', ...
+                    'FontSize', g.fontSize2, 'Box', 'off');
+                leg.ItemTokenSize = [10, 12];  % Shorter lines
+                leg.Position(1) = leg.Position(1) + 0.06;  % Shift right
+                leg.Position(2) = leg.Position(2) + 0.03;  % Shift up
             end
 
             set(ax_lineplot, 'FontSize', g.fontSize2);
@@ -893,6 +911,12 @@ for ex = 1:4
         axis(ax_lineplot, 'off');
     end
 end
+
+% Add title for right section using annotation
+annotation(fig_comparison, 'textbox', [0.55, 0.9, 0.4, 0.04], ...
+    'String', 'Neurons with enhanced response', ...
+    'FontSize', 11, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'center', 'EdgeColor', 'none');
 
 fprintf('\nVisualization complete.\n');
 

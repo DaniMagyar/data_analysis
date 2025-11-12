@@ -77,23 +77,37 @@ fprintf('Calculating PSTHs...\n');
 psthZ_full = cell(1, numel(ttl));
 psthHz_full = cell(1, numel(ttl));
 
+% Calculate Savitzky-Golay filter delay correction
+filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
+fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
+    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
+
 for hmp = 1:numel(ttl)
     psth_spx_og = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{hmp}, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 
-    % Convert to Hz: divide by number of trials and bin time
+    % Convert to Hz
     num_trials = size(g.cell_metrics.general.(ttl{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
-
-    % Smooth Hz data
     psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-    psthHz_full{hmp} = psth_hz_smooth;
 
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_hz_corrected = zeros(size(psth_hz_smooth));
+    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
+    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
+    psthHz_full{hmp} = psth_hz_corrected;
+
+    % Z-score
     baseline_idx = 1:(g.pre_time / g.bin_time);
     baseline_mean = mean(psth_spx_og(:, baseline_idx), 2);
     baseline_std = std(psth_spx_og(:, baseline_idx), 0, 2);
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
-    psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-    psthZ_full{hmp} = psth_spx;
+    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_spx_corrected = zeros(size(psth_spx_smooth));
+    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
+    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
+    psthZ_full{hmp} = psth_spx_corrected;
 end
 
 %% Process each cell type (PN and IN)
@@ -223,7 +237,7 @@ for ct = 1:2
 end
 
 %% Create figure
-fig = figure('Units', 'pixels', 'Position', [-100, -100, 1000, 1000], 'Visible', 'on');
+fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 1000], 'Visible', 'on');
 t = tiledlayout(fig, 6, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Determine global color limits across all heatmaps (CS, US, and CS+US)
@@ -248,7 +262,7 @@ clim_min = prctile(all_values, (100 - g.clim_percentile) / 2);
 clim_max = prctile(all_values, 100 - (100 - g.clim_percentile) / 2);
 
 %% Create single 2×6 tiledlayout for all heatmaps and lineplots
-t_plots = tiledlayout(t, 2, 6, 'TileSpacing', 'tight', 'Padding', 'tight');
+t_plots = tiledlayout(t, 2, 6, 'TileSpacing', 'compact', 'Padding', 'tight');
 t_plots.Layout.Tile = 1;  % Start at row 1, col 1
 t_plots.Layout.TileSpan = [3 2];  % Span rows 1-3, cols 1-2
 
@@ -298,26 +312,32 @@ for ct = 1:2
 
         % Labels
         if ct == 1
-            title(stim_title, 'FontSize', g.fontSize1);
+            title(stim_title, 'FontSize', 10);
         end
 
-        if stim == 1 && ct == 1
-            ylabel('Neuron #', 'FontSize', g.fontSize2);
+        % Y-label only on first column with cell type
+        if stim == 1
+            ylabel(sprintf('%s (Cell #)', cell_types{ct}), 'FontSize', 10);
         end
 
         % Set yticks to first and last
         n_neurons_plot = size(matrix, 1);
         yticks([1, n_neurons_plot]);
 
+        % Remove yticklabels from all but first column
+        if stim ~= 1
+            set(gca, 'YTickLabel', []);
+        end
+
         if ct == 2
-            xlabel('Time (s)', 'FontSize', g.fontSize2);
+            xlabel('Time (s)', 'FontSize', 10);
             xticks([-1 0 1]);
         else
             set(gca, 'XTickLabel', []);
         end
 
         % Set axis font size
-        set(gca, 'FontSize', g.fontSize2);
+        set(gca, 'FontSize', 10);
 
         % Add cluster lines (black)
         hold on;
@@ -353,11 +373,6 @@ for ct = 1:2
         end
 
         hold off;
-
-        % Add cell type label (only on first column)
-        if stim == 1
-            text(-0.9, sum(responsive_mask)/2, cell_types{ct}, 'FontSize', g.fontSize1, 'FontWeight', 'bold', 'HorizontalAlignment', 'center', 'Rotation', 90);
-        end
     end
 
     % Plot lineplots (columns 4-6) - stacked by cluster within each stimulus
@@ -392,24 +407,23 @@ for ct = 1:2
         t_nested = tiledlayout(t_plots, 3, 1, 'TileSpacing', 'none', 'Padding', 'tight');
         t_nested.Layout.Tile = tile_idx;
 
-        % Add title on top row
-        if ct == 1
-            if stim == 1
-                t_nested.Title.String = 'CS';
-            elseif stim == 2
-                t_nested.Title.String = 'US';
-            else
-                t_nested.Title.String = 'CS+US';
-            end
-            t_nested.Title.FontSize = g.fontSize1;
-            t_nested.Title.FontWeight = 'bold';
-        end
-
         % Plot each cluster in separate row
         for c = [1 2 3]
             clust_idx = find(res.Clusters == c);
 
             ax_line = nexttile(t_nested, c);
+
+            % Add title on first cluster of top row
+            if ct == 1 && c == 1
+                if stim == 1
+                    title('CS', 'FontSize', 10, 'FontWeight', 'bold');
+                elseif stim == 2
+                    title('US', 'FontSize', 10, 'FontWeight', 'bold');
+                else
+                    title('CS+US', 'FontSize', 10, 'FontWeight', 'bold');
+                end
+            end
+
             hold on;
             xline(0, '--k', 'LineWidth', g.xlinewidth);
 
@@ -429,7 +443,7 @@ for ct = 1:2
             ylim([y_min*1.1 y_max*1.1]);
 
             if ct == 2 && c == 3
-                xlabel('Time (s)', 'FontSize', g.fontSize2);
+                xlabel('Time (s)', 'FontSize', 10);
                 set(gca, 'XColor', 'k');
                 xticks([-1 0 1]);
             else
@@ -439,7 +453,7 @@ for ct = 1:2
 
             set(gca, 'YTickLabel', []);
             set(gca, 'YColor', 'none');
-            set(gca, 'FontSize', g.fontSize2);
+            set(gca, 'FontSize', 10);
 
             % Add scalebar on bottom cluster (c=3) of CS+US panel
             if c == 3 && stim == 3
@@ -452,7 +466,7 @@ for ct = 1:2
                 hold on;
                 plot([x_pos x_pos], [y_pos y_pos+scalebar_size], 'k-', 'LineWidth', 3);
                 text(x_pos+0.2, y_pos+scalebar_size/2, sprintf('%d Hz', scalebar_size), ...
-                    'FontSize', g.fontSize2, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
+                    'FontSize', 10, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
                 hold off;
             end
         end
@@ -461,17 +475,17 @@ end
 
 % Add colorbar - manually create with full control, positioned at bottom heatmap (IN)
 drawnow;  % Ensure all positions are updated
-cb_width = 0.010;
-cb_left = 0.040;
-cb_bottom = 0.52;  % Aligned with IN heatmap (rows 2-3 in 6-row layout)
-cb_height = 0.15;
+cb_width = 0.008;
+cb_left = 0.50;
+cb_bottom = 0.65;  % Aligned with IN heatmap (rows 2-3 in 6-row layout)
+cb_height = 0.08;
 cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
 set(cb_ax, 'YDir', 'normal');
-set(cb_ax, 'XTick', [], 'YAxisLocation', 'left');
-ylabel(cb_ax, 'Z-score', 'FontSize', g.fontSize2);
-cb_ax.FontSize = g.fontSize2;
+set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
+%ylabel(cb_ax, 'Z-score', 'FontSize', 10);
+cb_ax.FontSize = 10;
 
 %% Add metric bar charts (2 rows × 3 columns in bottom section)
 % Rows 4-5: US-sel, Multisensory (CS-sel removed)
@@ -482,10 +496,10 @@ t_metrics = tiledlayout(t, 2, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
 t_metrics.Layout.Tile = 7;  % Start at row 4, column 1
 t_metrics.Layout.TileSpan = [3 2];  % Span 3 rows × 2 columns
 
-metric_names = {'ΔnSpikes', 'ΔPeak FR (Hz)', 'Response length (ms)'};
+metric_names = {'ΔnSpikes', 'ΔFR (Hz)', 'Response length (ms)'};
 
 for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
-    for metric = 1:3  % ΔnSpikes, ΔPeak FR, Response length
+    for metric = 1:3  % ΔnSpikes, ΔFR, Response length
         ax_metric = nexttile(t_metrics, (c-2)*3 + metric);
 
         % Collect data for PN and IN
@@ -551,7 +565,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
                             Both_metric(n) = 0;
                         end
                     end
-                elseif metric == 2  % Peak firing rate change (Hz)
+                elseif metric == 2  % Firing rate change (Hz)
                     CS_metric = zeros(length(clust_idx), 1);
                     US_metric = zeros(length(clust_idx), 1);
                     Both_metric = zeros(length(clust_idx), 1);
@@ -668,17 +682,40 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
 
         hold off;
 
+        % Formatting - set ylim FIRST before calculating significance positions
+        xlim([0.5 10.5]);
+        xticks([2 3 4 7 8 9]);
+
+        % Set fixed y-limits based on metric type
+        if metric == 1  % ΔnSpikes
+            ylim([0 100]);
+            y_ticks = [0 50 100];
+        elseif metric == 2  % ΔFR
+            ylim([0 300]);
+            y_ticks = [0 150 300];
+        else  % metric == 3, Response length
+            ylim([0 700]);
+            y_ticks = [0 350 700];
+        end
+
+        % Set y-ticks
+        yticks(y_ticks);
+
         % Statistical comparisons - Wilcoxon signed rank test (paired data)
         % Compare CS vs US, CS vs CS+US, US vs CS+US within each cell type
 
         % Set fixed spacing for significance levels based on metric type
         if metric == 1  % ΔnSpikes
             sig_spacing = 4;  % Fixed absolute spacing between significance levels
-        elseif metric == 2  % ΔPeak FR
-            sig_spacing = 12;  % Fixed absolute spacing (10% of 120)
+        elseif metric == 2  % ΔFR
+            sig_spacing = 12;  % Fixed absolute spacing
         else  % metric == 3, Response length
-            sig_spacing = 50;  % Fixed absolute spacing (10% of 500)
+            sig_spacing = 50;  % Fixed absolute spacing
         end
+
+        % Get current ylim for consistent spacing calculations (AFTER ylim is set)
+        curr_ylim = ylim;
+        y_range = curr_ylim(2) - curr_ylim(1);
 
         % PN comparisons
         if ~isempty(data_PN)
@@ -691,12 +728,9 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
 
             % Add significance markers for PN
             y_max_PN = max(means_PN + sems_PN);
-            curr_ylim = ylim;
-            y_range = curr_ylim(2) - curr_ylim(1);
             hold on;
 
             % Level 1: Short comparisons (CS vs US, US vs CS+US)
-            % Position above data with fixed absolute distance
             y_pos_level1 = y_max_PN + 0.08 * y_range;
 
             % CS vs US
@@ -711,7 +745,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([2.1 2.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                text(2.5, y_pos_level1 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(2.5, y_pos_level1 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             % US vs CS+US
@@ -726,7 +760,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([3.1 3.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                text(3.5, y_pos_level1 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(3.5, y_pos_level1 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             % Level 2: Long comparison (CS vs CS+US) - fixed absolute spacing above level 1
@@ -744,7 +778,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([2 4], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
-                text(3, y_pos_level2 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(3, y_pos_level2 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             hold off;
@@ -761,12 +795,9 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
 
             % Add significance markers for IN
             y_max_IN = max(means_IN + sems_IN);
-            curr_ylim = ylim;
-            y_range = curr_ylim(2) - curr_ylim(1);
             hold on;
 
             % Level 1: Short comparisons (CS vs US, US vs CS+US)
-            % Position above data with fixed absolute distance
             y_pos_level1 = y_max_IN + 0.08 * y_range;
 
             % CS vs US
@@ -781,7 +812,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([7.1 7.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                text(7.5, y_pos_level1 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(7.5, y_pos_level1 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             % US vs CS+US
@@ -796,7 +827,7 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([8.1 8.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                text(8.5, y_pos_level1 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(8.5, y_pos_level1 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             % Level 2: Long comparison (CS vs CS+US) - fixed absolute spacing above level 1
@@ -814,31 +845,15 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             end
             if ~isempty(sig_text)
                 plot([7 9], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
-                text(8, y_pos_level2 + 0.05 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+                text(8, y_pos_level2 + 0.01 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 10);
             end
 
             hold off;
         end
 
-        % Formatting
-        xlim([0.5 10.5]);
-        xticks([2 3 4 7 8 9]);
-
-        % Set fixed y-limits based on metric type
-        if metric == 1  % ΔnSpikes
-            ylim([0 100]);
-            y_ticks = [0 50 100];
-        elseif metric == 2  % ΔPeak FR
-            ylim([0 300]);
-            y_ticks = [0 150 300];
-        else  % metric == 3, Response length
-            ylim([0 700]);
-            y_ticks = [0 350 700];
-        end
-
         % Add title on top row
         if c == 2
-            title(metric_names{metric}, 'FontSize', g.fontSize1, 'FontWeight', 'bold', 'Interpreter', 'tex');
+            title(metric_names{metric}, 'FontSize', 10, 'FontWeight', 'bold', 'Interpreter', 'tex');
         end
 
         % X-tick labels only on bottom row
@@ -848,23 +863,20 @@ for c = [2 3]  % US-selective, Multisensory only (CS-selective removed)
             set(gca, 'XTickLabel', []);
         end
 
-        % Set y-ticks
-        yticks(y_ticks);
-
         % Add PN/IN labels on top row
         if c == 2
             curr_ylim = ylim;
             y_pos = curr_ylim(2) * 0.95;  % Position at 95% of y-max
-            text(3, y_pos, 'PN', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-            text(8, y_pos, 'IN', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+            text(3, y_pos, 'PN', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+            text(8, y_pos, 'IN', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
         end
 
         % Add cluster name label only on first column
         if metric == 1
-            ylabel(cluster_names{c}, 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+            ylabel(cluster_names{c}, 'FontSize', 10, 'FontWeight', 'bold');
         end
 
-        set(gca, 'FontSize', g.fontSize2);
+        set(gca, 'FontSize', 10);
         box off;
     end
 end

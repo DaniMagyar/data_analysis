@@ -26,18 +26,18 @@ g.bin_time = 0.001;
 g.pre_time = 5;
 g.post_time = 0.5;
 g.monosyn_window = 0.025;  % 0-25ms
-g.smoothvalue = 7;
+g.smoothvalue = 5;
 g.plotwin = [0.05 0.05];
 g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
 g.xlinewidth = 2;
 g.clim_percentile = 95;
 
-g.onset_threshold = 3;  % Lower threshold for monosynaptic detection
+g.onset_threshold = 5;  % Lower threshold for monosynaptic detection
 g.min_consec_bins = max(1, round(0.001 / g.bin_time));  % 3ms for brief monosynaptic responses
 g.alpha = 0.0;
 
 % Responsiveness detection method
-g.use_two_rule = true;  % true: two-rule (Rule 1 OR Rule 2), false: one-rule (z-score only)
+g.use_two_rule = false;  % true: two-rule (Rule 1 OR Rule 2), false: one-rule (z-score only)
 
 % Two-rule responsiveness parameters (used if g.use_two_rule = true)
 g.zscore_threshold_rule1 = 3;   % Rule 1: z-score threshold
@@ -55,24 +55,39 @@ fprintf('Calculating PSTHs...\n');
 psthZ_full = cell(1,3);
 psthHz_full = cell(1,3);
 baseline_bins = round(g.pre_time / g.bin_time);
+
+% Calculate Savitzky-Golay filter delay correction
+filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
+fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
+    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
+
 for hmp = 1:3
     psth_spx_og = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{hmp}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 
-    % Convert to Hz: divide by number of trials and bin time
+    % Convert to Hz
     num_trials = size(cell_metrics.general.(ttl{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
     psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-    psthHz_full{hmp} = psth_hz_smooth;
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_hz_corrected = zeros(size(psth_hz_smooth));
+    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
+    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
+    psthHz_full{hmp} = psth_hz_corrected;
 
     % Z-score using baseline period only
     baseline_mean = mean(psth_spx_og(:, 1:baseline_bins), 2);
     baseline_std = std(psth_spx_og(:, 1:baseline_bins), 0, 2);
     baseline_std(baseline_std == 0) = 1;  % Avoid division by zero
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
+    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
 
-    psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-    psthZ_full{hmp} = psth_spx;
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_spx_corrected = zeros(size(psth_spx_smooth));
+    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
+    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
+    psthZ_full{hmp} = psth_spx_corrected;
 end
 
 %% Monosynaptic detection for each brain region
@@ -231,9 +246,9 @@ for br = 1:2
         n_neurons, sum(Clusters_all==1), sum(Clusters_all==2), sum(Clusters_all==3));
 end
 
-%% Create figure - heatmaps + bar charts + latency boxplots
-fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 600], 'Visible', 'on');
-t = tiledlayout(fig, 4, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+%% Create figure - 4x6 layout: heatmaps (cols 1-3) + Delta FR bars (col 4) + remaining (cols 5-6)
+fig = figure('Units', 'pixels', 'Position', [100, 100, 1200, 800], 'Visible', 'on');
+t = tiledlayout(fig, 4, 6, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Determine global color limits across all heatmaps (CS, US, and CS+US)
 all_values = [];
@@ -265,11 +280,11 @@ clim_min = prctile(all_values, (100 - g.clim_percentile) / 2);
 clim_max = prctile(all_values, 100 - (100 - g.clim_percentile) / 2);
 fprintf('Global color limits: [%.2f, %.2f]\n', clim_min, clim_max);
 
-% Create nested tiledlayout for all 6 heatmaps (2 brain regions × 3 stimuli)
-% This spans rows 1-4, columns 1-3 of the main layout
-t_heatmaps = tiledlayout(t, 2, 3, 'TileSpacing', 'tight', 'Padding', 'tight');
+% Create nested tiledlayout for heatmaps + bar graphs (2 brain regions × 4 columns)
+% This spans rows 1-4, columns 1-4 of the main layout
+t_heatmaps = tiledlayout(t, 2, 4, 'TileSpacing', 'tight', 'Padding', 'tight');
 t_heatmaps.Layout.Tile = 1;  % Start at tile 1 (row 1, column 1)
-t_heatmaps.Layout.TileSpan = [4 3];  % Span 4 rows, 3 columns
+t_heatmaps.Layout.TileSpan = [4 4];  % Span 4 rows, 4 columns
 
 for br = 1:2
     if isempty(results_all{br})
@@ -300,10 +315,10 @@ for br = 1:2
 
         n_responsive = sum(responsive_mask_all);
 
-        % Heatmaps in nested tiledlayout (2 rows × 3 columns)
-        % Row 1 (br=1, LA): tiles 1, 2, 3
-        % Row 2 (br=2, Astria): tiles 4, 5, 6
-        tile_num = (br-1)*3 + stim;
+        % Heatmaps in nested tiledlayout (2 rows × 4 columns)
+        % Row 1 (br=1, LA): tiles 1, 2, 3 (column 4 is bars)
+        % Row 2 (br=2, Astria): tiles 5, 6, 7 (column 8 is bars)
+        tile_num = (br-1)*4 + stim;
         ax = nexttile(t_heatmaps, tile_num);
         plot_bins = round((g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
         matrix = psth_sorted_all(:, plot_bins);
@@ -395,266 +410,162 @@ end
 
 % Add colorbar - manually create with full control, positioned at bottom heatmap (Astria)
 drawnow;  % Ensure all positions are updated
-cb_width = 0.010;
-cb_left = 0.033;
-cb_bottom = 0.04;  % Aligned with Astria heatmap (row 2 in 4-row layout)
-cb_height = 0.15;
+cb_width = 0.008;
+cb_left = 0.185;
+cb_bottom = 0.06;  % Aligned with Astria heatmap (row 2 in 4-row layout)
+cb_height = 0.08;
 cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
 set(cb_ax, 'YDir', 'normal');
-set(cb_ax, 'XTick', [], 'YAxisLocation', 'left');
-ylabel(cb_ax, 'Z-score', 'FontSize', g.fontSize2);
+set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
+%ylabel(cb_ax, 'Z-score', 'FontSize', g.fontSize2);
 cb_ax.FontSize = g.fontSize2;
 
-%% Add metric bar charts (3 clusters × 2 metrics in columns 4-5)
+%% Add Delta Peak FR bar charts in column 4 of the same nested layout
 cluster_names = {'CS-sel', 'US-sel', 'Multi'};
-metric_names = {'\DeltaMean FR (Hz)', '\DeltaPeak FR (Hz)'};
 
-% Create nested tiledlayout for bar charts spanning rows 1-3, columns 4-5
-t_bars = tiledlayout(t, 3, 2, 'TileSpacing', 'tight', 'Padding', 'tight');
-t_bars.Layout.Tile = 4;  % Start at tile 4 (row 1, column 4)
-t_bars.Layout.TileSpan = [3 2];  % Span 3 rows, 2 columns
+for br = 1:2
+    if isempty(results_all{br})
+        continue;
+    end
 
-for c = [1 2 3]  % CS-selective, US-selective, Multisensory
-    for metric = 1:2  % Mean FR, Peak FR only
-        % Bar charts in nested layout: 3 rows × 2 columns
-        ax_metric = nexttile(t_bars, (c-1)*2 + metric);
+    res = results_all{br};
 
-        % Collect data for LA and Astria (all neurons pooled)
-        data_LA = [];
-        data_Astria = [];
+    % Create nested 3×1 tiledlayout for bars in column 4
+    % Row 1 (br=1, LA): tile 4
+    % Row 2 (br=2, Astria): tile 8
+    t_bars = tiledlayout(t_heatmaps, 3, 1, 'TileSpacing', 'tight', 'Padding', 'tight');
+    t_bars.Layout.Tile = (br-1)*4 + 4;  % Tile 4 for LA, Tile 8 for Astria
 
-        for br = 1:2
-            if isempty(results_all{br})
-                continue;
+    % Plot each cluster in separate row
+    for c = [1 2 3]  % CS-selective, US-selective, Multisensory
+        ax_bar = nexttile(t_bars, c);
+
+        clust_idx = find(res.Clusters_all == c);
+
+        if ~isempty(clust_idx)
+            % Calculate Delta Peak FR in monosyn window (12ms to g.monosyn_window)
+            CS_metric = zeros(length(clust_idx), 1);
+            US_metric = zeros(length(clust_idx), 1);
+            Both_metric = zeros(length(clust_idx), 1);
+
+            baseline_idx = 1:baseline_bins;
+            response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
+            response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+
+            for n = 1:length(clust_idx)
+                idx_n = clust_idx(n);
+                baseline_fr = mean(res.psth_CS_Hz_all(idx_n, baseline_idx));
+
+                % CS peak firing rate change
+                peak_fr_CS = max(res.psth_CS_Hz_all(idx_n, response_start_bin:response_end_bin));
+                CS_metric(n) = peak_fr_CS - baseline_fr;
+
+                % US peak firing rate change
+                peak_fr_US = max(res.psth_US_Hz_all(idx_n, response_start_bin:response_end_bin));
+                US_metric(n) = peak_fr_US - baseline_fr;
+
+                % CS+US peak firing rate change
+                peak_fr_Both = max(res.psth_Both_Hz_all(idx_n, response_start_bin:response_end_bin));
+                Both_metric(n) = peak_fr_Both - baseline_fr;
             end
 
-            res = results_all{br};
-            clust_idx_all = find(res.Clusters_all == c);
+            % Calculate means and SEMs
+            means_data = mean([CS_metric, US_metric, Both_metric], 1, 'omitnan');
+            sems_data = std([CS_metric, US_metric, Both_metric], 0, 1, 'omitnan') ./ sqrt(sum(~isnan(CS_metric)));
 
-            % Process all neurons
-            if ~isempty(clust_idx_all)
-                if metric == 1  % Mean firing rate change (Hz) in monosyn window
-                    CS_metric_all = zeros(length(clust_idx_all), 1);
-                    US_metric_all = zeros(length(clust_idx_all), 1);
-                    Both_metric_all = zeros(length(clust_idx_all), 1);
-
-                    baseline_idx = 1:baseline_bins;
-                    % Define response window (12ms to g.monosyn_window)
-                    response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                    response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
-
-                    for n = 1:length(clust_idx_all)
-                        idx_n = clust_idx_all(n);
-                        baseline_fr = mean(res.psth_CS_Hz_all(idx_n, baseline_idx));
-
-                        % Calculate mean FR in 12-25ms window for all neurons
-                        response_fr_CS = mean(res.psth_CS_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        CS_metric_all(n) = response_fr_CS - baseline_fr;
-
-                        response_fr_US = mean(res.psth_US_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        US_metric_all(n) = response_fr_US - baseline_fr;
-
-                        response_fr_Both = mean(res.psth_Both_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        Both_metric_all(n) = response_fr_Both - baseline_fr;
-                    end
-
-                else  % metric == 2: Peak firing rate change (Hz) in monosyn window
-                    CS_metric_all = zeros(length(clust_idx_all), 1);
-                    US_metric_all = zeros(length(clust_idx_all), 1);
-                    Both_metric_all = zeros(length(clust_idx_all), 1);
-
-                    baseline_idx = 1:baseline_bins;
-                    % Define response window (12ms to g.monosyn_window)
-                    response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                    response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
-
-                    for n = 1:length(clust_idx_all)
-                        idx_n = clust_idx_all(n);
-                        baseline_fr = mean(res.psth_CS_Hz_all(idx_n, baseline_idx));
-
-                        % Calculate peak FR in 12-25ms window for all neurons
-                        peak_fr_CS = max(res.psth_CS_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        CS_metric_all(n) = peak_fr_CS - baseline_fr;
-
-                        peak_fr_US = max(res.psth_US_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        US_metric_all(n) = peak_fr_US - baseline_fr;
-
-                        peak_fr_Both = max(res.psth_Both_Hz_all(idx_n, response_start_bin:response_end_bin));
-                        Both_metric_all(n) = peak_fr_Both - baseline_fr;
-                    end
-                end
-
-                if br == 1
-                    data_LA = [CS_metric_all, US_metric_all, Both_metric_all];
-                else
-                    data_Astria = [CS_metric_all, US_metric_all, Both_metric_all];
-                end
-            end
-        end
-
-        % Plot grouped bars - LA [2 3 4], Astria [7 8 9]
-        hold on;
-
-        % LA bars at positions 2, 3, 4 - darker cluster color
-        if ~isempty(data_LA)
-            means_LA = mean(data_LA, 1, 'omitnan');
-            sems_LA = std(data_LA, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_LA(:,1))));
-            bar_color_LA = cluster_colors(c, :) * 0.7;  % Darker
-            bar([2 3 4], means_LA, 0.6, 'FaceColor', bar_color_LA, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([2 3 4], means_LA, sems_LA, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
-        end
-
-        % Astria bars at positions 7, 8, 9 - lighter cluster color
-        if ~isempty(data_Astria)
-            means_Astria = mean(data_Astria, 1, 'omitnan');
-            sems_Astria = std(data_Astria, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data_Astria(:,1))));
-            bar_color_Astria = cluster_colors(c, :) + (1 - cluster_colors(c, :)) * 0.5;  % Lighter
-            bar([7 8 9], means_Astria, 0.6, 'FaceColor', bar_color_Astria, 'EdgeColor', 'k', 'LineWidth', 1);
-            errorbar([7 8 9], means_Astria, sems_Astria, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
-        end
-
-        hold off;
-
-        % Statistical comparisons - Wilcoxon signed rank test (paired data)
-        % LA comparisons
-        if ~isempty(data_LA) && sum(~isnan(data_LA(:,1))) > 0 && sum(~isnan(data_LA(:,2))) > 0 && sum(~isnan(data_LA(:,3))) > 0
-            y_max_LA = max(means_LA + sems_LA);
+            % Plot bars
             hold on;
+            bar_color = cluster_colors(c, :);  % Same color as pie charts
+            bar([1 2 3], means_data, 0.4, 'FaceColor', bar_color, 'EdgeColor', 'k', 'LineWidth', 1);
+            errorbar([1 2 3], means_data, sems_data, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
-            % Level 1: Short comparisons
-            y_pos_level1 = y_max_LA + y_max_LA * 0.08;
-
-            % CS vs US
-            try
-                [p_LA_CS_US, ~] = signrank(data_LA(:,1), data_LA(:,2));
-                if p_LA_CS_US < 0.05
-                    sig_text = get_sig_stars(p_LA_CS_US);
-                    plot([2 3], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                    text(2.5, y_pos_level1, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
-
-            % US vs Both
-            try
-                [p_LA_US_Both, ~] = signrank(data_LA(:,2), data_LA(:,3));
-                if p_LA_US_Both < 0.05
-                    sig_text = get_sig_stars(p_LA_US_Both);
-                    plot([3 4], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                    text(3.5, y_pos_level1, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
-
-            % Level 2: Long comparison
-            y_pos_level2 = y_max_LA + y_max_LA * 0.25;
-
-            % CS vs Both
-            try
-                [p_LA_CS_Both, ~] = signrank(data_LA(:,1), data_LA(:,3));
-                if p_LA_CS_Both < 0.05
-                    sig_text = get_sig_stars(p_LA_CS_Both);
-                    plot([2 4], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
-                    text(3, y_pos_level2, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
-
-            hold off;
-        end
-
-        % Astria comparisons
-        if ~isempty(data_Astria) && sum(~isnan(data_Astria(:,1))) > 0 && sum(~isnan(data_Astria(:,2))) > 0 && sum(~isnan(data_Astria(:,3))) > 0
-            y_max_Astria = max(means_Astria + sems_Astria);
-            hold on;
-
-            % Level 1: Short comparisons
-            y_pos_level1 = y_max_Astria + y_max_Astria * 0.08;
-
-            % CS vs US
-            try
-                [p_Astria_CS_US, ~] = signrank(data_Astria(:,1), data_Astria(:,2));
-                if p_Astria_CS_US < 0.05
-                    sig_text = get_sig_stars(p_Astria_CS_US);
-                    plot([7 8], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                    text(7.5, y_pos_level1, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
-
-            % US vs Both
-            try
-                [p_Astria_US_Both, ~] = signrank(data_Astria(:,2), data_Astria(:,3));
-                if p_Astria_US_Both < 0.05
-                    sig_text = get_sig_stars(p_Astria_US_Both);
-                    plot([8 9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
-                    text(8.5, y_pos_level1, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
-
-            % Level 2: Long comparison
-            y_pos_level2 = y_max_Astria + y_max_Astria * 0.25;
-
-            % CS vs Both
-            try
-                [p_Astria_CS_Both, ~] = signrank(data_Astria(:,1), data_Astria(:,3));
-                if p_Astria_CS_Both < 0.05
-                    sig_text = get_sig_stars(p_Astria_CS_Both);
-                    plot([7 9], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
-                    text(8, y_pos_level2, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-                end
-            catch
-            end
+            % Statistical comparisons - Wilcoxon signed rank test
+            [p_CS_US, ~] = signrank(CS_metric, US_metric);
+            [p_CS_Both, ~] = signrank(CS_metric, Both_metric);
+            [p_US_Both, ~] = signrank(US_metric, Both_metric);
 
             hold off;
         end
 
         % Formatting
-        xlim([0.5 10.5]);
-        xticks([2 3 4 7 8 9]);
+        xlim([0.5 3.5]);
+        xticks([1 2 3]);
+        ylim([0 320]);
+        yticks([0 160 320]);
 
-        % Set fixed y-limits based on metric
-        if metric == 1  % Delta Mean FR
-            ylim([0 200]);
-            y_ticks = [0, 100, 200];
-        else  % Delta Peak FR
-            ylim([0 300]);
-            y_ticks = [0, 150, 300];
+        % Add significance markers after setting ylim
+        if ~isempty(clust_idx)
+            hold on;
+            y_max_data = max(means_data + sems_data);
+            curr_ylim = ylim;
+            y_range = curr_ylim(2) - curr_ylim(1);
+
+            % Level 1: Short comparisons (CS vs US, US vs CS+US)
+            y_pos_level1 = y_max_data + 0.08 * y_range;
+
+            % CS vs US
+            if p_CS_US < 0.001
+                sig_text = '***';
+            elseif p_CS_US < 0.01
+                sig_text = '**';
+            elseif p_CS_US < 0.05
+                sig_text = '*';
+            else
+                sig_text = '';
+            end
+            if ~isempty(sig_text)
+                plot([1.1 1.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
+                text(1.5, y_pos_level1 + 0.02 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+            end
+
+            % US vs CS+US
+            if p_US_Both < 0.001
+                sig_text = '***';
+            elseif p_US_Both < 0.01
+                sig_text = '**';
+            elseif p_US_Both < 0.05
+                sig_text = '*';
+            else
+                sig_text = '';
+            end
+            if ~isempty(sig_text)
+                plot([2.1 2.9], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
+                text(2.5, y_pos_level1 + 0.02 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+            end
+
+            % Level 2: Long comparison (CS vs CS+US)
+            y_pos_level2 = y_pos_level1 + 25;  % Increased spacing between levels
+
+            % CS vs CS+US
+            if p_CS_Both < 0.001
+                sig_text = '***';
+            elseif p_CS_Both < 0.01
+                sig_text = '**';
+            elseif p_CS_Both < 0.05
+                sig_text = '*';
+            else
+                sig_text = '';
+            end
+            if ~isempty(sig_text)
+                plot([1 3], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
+                text(2, y_pos_level2 + 0.02 * y_range, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', g.fontSize2);
+            end
+
+            hold off;
         end
 
-        if c == 1
-            title(metric_names{metric}, 'FontSize', g.fontSize1, 'FontWeight', 'bold');
+        % Add title on top cluster of LA
+        if br == 1 && c == 1
+            title('ΔFR (Hz)', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
         end
 
-        % X-tick labels only on bottom row
-        if c == 3
-            xticklabels({'CS', 'US', 'CS+US', 'CS', 'US', 'CS+US'});
+        % X-tick labels only on bottom cluster of Astria
+        if br == 2 && c == 3
+            xticklabels({'CS', 'US', 'CS+US'});
         else
             set(gca, 'XTickLabel', []);
-        end
-
-        % Set y-ticks
-        yticks(y_ticks);
-
-        % Add LA/Astria labels on top row
-        if c == 1
-            curr_ylim_extended = ylim;
-            y_range = curr_ylim_extended(2) - curr_ylim_extended(1);
-            if metric == 1
-                y_pos = curr_ylim_extended(2) - 0.05*y_range;
-            else
-                y_pos = curr_ylim_extended(2) - 0.10*y_range;
-            end
-            text(3, y_pos, 'LA', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-            text(8, y_pos, 'AStria', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-        end
-
-        % Add y-axis label
-        if metric == 1
-            ylabel(cluster_names{c}, 'FontSize', g.fontSize2, 'FontWeight', 'bold');
         end
 
         set(gca, 'FontSize', g.fontSize2);
@@ -662,56 +573,442 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
     end
 end
 
-%% Add latency boxplot panel (spanning columns 4-5, row 4) - Brain region comparison
-ax_latency = nexttile(t, 19, [1 2]);  % Row 4, columns 4-5
+%% Add right panel with pie charts, across-region comparison, and latency comparison
+% Create main nested 3x2 tiledlayout spanning rows 1-4, columns 5-6
+t_right = tiledlayout(t, 3, 2, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_right.Layout.Tile = 5;  % Row 1, columns 5-6
+t_right.Layout.TileSpan = [4 2];  % Span 4 rows, 2 columns
 
-% Collect latency data - POOLING selective and multisensory together for each region
-% LA CS latency (CS-selective + Multisensory, using CS latency)
-LA_CS_pooled_lat = [results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 1); ...
-                    results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 3)] * 1000;  % Convert to ms
+%% Row 1: Pie charts (1×2 nested tiledlayout in tiles 1-2)
+% Create nested 1×2 tiledlayout for pie charts
+t_pie = tiledlayout(t_right, 1, 2, 'TileSpacing', 'none', 'Padding', 'tight');
+t_pie.Layout.Tile = 1;  % Start at tile 1
+t_pie.Layout.TileSpan = [1 2];  % Span tiles 1-2
 
-% Astria CS latency (CS-selective + Multisensory, using CS latency)
-Astria_CS_pooled_lat = [results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 1); ...
-                        results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 3)] * 1000;
+% LA pie chart
+ax_pie_LA = nexttile(t_pie, 1);
 
-% LA US latency (US-selective + Multisensory, using US latency)
-LA_US_pooled_lat = [results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 2); ...
-                    results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 3)] * 1000;
+if ~isempty(results_all{1})
+    res = results_all{1};
 
-% Astria US latency (US-selective + Multisensory, using US latency)
-Astria_US_pooled_lat = [results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 2); ...
-                        results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 3)] * 1000;
+    % Count neurons in each cluster (only clusters 1, 2, 3)
+    n_CS_sel = sum(res.Clusters_all == 1);
+    n_US_sel = sum(res.Clusters_all == 2);
+    n_Multi = sum(res.Clusters_all == 3);
+    total_n = n_CS_sel + n_US_sel + n_Multi;
+
+    pie_data = [n_CS_sel, n_US_sel, n_Multi];
+    % Calculate percentages
+    pct_CS = (n_CS_sel / total_n) * 100;
+    pct_US = (n_US_sel / total_n) * 100;
+    pct_Multi = (n_Multi / total_n) * 100;
+
+    pie_labels = {sprintf('%.0f%%', pct_CS), ...
+                  sprintf('%.0f%%', pct_US), ...
+                  sprintf('%.0f%%', pct_Multi)};
+
+    p = pie(ax_pie_LA, pie_data, pie_labels);
+
+    % Set colors and text properties
+    for i = 1:2:length(p)  % Every other element is a patch
+        patch_idx = (i+1)/2;
+        set(p(i), 'FaceColor', cluster_colors(patch_idx, :));
+        set(p(i), 'EdgeColor', 'k');
+        set(p(i), 'LineWidth', 1);
+    end
+
+    % Set text properties and move inside pie - FontSize 12
+    for i = 2:2:length(p)  % Text elements
+        set(p(i), 'FontSize', 12);
+        set(p(i), 'FontWeight', 'bold');
+        set(p(i), 'Color', 'w');  % White font color
+        % Move text closer to center (inside the pie)
+        pos = get(p(i), 'Position');
+        set(p(i), 'Position', pos * 0.3);  % Move 30% toward center (more inside)
+    end
+
+    title('LA', 'FontSize', 12, 'FontWeight', 'bold');
+end
+
+% Astria pie chart
+ax_pie_Astria = nexttile(t_pie, 2);
+
+if ~isempty(results_all{2})
+    res = results_all{2};
+
+    % Count neurons in each cluster (only clusters 1, 2, 3)
+    n_CS_sel = sum(res.Clusters_all == 1);
+    n_US_sel = sum(res.Clusters_all == 2);
+    n_Multi = sum(res.Clusters_all == 3);
+    total_n = n_CS_sel + n_US_sel + n_Multi;
+
+    pie_data = [n_CS_sel, n_US_sel, n_Multi];
+    % Calculate percentages
+    pct_CS = (n_CS_sel / total_n) * 100;
+    pct_US = (n_US_sel / total_n) * 100;
+    pct_Multi = (n_Multi / total_n) * 100;
+
+    pie_labels = {sprintf('%.0f%%', pct_CS), ...
+                  sprintf('%.0f%%', pct_US), ...
+                  sprintf('%.0f%%', pct_Multi)};
+
+    p = pie(ax_pie_Astria, pie_data, pie_labels);
+
+    % Set colors and text properties
+    for i = 1:2:length(p)  % Every other element is a patch
+        patch_idx = (i+1)/2;
+        set(p(i), 'FaceColor', cluster_colors(patch_idx, :));
+        set(p(i), 'EdgeColor', 'k');
+        set(p(i), 'LineWidth', 1);
+    end
+
+    % Set text properties and move inside pie - FontSize 12
+    for i = 2:2:length(p)  % Text elements
+        set(p(i), 'FontSize', 12);
+        set(p(i), 'FontWeight', 'bold');
+        set(p(i), 'Color', 'w');  % White font color
+        % Move text closer to center (inside the pie)
+        pos = get(p(i), 'Position');
+        set(p(i), 'Position', pos * 0.3);  % Move 30% toward center (more inside)
+    end
+
+    title('AStria', 'FontSize', 12, 'FontWeight', 'bold');
+end
+
+% Add legend between the two pie charts
+% Create a dummy invisible axes positioned between pie charts
+ax_legend = axes('Position', [0.65 0.85 0.05 0.05], 'Visible', 'off');
+hold(ax_legend, 'on');
+% Create invisible plot objects with square markers for legend
+h1 = plot(ax_legend, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(1, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+h2 = plot(ax_legend, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(2, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+h3 = plot(ax_legend, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(3, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+lgd = legend(ax_legend, [h1, h2, h3], {'CS-sel', 'US-sel', 'CS&US'}, ...
+             'Location', 'east', 'FontSize', 10, 'Box', 'off');
+lgd.ItemTokenSize = [30, 30];  % Increase marker size in legend
+
+% Add title to pie chart section - FontSize 12
+title(t_pie, 'Response categories', 'FontSize', 12, 'FontWeight', 'bold');
+
+%% Row 2: Across-region comparison bar plots (3 nested tiles spanning both columns)
+% Create nested 1×3 tiledlayout for comparison bars in row 2
+t_comp = tiledlayout(t_right, 1, 3, 'TileSpacing', 'tight', 'Padding', 'tight');
+t_comp.Layout.Tile = 3;  % Row 2, spanning tiles 3-4
+t_comp.Layout.TileSpan = [1 2];  % Span 1 row, 2 columns
+
+stim_names = {'CS', 'US', 'CS+US'};
+
+for stim = 1:3  % CS, US, CS+US
+    ax_comp = nexttile(t_comp, stim);
+
+    % Collect data from LA and Astria
+    data_regions = [];
+    region_labels = {};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        % Select appropriate PSTH
+        if stim == 1  % CS
+            psth_Hz = res.psth_CS_Hz_all;
+        elseif stim == 2  % US
+            psth_Hz = res.psth_US_Hz_all;
+        else  % CS+US
+            psth_Hz = res.psth_Both_Hz_all;
+        end
+
+        % Find responsive neurons (clusters 1, 2, 3)
+        responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
+
+        if ~isempty(responsive_idx)
+            % Calculate Delta Peak FR in monosyn window (12ms to g.monosyn_window)
+            delta_peak_fr = zeros(length(responsive_idx), 1);
+            baseline_idx = 1:baseline_bins;
+            response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
+            response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+
+            for n = 1:length(responsive_idx)
+                idx_n = responsive_idx(n);
+
+                % Calculate baseline firing rate
+                baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
+
+                % Calculate peak firing rate in monosyn window
+                peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
+
+                % Delta Peak FR
+                delta_peak_fr(n) = peak_fr - baseline_fr;
+            end
+
+            data_regions = [data_regions; delta_peak_fr];
+
+            if br == 1
+                region_labels = [region_labels; repmat({'LA'}, length(responsive_idx), 1)];
+            else
+                region_labels = [region_labels; repmat({'AStria'}, length(responsive_idx), 1)];
+            end
+        end
+    end
+
+    % Plot bars
+    if ~isempty(data_regions)
+        % Separate LA and Astria data
+        LA_data = data_regions(strcmp(region_labels, 'LA'));
+        Astria_data = data_regions(strcmp(region_labels, 'AStria'));
+
+        means_data = [mean(LA_data, 'omitnan'), mean(Astria_data, 'omitnan')];
+        sems_data = [std(LA_data, 0, 'omitnan') / sqrt(length(LA_data)), ...
+                     std(Astria_data, 0, 'omitnan') / sqrt(length(Astria_data))];
+
+        hold on;
+
+        % Bar colors
+        bar_colors = [0.7 0.2 0.2; 0.2 0.4 0.7];  % LA dark red, Astria blue
+
+        b = bar([1 2], means_data, 0.6, 'FaceColor', 'flat', 'EdgeColor', 'k', 'LineWidth', 1);
+        b.CData = bar_colors;
+        errorbar([1 2], means_data, sems_data, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
+
+        % Statistical comparison - Wilcoxon rank-sum test (unpaired)
+        [p_val, ~] = ranksum(LA_data, Astria_data);
+
+        % Add significance marker
+        y_max = max(means_data + sems_data);
+        y_pos = y_max * 1.15;
+
+        plot([1 2], [y_pos y_pos], 'k-', 'LineWidth', 1.5);
+
+        if p_val < 0.001
+            sig_text = '***';
+        elseif p_val < 0.01
+            sig_text = '**';
+        elseif p_val < 0.05
+            sig_text = '*';
+        else
+            sig_text = 'n.s.';
+        end
+
+        text(1.5, y_pos, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+            'FontSize', g.fontSize2);
+
+        hold off;
+    end
+
+    % Formatting
+    xlim([0.5 2.5]);
+    xticks([1 2]);
+    xticklabels({'LA', 'AStria'});
+    ylim([0 250]);
+    yticks([0 125 250]);
+
+    % Y-label and Y-tick labels only on first panel
+    if stim == 1
+        ylabel('ΔFR (Hz)', 'FontSize', g.fontSize2);
+    else
+        set(gca, 'YTickLabel', []);
+    end
+
+    title(stim_names{stim}, 'FontSize', g.fontSize1, 'FontWeight', 'bold');
+    set(gca, 'FontSize', g.fontSize2);
+    box off;
+end
+
+% Add title to comparison section - FontSize 12
+title(t_comp, 'Across region comparison', 'FontSize', 12, 'FontWeight', 'bold');
+
+%% Row 3: Latency comparison boxplots (3 nested tiles spanning both columns)
+% Create nested 1×3 tiledlayout for latency comparisons in row 3
+t_latency = tiledlayout(t_right, 1, 3, 'TileSpacing', 'tight', 'Padding', 'tight');
+t_latency.Layout.Tile = 5;  % Row 3, spanning tiles 5-6
+t_latency.Layout.TileSpan = [1 2];  % Span 1 row, 2 columns
+
+stim_names_lat = {'CS', 'US', 'CS+US'};
+
+for stim = 1:3  % CS, US, CS+US
+    ax_lat = nexttile(t_latency, stim);
+
+    % Collect latency data for this stimulus
+    data_regions = [];
+    region_labels = {};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        % Select appropriate latencies based on stimulus and cluster
+        if stim == 1  % CS - from CS-selective and Multisensory
+            responsive_idx = find(ismember(res.Clusters_all, [1 3]));
+            onset_lat = res.CS_onset_lat_all(responsive_idx);
+        elseif stim == 2  % US - from US-selective and Multisensory
+            responsive_idx = find(ismember(res.Clusters_all, [2 3]));
+            onset_lat = res.US_onset_lat_all(responsive_idx);
+        else  % CS+US - from all responsive neurons
+            responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
+            onset_lat = res.Both_onset_lat_all(responsive_idx);
+        end
+
+        % Remove NaN values and convert to ms
+        onset_lat = onset_lat(~isnan(onset_lat)) * 1000;
+
+        if ~isempty(onset_lat)
+            data_regions = [data_regions; onset_lat];
+
+            if br == 1
+                region_labels = [region_labels; repmat({'LA'}, length(onset_lat), 1)];
+            else
+                region_labels = [region_labels; repmat({'AStria'}, length(onset_lat), 1)];
+            end
+        end
+    end
+
+    % Plot boxplots and scatter
+    if ~isempty(data_regions)
+        % Separate LA and Astria data
+        LA_data = data_regions(strcmp(region_labels, 'LA'));
+        Astria_data = data_regions(strcmp(region_labels, 'AStria'));
+
+        hold on;
+
+        % Plot boxplots
+        boxplot(ax_lat, [LA_data; Astria_data], ...
+                [ones(length(LA_data),1)*1; ones(length(Astria_data),1)*2], ...
+                'Positions', [1 2], 'Widths', 0.6, 'Colors', 'k');
+
+        % Overlay scatter points with jitter
+        jitter_amount = 0.15;
+        region_colors_lat = {[0.8 0.2 0.2], [0.2 0.4 0.8]};  % Red for LA, Blue for Astria
+
+        if ~isempty(LA_data)
+            x_jitter_LA = 1 + (rand(length(LA_data), 1) - 0.5) * jitter_amount;
+            scatter(x_jitter_LA, LA_data, 20, region_colors_lat{1}, 'filled', 'MarkerFaceAlpha', 0.4);
+        end
+
+        if ~isempty(Astria_data)
+            x_jitter_Astria = 2 + (rand(length(Astria_data), 1) - 0.5) * jitter_amount;
+            scatter(x_jitter_Astria, Astria_data, 20, region_colors_lat{2}, 'filled', 'MarkerFaceAlpha', 0.4);
+        end
+
+        % Statistical comparison - Wilcoxon rank-sum test (unpaired)
+        if ~isempty(LA_data) && ~isempty(Astria_data)
+            [p_val, ~] = ranksum(LA_data, Astria_data);
+
+            % Add significance marker
+            y_max = max([LA_data; Astria_data]);
+            y_pos = y_max * 1.15;
+
+            plot([1 2], [y_pos y_pos], 'k-', 'LineWidth', 1.5);
+
+            if p_val < 0.001
+                sig_text = '***';
+            elseif p_val < 0.01
+                sig_text = '**';
+            elseif p_val < 0.05
+                sig_text = '*';
+            else
+                sig_text = 'n.s.';
+            end
+
+            text(1.5, y_pos, sig_text, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+                'FontSize', g.fontSize2);
+        end
+
+        hold off;
+    end
+
+    % Formatting
+    xlim([0.5 2.5]);
+    xticks([1 2]);
+    xticklabels({'LA', 'AStria'});
+    ylim([0 50]);
+    yticks([0 25 50]);
+
+    % Y-label and Y-tick labels only on first panel
+    if stim == 1
+        ylabel('Onset Latency (ms)', 'FontSize', g.fontSize2);
+    else
+        set(gca, 'YTickLabel', []);
+    end
+
+    title(stim_names_lat{stim}, 'FontSize', g.fontSize1, 'FontWeight', 'bold');
+    set(gca, 'FontSize', g.fontSize2);
+    box off;
+end
+
+% Add title to latency section - FontSize 12
+title(t_latency, 'Onset latency comparison', 'FontSize', 12, 'FontWeight', 'bold');
+
+fprintf('\nMain figure complete.\n');
+
+%% Supplementary figure - selective vs multisensory latency comparison + chi-square test
+fprintf('\nGenerating supplementary figure...\n');
+
+fig_supp = figure('Units', 'pixels', 'Position', [200, 200, 1000, 700], 'Visible', 'on');
+t_supp = tiledlayout(fig_supp, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Row 1: Latency comparison (original boxplot content)
+ax_latency = nexttile(t_supp, 1);
+
+% Collect latency data for each group
+% LA CS-selective and Multisensory (CS latency)
+LA_CS_sel_lat = results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 1) * 1000;  % Convert to ms
+LA_Multi_CS_lat = results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 3) * 1000;
+
+% Astria CS-selective and Multisensory (CS latency)
+Astria_CS_sel_lat = results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 1) * 1000;
+Astria_Multi_CS_lat = results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 3) * 1000;
+
+% LA US-selective and Multisensory (US latency)
+LA_US_sel_lat = results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 2) * 1000;
+LA_Multi_US_lat = results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 3) * 1000;
+
+% Astria US-selective and Multisensory (US latency)
+Astria_US_sel_lat = results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 2) * 1000;
+Astria_Multi_US_lat = results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 3) * 1000;
 
 % Remove NaN values
-LA_CS_pooled_lat = LA_CS_pooled_lat(~isnan(LA_CS_pooled_lat));
-Astria_CS_pooled_lat = Astria_CS_pooled_lat(~isnan(Astria_CS_pooled_lat));
-LA_US_pooled_lat = LA_US_pooled_lat(~isnan(LA_US_pooled_lat));
-Astria_US_pooled_lat = Astria_US_pooled_lat(~isnan(Astria_US_pooled_lat));
+LA_CS_sel_lat = LA_CS_sel_lat(~isnan(LA_CS_sel_lat));
+LA_Multi_CS_lat = LA_Multi_CS_lat(~isnan(LA_Multi_CS_lat));
+Astria_CS_sel_lat = Astria_CS_sel_lat(~isnan(Astria_CS_sel_lat));
+Astria_Multi_CS_lat = Astria_Multi_CS_lat(~isnan(Astria_Multi_CS_lat));
+LA_US_sel_lat = LA_US_sel_lat(~isnan(LA_US_sel_lat));
+LA_Multi_US_lat = LA_Multi_US_lat(~isnan(LA_Multi_US_lat));
+Astria_US_sel_lat = Astria_US_sel_lat(~isnan(Astria_US_sel_lat));
+Astria_Multi_US_lat = Astria_Multi_US_lat(~isnan(Astria_Multi_US_lat));
 
 hold on;
 
-% Positions for 2 pairs of boxplots (LA vs Astria for CS and US)
-positions = [1 2, 5 6];
-all_data = {LA_CS_pooled_lat, Astria_CS_pooled_lat, LA_US_pooled_lat, Astria_US_pooled_lat};
+% Positions for 4 pairs of boxplots
+positions = [1 2, 4 5, 7 8, 10 11];
+all_data = {LA_CS_sel_lat, LA_Multi_CS_lat, Astria_CS_sel_lat, Astria_Multi_CS_lat, ...
+            LA_US_sel_lat, LA_Multi_US_lat, Astria_US_sel_lat, Astria_Multi_US_lat};
 
 % Plot boxplots
-boxplot(ax_latency, [all_data{1}; all_data{2}; all_data{3}; all_data{4}], ...
+boxplot([all_data{1}; all_data{2}; all_data{3}; all_data{4}; ...
+         all_data{5}; all_data{6}; all_data{7}; all_data{8}], ...
         [ones(length(all_data{1}),1)*1; ones(length(all_data{2}),1)*2; ...
-         ones(length(all_data{3}),1)*5; ones(length(all_data{4}),1)*6], ...
+         ones(length(all_data{3}),1)*4; ones(length(all_data{4}),1)*5; ...
+         ones(length(all_data{5}),1)*7; ones(length(all_data{6}),1)*8; ...
+         ones(length(all_data{7}),1)*10; ones(length(all_data{8}),1)*11], ...
         'Positions', positions, 'Widths', 0.6, 'Colors', 'k');
 
-% Overlay scatter points with jitter - color by brain region
+% Overlay scatter points with jitter
 jitter_amount = 0.15;
-region_colors = {[0.8 0.2 0.2], [0.2 0.4 0.8]};  % Red for LA, Blue for Astria
-for i = 1:4
+for i = 1:8
     if ~isempty(all_data{i})
         x_jitter = positions(i) + (rand(length(all_data{i}), 1) - 0.5) * jitter_amount;
 
-        % Color based on region: LA (odd) vs Astria (even)
-        if mod(i, 2) == 1  % LA
-            color = region_colors{1};
-        else  % Astria
-            color = region_colors{2};
+        % Color based on group type (selective vs multisensory)
+        if mod(i, 2) == 1  % Selective groups (odd indices)
+            color = [0.5 0.5 0.5];  % Gray
+        else  % Multisensory groups (even indices)
+            color = [0.6 0.2 0.6];  % Purple
         end
 
         scatter(x_jitter, all_data{i}, 20, color, 'filled', 'MarkerFaceAlpha', 0.4);
@@ -721,36 +1018,37 @@ end
 hold off;
 
 % Formatting
-xlim([0 7]);
+xlim([0 12]);
 ylim([0 50]);
-xticks([1.5 5.5]);
-xticklabels({'CS', 'US'});
-ylabel('Onset Latency (ms)', 'FontSize', g.fontSize2);
-title('Onset Latencies', 'FontSize', g.fontSize1, 'FontWeight', 'bold');
-set(gca, 'FontSize', g.fontSize2);
+xticks([1.5 4.5 7.5 10.5]);
+xticklabels({'LA CS', 'AStria CS', 'LA US', 'AStria US'});
+ylabel('Onset Latency (ms)', 'FontSize', 10);
+title('Onset Latencies: Selective vs CS&US', 'FontSize', 10, 'FontWeight', 'bold');
+set(gca, 'FontSize', 10);
 box off;
 
-% Add statistics - ranksum test for all comparisons
+% Add statistics - ranksum test for each pair (selective vs multisensory)
+y_pos_sig = 45;  % Position for significance markers
+pairs_to_test = {
+    {LA_CS_sel_lat, LA_Multi_CS_lat, 1.5};      % LA CS pair, x-position for text
+    {Astria_CS_sel_lat, Astria_Multi_CS_lat, 4.5};  % Astria CS pair
+    {LA_US_sel_lat, LA_Multi_US_lat, 7.5};      % LA US pair
+    {Astria_US_sel_lat, Astria_Multi_US_lat, 10.5};  % Astria US pair
+};
+
 hold on;
-
-% Level 1 (y = 45): LA vs Astria within each stimulus (short lines)
-y_pos_level1 = 45;
-pairs_level1 = {
-    {LA_CS_pooled_lat, Astria_CS_pooled_lat, 1, 2};  % CS: LA vs Astria
-    {LA_US_pooled_lat, Astria_US_pooled_lat, 5, 6};  % US: LA vs Astria
-};
-
-for p = 1:2
-    data1 = pairs_level1{p}{1};
-    data2 = pairs_level1{p}{2};
-    x_left = pairs_level1{p}{3};
-    x_right = pairs_level1{p}{4};
+for p = 1:4
+    data1 = pairs_to_test{p}{1};
+    data2 = pairs_to_test{p}{2};
+    x_center = pairs_to_test{p}{3};
 
     if ~isempty(data1) && ~isempty(data2) && length(data1) > 0 && length(data2) > 0
         [p_val, ~] = ranksum(data1, data2);
 
         % Draw line connecting the two boxplots
-        plot([x_left x_right], [y_pos_level1 y_pos_level1], 'k-', 'LineWidth', 1.5);
+        x_left = x_center - 0.5;
+        x_right = x_center + 0.5;
+        plot([x_left x_right], [y_pos_sig y_pos_sig], 'k-', 'LineWidth', 1.5);
 
         if p_val < 0.05
             sig_text = get_sig_stars(p_val);
@@ -758,51 +1056,190 @@ for p = 1:2
             sig_text = 'n.s.';
         end
 
-        text((x_left + x_right) / 2, y_pos_level1, sig_text, 'HorizontalAlignment', 'center', ...
-            'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
+        text(x_center, y_pos_sig, sig_text, 'HorizontalAlignment', 'center', ...
+            'VerticalAlignment', 'bottom', 'FontSize', 10);
     end
 end
-
-% Level 2 (y = 48): CS vs US within each region (longer lines)
-y_pos_level2 = 48;
-pairs_level2 = {
-    {LA_CS_pooled_lat, LA_US_pooled_lat, 1, 5};      % LA: CS vs US
-    {Astria_CS_pooled_lat, Astria_US_pooled_lat, 2, 6};  % Astria: CS vs US
-};
-
-for p = 1:2
-    data1 = pairs_level2{p}{1};
-    data2 = pairs_level2{p}{2};
-    x_left = pairs_level2{p}{3};
-    x_right = pairs_level2{p}{4};
-
-    if ~isempty(data1) && ~isempty(data2) && length(data1) > 0 && length(data2) > 0
-        [p_val, ~] = ranksum(data1, data2);
-
-        % Draw line connecting the two boxplots
-        plot([x_left x_right], [y_pos_level2 y_pos_level2], 'k-', 'LineWidth', 1.5);
-
-        if p_val < 0.05
-            sig_text = get_sig_stars(p_val);
-        else
-            sig_text = 'n.s.';
-        end
-
-        text((x_left + x_right) / 2, y_pos_level2, sig_text, 'HorizontalAlignment', 'center', ...
-            'VerticalAlignment', 'bottom', 'FontSize', g.fontSize2);
-    end
-end
-
 hold off;
 
-% Add legend for brain regions
-legend_ax = axes('Position', [0.85 0.15 0.1 0.05], 'Visible', 'off');
+% Add legend
+legend_ax = axes('Position', [0.75 0.8 0.15 0.1], 'Visible', 'off');
 hold(legend_ax, 'on');
-scatter(legend_ax, 1, 1, 50, region_colors{1}, 'filled');
-scatter(legend_ax, 1, 2, 50, region_colors{2}, 'filled');
-legend(legend_ax, {'LA', 'Astria'}, 'Location', 'best', 'FontSize', g.fontSize2);
+h1 = scatter(legend_ax, NaN, NaN, 50, [0.5 0.5 0.5], 'filled');
+h2 = scatter(legend_ax, NaN, NaN, 50, [0.6 0.2 0.6], 'filled');
+legend(legend_ax, [h1, h2], {'Selective', 'CS&US'}, 'Location', 'best', 'FontSize', 10);
 hold(legend_ax, 'off');
 
+%% Row 2: Chi-square test analysis (3 panels)
+fprintf('\n=== Chi-square Test: LA vs Astria (Monosynaptic) ===\n');
+
+% Build contingency table: 2 regions × 3 clusters (CS-sel, US-sel, Multi)
+contingency_table = zeros(2, 3);
+for br = 1:2
+    if ~isempty(results_all{br})
+        for c = 1:3
+            contingency_table(br, c) = sum(results_all{br}.Clusters_all == c);
+        end
+    end
+end
+
+fprintf('Contingency Table (regions × clusters):\n');
+fprintf('%12s%12s%12s%12s%12s\n', 'Region', 'CS-sel', 'US-sel', 'Multi', 'Total');
+for br = 1:2
+    if strcmp(brain_regions{br}, 'Astria')
+        fprintf('%12s', 'AStria');
+    else
+        fprintf('%12s', brain_regions{br});
+    end
+    for c = 1:3
+        fprintf('%12d', contingency_table(br, c));
+    end
+    fprintf('%12d\n', sum(contingency_table(br, :)));
+end
+fprintf('%12s', 'Total');
+for c = 1:3
+    fprintf('%12d', sum(contingency_table(:, c)));
+end
+fprintf('%12d\n', sum(contingency_table(:)));
+
+% Calculate chi-square statistic
+[chi2_obs, p_parametric] = calculate_chi_square(contingency_table);
+fprintf('\nObserved chi-square statistic: %.4f\n', chi2_obs);
+fprintf('Parametric p-value: %.4f\n', p_parametric);
+
+% Cramér's V for effect size
+n_total = sum(contingency_table(:));
+df_cramer = min(size(contingency_table, 1) - 1, size(contingency_table, 2) - 1);
+cramers_v = sqrt(chi2_obs / (n_total * df_cramer));
+fprintf('Cramér''s V (effect size): %.4f\n', cramers_v);
+
+% Check expected counts
+row_totals = sum(contingency_table, 2);
+col_totals = sum(contingency_table, 1);
+expected = (row_totals * col_totals) / n_total;
+min_expected = min(expected(:));
+if min_expected < 5
+    fprintf('WARNING: Minimum expected count = %.2f (< 5). Chi-square approximation may be unreliable.\n', min_expected);
+else
+    fprintf('Minimum expected count = %.2f (>= 5). Chi-square assumptions satisfied.\n', min_expected);
+end
+
+% Permutation test
+n_permutations = 10000;
+chi2_perm = zeros(n_permutations, 1);
+
+% Pool all cluster assignments
+all_clusters = [];
+region_indices = [];
+for br = 1:2
+    if ~isempty(results_all{br})
+        n_neurons = results_all{br}.n_neurons;
+        all_clusters = [all_clusters; results_all{br}.Clusters_all];
+        region_indices = [region_indices; br * ones(n_neurons, 1)];
+    end
+end
+
+fprintf('Running %d permutations...\n', n_permutations);
+for perm = 1:n_permutations
+    % Shuffle cluster assignments
+    shuffled_clusters = all_clusters(randperm(length(all_clusters)));
+
+    % Build permuted contingency table
+    perm_table = zeros(2, 3);
+    for br = 1:2
+        br_mask = region_indices == br;
+        br_clusters = shuffled_clusters(br_mask);
+        for c = 1:3
+            perm_table(br, c) = sum(br_clusters == c);
+        end
+    end
+
+    % Calculate chi-square for permuted data
+    chi2_perm(perm) = calculate_chi_square(perm_table);
+
+    if mod(perm, 1000) == 0
+        fprintf('  Completed %d/%d permutations\n', perm, n_permutations);
+    end
+end
+
+% Calculate permutation p-value
+p_perm = sum(chi2_perm >= chi2_obs) / n_permutations;
+fprintf('\nPermutation p-value: %.4f\n', p_perm);
+if p_perm < 0.05
+    fprintf('Significance (p < 0.05): YES\n');
+else
+    fprintf('Significance (p < 0.05): NO\n');
+end
+
+% Create nested 1×3 tiledlayout for chi-square panels
+t_chi = tiledlayout(t_supp, 1, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_chi.Layout.Tile = 2;
+
+% Panel 1: Permutation distribution
+ax_perm = nexttile(t_chi, 1);
+histogram(ax_perm, chi2_perm, 50, 'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'k');
+hold on;
+xline(chi2_obs, 'r-', 'LineWidth', 2);
+hold off;
+xlabel('Chi-square statistic', 'FontSize', 10);
+ylabel('Frequency', 'FontSize', 10);
+title('Permutation Distribution', 'FontSize', 10, 'FontWeight', 'bold');
+legend({'Null', 'Observed'}, 'Location', 'northeast', 'FontSize', 10);
+set(gca, 'FontSize', 10);
+box off;
+
+% Panel 2: Contingency table
+ax_table = nexttile(t_chi, 2);
+axis(ax_table, 'off');
+% Display contingency table as text
+y_start = 0.7;
+y_step = 0.2;
+text(0.1, y_start, 'Region', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+text(0.3, y_start, 'CS-sel', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+text(0.5, y_start, 'US-sel', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+text(0.7, y_start, 'CS&US', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+for br = 1:2
+    if strcmp(brain_regions{br}, 'Astria')
+        region_name = 'AStria';
+    else
+        region_name = brain_regions{br};
+    end
+    text(0.1, y_start - br*y_step, region_name, 'FontSize', 10, 'HorizontalAlignment', 'center');
+    text(0.3, y_start - br*y_step, sprintf('%d', contingency_table(br, 1)), 'FontSize', 10, 'HorizontalAlignment', 'center');
+    text(0.5, y_start - br*y_step, sprintf('%d', contingency_table(br, 2)), 'FontSize', 10, 'HorizontalAlignment', 'center');
+    text(0.7, y_start - br*y_step, sprintf('%d', contingency_table(br, 3)), 'FontSize', 10, 'HorizontalAlignment', 'center');
+end
+title(ax_table, sprintf('Contingency Table (χ²=%.2f)', chi2_obs), 'FontSize', 10, 'FontWeight', 'bold');
+
+% Panel 3: Statistical summary
+ax_stats = nexttile(t_chi, 3);
+axis(ax_stats, 'off');
+% Compact display of statistics
+y_pos = 0.7;
+y_step = 0.15;
+text(0.5, y_pos, sprintf('χ²: %.2f', chi2_obs), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+text(0.5, y_pos - y_step, sprintf('p: %.4f', p_perm), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+text(0.5, y_pos - 2*y_step, sprintf('V: %.3f', cramers_v), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
+
+% Add significance symbol
+if p_perm < 0.001
+    sig_symbol = '***';
+    sig_color = [0.8 0.2 0.2];
+elseif p_perm < 0.01
+    sig_symbol = '**';
+    sig_color = [0.8 0.4 0.2];
+elseif p_perm < 0.05
+    sig_symbol = '*';
+    sig_color = [0.8 0.6 0.2];
+else
+    sig_symbol = 'n.s.';
+    sig_color = [0.5 0.5 0.5];
+end
+text(0.5, y_pos - 3*y_step, sig_symbol, 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'center', 'Color', sig_color);
+title(ax_stats, 'Statistics', 'FontSize', 10, 'FontWeight', 'bold');
+
+fprintf('\nSupplementary figure complete.\n');
 fprintf('\nDone.\n');
 
 %% Helper functions
@@ -863,4 +1300,25 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
             offset_lat = (offset_idx - 1) * bin_time;
         end
     end
+end
+
+function [chi2_stat, p_value] = calculate_chi_square(contingency_table)
+    % Calculate chi-square statistic from contingency table
+    % Returns chi2 statistic and parametric p-value
+
+    % Calculate expected frequencies
+    row_totals = sum(contingency_table, 2);
+    col_totals = sum(contingency_table, 1);
+    n_total = sum(contingency_table(:));
+
+    expected = (row_totals * col_totals) / n_total;
+
+    % Calculate chi-square statistic
+    chi2_stat = sum(((contingency_table(:) - expected(:)).^2) ./ expected(:));
+
+    % Degrees of freedom
+    df = (size(contingency_table, 1) - 1) * (size(contingency_table, 2) - 1);
+
+    % Parametric p-value (chi-square distribution)
+    p_value = 1 - chi2cdf(chi2_stat, df);
 end

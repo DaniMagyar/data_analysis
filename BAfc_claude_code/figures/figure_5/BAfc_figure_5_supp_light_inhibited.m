@@ -70,6 +70,11 @@ psthHz_nolight = cell(1, 2);
 psthZ_light = cell(1, 2);  % CS, US (light)
 psthHz_light = cell(1, 2);
 
+% Calculate Savitzky-Golay filter delay correction
+filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
+fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
+    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
+
 % Process no-light conditions
 for hmp = 1:2  % CS, US
     psth_spx_og = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl_nolight{hmp}, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
@@ -78,15 +83,25 @@ for hmp = 1:2  % CS, US
     num_trials = size(cell_metrics.general.(ttl_nolight{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
     psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-    psthHz_nolight{hmp} = psth_hz_smooth;
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_hz_corrected = zeros(size(psth_hz_smooth));
+    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
+    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
+    psthHz_nolight{hmp} = psth_hz_corrected;
 
     % Z-score using baseline period only
     baseline_idx = 1:(g.pre_time / g.bin_time);
     baseline_mean = mean(psth_spx_og(:, baseline_idx), 2);
     baseline_std = std(psth_spx_og(:, baseline_idx), 0, 2);
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
-    psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-    psthZ_nolight{hmp} = psth_spx;
+    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_spx_corrected = zeros(size(psth_spx_smooth));
+    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
+    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
+    psthZ_nolight{hmp} = psth_spx_corrected;
 end
 
 % Process light conditions
@@ -97,15 +112,25 @@ for hmp = 1:2  % CS, US
     num_trials = size(cell_metrics.general.(ttl_light{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
     psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-    psthHz_light{hmp} = psth_hz_smooth;
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_hz_corrected = zeros(size(psth_hz_smooth));
+    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
+    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
+    psthHz_light{hmp} = psth_hz_corrected;
 
     % Z-score using baseline period only
     baseline_idx = 1:(g.pre_time / g.bin_time);
     baseline_mean = mean(psth_spx_og(:, baseline_idx), 2);
     baseline_std = std(psth_spx_og(:, baseline_idx), 0, 2);
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
-    psth_spx = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-    psthZ_light{hmp} = psth_spx;
+    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
+
+    % Correct for filter delay by shifting forward (move data earlier in time)
+    psth_spx_corrected = zeros(size(psth_spx_smooth));
+    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
+    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
+    psthZ_light{hmp} = psth_spx_corrected;
 end
 
 %% Identify light-inhibited neurons for each brain region
@@ -350,9 +375,9 @@ if ~has_data
 end
 
 %% Create figure
-% NEW LAYOUT: Row 1=LA heatmaps (4 cols), Row 2=LA lineplots (4 cols), Row 3=Astria heatmaps (4 cols), Row 4=Astria lineplots (4 cols)
-fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 800], 'Visible', 'on');
-t = tiledlayout(fig, 4, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
+% NEW LAYOUT: Row 1=Example rasters (4 cols), Row 2=LA heatmaps (4 cols), Row 3=LA lineplots (4 cols), Row 4=Astria heatmaps (4 cols), Row 5=Astria lineplots (4 cols)
+fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 1000], 'Visible', 'on');
+t = tiledlayout(fig, 5, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Determine global color limits across all heatmaps
 all_values = [];
@@ -399,7 +424,141 @@ end
 
 ylim_lineplot = [0, max(all_lineplot_values) * 1.1];  % 0 to max + 10% padding
 
-%% Plot: Row 1=LA heatmaps, Row 2=LA lineplots, Row 3=Astria heatmaps, Row 4=Astria lineplots
+%% Print all neurons for both regions
+fprintf('\n========================================\n');
+fprintf('ALL LIGHT-INHIBITED NEURONS (sorted order)\n');
+fprintf('========================================\n');
+
+for br = 1:2  % LA, Astria
+    if isempty(results_all{br})
+        continue;
+    end
+
+    fprintf('\n--- %s ---\n', brain_regions{br});
+    res = results_all{br};
+
+    for pos = 1:length(res.leafOrder)
+        sorted_idx = res.leafOrder(pos);
+        global_idx = res.light_inhibited_idx(sorted_idx);
+
+        fprintf('%2d. Animal: %-12s  cellID: %3d  Region: %-8s  Type: %s\n', ...
+            pos, ...
+            cell_metrics.animal{global_idx}, ...
+            cell_metrics.cellID(global_idx), ...
+            cell_metrics.brainRegion{global_idx}, ...
+            cell_metrics.putativeCellType{global_idx});
+    end
+end
+
+fprintf('\n========================================\n\n');
+
+%% Plot Row 1: Example rasters from 7th LA neuron
+% Get the 7th neuron from LA heatmap (after sorting)
+if ~isempty(results_all{1})  % LA exists
+    res_LA = results_all{1};
+    if length(res_LA.leafOrder) >= 7
+        % leafOrder(7) gives the 7th position in sorted list
+        % Map it back to global index using light_inhibited_idx
+        sorted_position = res_LA.leafOrder(7);
+        example_neuron_idx = res_LA.light_inhibited_idx(sorted_position);
+
+        % Print example neuron information
+        fprintf('\n=== Example Neuron (7th in LA heatmap) ===\n');
+        fprintf('Animal: %s\n', cell_metrics.animal{example_neuron_idx});
+        fprintf('cellID: %d\n', cell_metrics.cellID(example_neuron_idx));
+        fprintf('Brain Region: %s\n', cell_metrics.brainRegion{example_neuron_idx});
+        if isfield(cell_metrics, 'putativeCellType')
+            fprintf('Cell Type: %s\n', cell_metrics.putativeCellType{example_neuron_idx});
+        end
+        fprintf('==========================================\n\n');
+
+        % Create nested tiledlayout spanning all 4 columns of row 1
+        t_nested = tiledlayout(t, 1, 4, 'TileSpacing', 'compact', 'Padding', 'tight');
+        t_nested.Layout.Tile = 1;  % Start at tile 1
+        t_nested.Layout.TileSpan = [1 4];  % Span 1 row, 4 columns
+
+        % Add title to nested layout
+        title(t_nested, 'Example light inhibited neuron', 'FontSize', 12, 'FontWeight', 'bold');
+
+        % Get trial data for all 4 conditions
+        ttl_list = {ttl_nolight{1}, ttl_light{1}, ttl_nolight{2}, ttl_light{2}};  % CS no-light, CS light, US no-light, US light
+        raster_titles = {'CS - No light', 'CS - Light', 'US - No light', 'US - Light'};
+
+        % Plot raster for each condition
+        for col = 1:4
+            ax = nexttile(t_nested, col);  % Use nested layout instead of main layout
+
+            % Get spike times for this neuron and TTL
+            ttl_current = ttl_list{col};
+            [psth_temp, preAP_norm, postAP_norm] = BAfc_psth_spx('cell_metrics', cell_metrics, ...
+                'ttl', ttl_current, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
+
+            % Plot raster
+            hold on;
+
+            % Add red shaded area for light conditions (cols 2 and 4)
+            if col == 2 || col == 4
+                % Create patch for shaded area
+                patch([-0.5, 0.5, 0.5, -0.5], [0, 0, 1000, 1000], [1 0.8 0.8], ...
+                    'EdgeColor', 'none', 'FaceAlpha', 0.6);
+            end
+
+            % Get pre and post spike times for this neuron
+            preAP = preAP_norm{example_neuron_idx};
+            postAP = postAP_norm{example_neuron_idx};
+            n_trials = length(preAP);
+
+            for trial = 1:n_trials
+                % Pre-stimulus spikes (already in seconds, negative times)
+                if ~isempty(preAP{trial})
+                    spk_times_pre = preAP{trial};
+                    % Filter to plot window (use g.plotwin for consistency with heatmaps)
+                    spk_times_pre = spk_times_pre(spk_times_pre >= -g.plotwin(1) & spk_times_pre <= 0);
+                    if ~isempty(spk_times_pre)
+                        plot(spk_times_pre, trial * ones(size(spk_times_pre)), 'k.', 'MarkerSize', 6);
+                    end
+                end
+
+                % Post-stimulus spikes (already in seconds, positive times)
+                if ~isempty(postAP{trial})
+                    spk_times_post = postAP{trial};
+                    % Filter to plot window (use g.plotwin for consistency with heatmaps)
+                    spk_times_post = spk_times_post(spk_times_post >= 0 & spk_times_post <= g.plotwin(2));
+                    if ~isempty(spk_times_post)
+                        plot(spk_times_post, trial * ones(size(spk_times_post)), 'k.', 'MarkerSize', 6);
+                    end
+                end
+            end
+
+            % Vertical line at stimulus onset
+            plot([0 0], [0 n_trials+1], 'r-', 'LineWidth', 2);
+
+            % Red line for light illumination on light conditions (cols 2 and 4)
+            if col == 2 || col == 4
+                y_pos = n_trials + 2;  % Above all trials
+                plot([-0.5, 0.5], [y_pos, y_pos], '-', 'Color', [1 0 0], 'LineWidth', 3);
+            end
+
+            hold off;
+
+            % Formatting
+            xlim([-g.plotwin(1), g.plotwin(2)]);
+            ylim([0, n_trials + 1]);
+
+            title(raster_titles{col}, 'FontSize', g.fontSize1);
+            if col == 1
+                ylabel('Trial', 'FontSize', 12);
+                yticks([0 40 80]);
+            else
+                set(gca, 'YTickLabel', []);
+            end
+            set(gca, 'XTickLabel', []);  % No x-labels on row 1
+            set(gca, 'FontSize', g.fontSize2);
+        end
+    end
+end
+
+%% Plot: Row 2=LA heatmaps, Row 3=LA lineplots, Row 4=Astria heatmaps, Row 5=Astria lineplots
 % 4 columns per row: CS no-light, CS light, US no-light, US light
 for br = 1:2  % LA, Astria
     if isempty(results_all{br})
@@ -422,9 +581,22 @@ for br = 1:2  % LA, Astria
     US_nolight_hz = res.psth_US_Hz_nolight(res.leafOrder, :);
     US_light_hz = res.psth_US_Hz_light(res.leafOrder, :);
 
-    % Calculate row indices: LA gets rows 1-2, Astria gets rows 3-4
-    heatmap_row = (br-1)*2 + 1;
-    lineplot_row = (br-1)*2 + 2;
+    % Calculate row indices: LA gets rows 2-3, Astria gets rows 4-5 (row 1 is for example rasters)
+    heatmap_row = (br-1)*2 + 2;
+    lineplot_row = (br-1)*2 + 3;
+
+    % Create nested tiledlayout spanning 2 rows and 4 columns for this brain region
+    t_nested_region = tiledlayout(t, 2, 4, 'TileSpacing', 'compact', 'Padding', 'tight');
+    first_tile = (heatmap_row - 1) * 4 + 1;  % First tile of heatmap row
+    t_nested_region.Layout.Tile = first_tile;
+    t_nested_region.Layout.TileSpan = [2 4];  % Span 2 rows, 4 columns
+
+    % Add title to nested layout
+    if br == 1
+        title(t_nested_region, 'All light-inhibited neurons from LA', 'FontSize', 12, 'FontWeight', 'bold');
+    else
+        title(t_nested_region, 'All light-inhibited neurons from AStria', 'FontSize', 12, 'FontWeight', 'bold');
+    end
 
     % Prepare all PSTH data in order: CS no-light, CS light, US no-light, US light
     psth_z_all = {CS_nolight_z, CS_light_z, US_nolight_z, US_light_z};
@@ -442,21 +614,22 @@ for br = 1:2  % LA, Astria
 
     % Plot all 4 conditions (columns)
     for col = 1:4
-        %% Row 1 or 3: Heatmap
-        tile_idx = (heatmap_row-1)*4 + col;
-        ax = nexttile(t, tile_idx);
+        %% Row 1 of nested layout: Heatmap
+        tile_idx = col;  % Just use column index within nested layout
+        ax = nexttile(t_nested_region, tile_idx);
         matrix = psth_z_all{col}(:, (g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
         imagesc(g.timeaxis_hmp, 1:size(matrix, 1), matrix);
         clim([clim_min clim_max]);
         colormap(ax, g.colors.Heatmap);
         xline(0, '--k', 'LineWidth', g.xlinewidth);
 
-        % Labels and title
-        if br == 1  % LA - top row gets titles
-            title(titles_all{col}, 'FontSize', g.fontSize1);
-        end
+        % Labels (no titles on heatmap rows - titles are on row 1 rasters)
         if col == 1  % First column gets ylabel
-            ylabel(sprintf('%s\nNeuron #', brain_regions{br}), 'FontSize', g.fontSize2);
+            if br == 1
+                ylabel('LA (Cell #)', 'FontSize', 12);
+            else
+                ylabel('AStria (Cell #)', 'FontSize', 12);
+            end
         end
 
         yticks([1, size(matrix, 1)]);
@@ -491,37 +664,39 @@ for br = 1:2  % LA, Astria
 
         hold off;
 
-        %% Row 2 or 4: Lineplot
-        tile_idx = (lineplot_row-1)*4 + col;
-        ax = nexttile(t, tile_idx);
+        %% Row 2 of nested layout: Lineplot
+        tile_idx = 4 + col;  % Second row starts at tile 5
+        ax = nexttile(t_nested_region, tile_idx);
 
         psth_mean = mean(psth_hz_all{col}(:, plot_idx), 1);
 
         % Set limits first
         xlim([time_vec(1) time_vec(end)]);
-        ylim([ylim_lineplot(1), ylim_lineplot(2) * 1.1]);  % Extend y-axis by 10% to make room for red line
+        ylim([0, 30]);
 
         hold on;
+
+        % Add red shaded area for light conditions (cols 2 and 4)
+        if col == 2 || col == 4
+            patch([-0.5, 0.5, 0.5, -0.5], [0, 0, 30, 30], [1 0.8 0.8], ...
+                'EdgeColor', 'none', 'FaceAlpha', 0.6);
+        end
+
         xline(0, '--k', 'LineWidth', g.xlinewidth);
         plot(time_vec, psth_mean, '-', 'Color', line_colors{col}, 'LineWidth', 2.5);
-
-        % Add red line for light illumination period on light conditions (cols 2 and 4)
-        if col == 2 || col == 4
-            y_pos = ylim_lineplot(2) * 1.05;  % Above the data, within extended ylim
-            plot([-0.5, 0.5], [y_pos, y_pos], '-', 'Color', [1 0 0], 'LineWidth', 3);
-        end
 
         hold off;
 
         % Y-axis labels and ticks
         if col == 1  % First column shows ylabel and ticks
-            ylabel('FR (Hz)', 'FontSize', g.fontSize2);
+            ylabel('FR (Hz)', 'FontSize', 12);
+            yticks([0 15 30]);
         else
             set(gca, 'YTickLabel', []);
         end
 
         % X-axis labels
-        if br == 2  % Astria - bottom row gets x-labels
+        if br == 2  % Astria lineplot (row 5) - bottom row gets x-labels
             xlabel('Time (s)', 'FontSize', g.fontSize2);
             xticks([-1 0 1]);
         else
@@ -533,16 +708,16 @@ end
 
 % Add colorbar
 drawnow;
-cb_width = 0.010;
-cb_left = 0.025;
-cb_bottom = 0.40;
-cb_height = 0.20;
+cb_width = 0.008;
+cb_left = 0.95;
+cb_bottom = 0.605;
+cb_height = 0.08;
 cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
 set(cb_ax, 'YDir', 'normal');
-set(cb_ax, 'XTick', [], 'YAxisLocation', 'left');
-ylabel(cb_ax, 'Z-score', 'FontSize', g.fontSize2);
+set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
+%ylabel(cb_ax, 'Z-score', 'FontSize', 12);
 cb_ax.FontSize = g.fontSize2;
 
 fprintf('\nDone. Light-inhibited neurons visualized.\n');
