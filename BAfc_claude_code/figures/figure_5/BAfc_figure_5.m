@@ -6,6 +6,23 @@
 
 clear all; close all
 
+%% TESTING METHOD SELECTION
+% Choose testing method for optogenetic enhancement detection:
+% 'multi_window' - Test multiple 1ms windows from artifact_end to monosyn_window
+%                  Neuron enhanced if ANY window p<0.05 with positive change
+%                  WARNING: High false positive rate (~86% for 38 windows)
+% 'single_window' - Test single pre-defined window
+%                   No multiple comparisons issue, statistically sound
+g.testing_method = 'single_window';  % Options: 'multi_window' or 'single_window'
+
+% Single window parameters (only used if testing_method = 'single_window')
+g.test_window_start = 0.012;  % Start of test window (s) - after artifact
+g.test_window_end = 0.050;    % End of test window (s) - monosynaptic window
+% Common options:
+%   Full monosynaptic: [0.012, 0.050]
+%   Early responses:   [0.012, 0.020]
+%   Sustained:         [0.020, 0.050]
+
 %% Setup - recordings with optogenetic manipulation
 recordings = {...
   'MD298_001_kilosort',...
@@ -383,10 +400,28 @@ fprintf('  BAfc_monosyn_raster_ui(g_ui, monosyn_results, ttl)\n');
 %% Statistical comparison for CS and US separately
 fprintf('\n=== Statistical Comparison: Light vs No-Light ===\n');
 
-% Fine-grained multi-window testing
+% Setup testing windows based on method
 artifact_end = 0.012;  % 12ms artifact exclusion
-window_ends = 0.013:0.001:g.monosyn_window;  % 13ms to monosyn_window in 1ms steps
-n_windows = length(window_ends);
+
+if strcmp(g.testing_method, 'multi_window')
+    % Fine-grained multi-window testing
+    window_ends = 0.013:0.001:g.monosyn_window;  % 13ms to monosyn_window in 1ms steps
+    n_windows = length(window_ends);
+    fprintf('Using MULTI-WINDOW testing: %d windows from %.0f-%.0f ms\n', ...
+        n_windows, artifact_end*1000, g.monosyn_window*1000);
+    fprintf('WARNING: Family-wise error rate ~%.1f%%\n', (1 - 0.95^n_windows)*100);
+elseif strcmp(g.testing_method, 'single_window')
+    % Single pre-defined window testing
+    window_ends = g.test_window_end;  % Single window endpoint
+    n_windows = 1;
+    fprintf('Using SINGLE-WINDOW testing: %.0f-%.0f ms\n', ...
+        g.test_window_start*1000, g.test_window_end*1000);
+    fprintf('No multiple comparisons correction needed.\n');
+    % Override artifact_end for single window method
+    artifact_end = g.test_window_start;
+else
+    error('Invalid testing_method. Must be ''multi_window'' or ''single_window''');
+end
 
 comparison_results = struct();
 
@@ -568,10 +603,12 @@ for r = 1:2
             colormap(ax_pie, colors);
         end
 
-        % Add title using spaghetti_titles
+        % Add title using spaghetti_titles with manual positioning
         plot_idx = (r-1)*2 + s;
-        title(ax_pie, spaghetti_titles{plot_idx}, ...
+        title_handle = title(ax_pie, spaghetti_titles{plot_idx}, ...
             'FontSize', g.fontSize1, 'FontWeight', 'bold');
+        % Move title up to avoid overlap with percentage labels
+        title_handle.Position(2) = title_handle.Position(2) + 0.15;
 
         % Slope graph - Delta Peak FR for enhanced neurons (row 2 of nested layout)
         ax_slope_peak = nexttile(t_nested_right, col_idx + 4);
@@ -601,38 +638,44 @@ for r = 1:2
             for i = 1:n_enhanced
                 idx = increased_idx(i);
 
-                % Find this neuron's most significant window
-                neuron_pos = find(all_neuron_indices == idx);
-                if ~isempty(neuron_pos)
-                    p_vals = neuron_pvalues{neuron_pos};
-                    [~, min_window_idx] = min(p_vals);
-                    window_end = window_ends(min_window_idx);
-
-                    % Define response window (12ms to window_end)
-                    test_window = [artifact_end, window_end];
-
-                    % Get spike counts for no-light trials
-                    spikes_nolight_trials = [];
-                    if ~isempty(postAP_norm_nolight{idx})
-                        for trial = 1:length(postAP_norm_nolight{idx})
-                            trial_spikes = postAP_norm_nolight{idx}{trial};
-                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                            spikes_nolight_trials = [spikes_nolight_trials; spike_count];
-                        end
+                % Define response window based on testing method
+                if strcmp(g.testing_method, 'multi_window')
+                    % Find this neuron's most significant window
+                    neuron_pos = find(all_neuron_indices == idx);
+                    if ~isempty(neuron_pos)
+                        p_vals = neuron_pvalues{neuron_pos};
+                        [~, min_window_idx] = min(p_vals);
+                        window_end = window_ends(min_window_idx);
+                    else
+                        window_end = window_ends(1);  % Fallback
                     end
-                    mean_spikes_nolight(i) = mean(spikes_nolight_trials);
-
-                    % Get spike counts for light trials
-                    spikes_light_trials = [];
-                    if ~isempty(postAP_norm_light{idx})
-                        for trial = 1:length(postAP_norm_light{idx})
-                            trial_spikes = postAP_norm_light{idx}{trial};
-                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                            spikes_light_trials = [spikes_light_trials; spike_count];
-                        end
-                    end
-                    mean_spikes_light(i) = mean(spikes_light_trials);
+                    test_window = [0.012, window_end];  % Original artifact_end
+                elseif strcmp(g.testing_method, 'single_window')
+                    % Use the pre-defined window for all neurons
+                    test_window = [g.test_window_start, g.test_window_end];
                 end
+
+                % Get spike counts for no-light trials
+                spikes_nolight_trials = [];
+                if ~isempty(postAP_norm_nolight{idx})
+                    for trial = 1:length(postAP_norm_nolight{idx})
+                        trial_spikes = postAP_norm_nolight{idx}{trial};
+                        spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                        spikes_nolight_trials = [spikes_nolight_trials; spike_count];
+                    end
+                end
+                mean_spikes_nolight(i) = mean(spikes_nolight_trials);
+
+                % Get spike counts for light trials
+                spikes_light_trials = [];
+                if ~isempty(postAP_norm_light{idx})
+                    for trial = 1:length(postAP_norm_light{idx})
+                        trial_spikes = postAP_norm_light{idx}{trial};
+                        spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                        spikes_light_trials = [spikes_light_trials; spike_count];
+                    end
+                end
+                mean_spikes_light(i) = mean(spikes_light_trials);
             end
 
             % Create slope graph for spike counts
@@ -763,7 +806,7 @@ for ex = 1:4
             ylim(ax_raster_nolight, [0 n_trials+1]);
             set(ax_raster_nolight, 'XTickLabel', []);
             if ex == 1
-                ylabel(ax_raster_nolight, 'Trial# (laser OFF)', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+                ylabel(ax_raster_nolight, 'Trial # (laser OFF)', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             else
                 set(ax_raster_nolight, 'YTickLabel', []);
             end
@@ -824,7 +867,7 @@ for ex = 1:4
             ylim(ax_raster_light, [0 n_trials+1]);
             set(ax_raster_light, 'XTickLabel', []);
             if ex == 1
-                ylabel(ax_raster_light, 'Trial# (laser ON)', 'Color', 'r', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+                ylabel(ax_raster_light, 'Trial # (laser ON)', 'Color', 'r', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             else
                 set(ax_raster_light, 'YTickLabel', []);
             end
@@ -918,6 +961,31 @@ annotation(fig_comparison, 'textbox', [0.55, 0.9, 0.4, 0.04], ...
     'FontSize', 11, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'EdgeColor', 'none');
 
+%% Add panel labels
+% A: Rasterplots (top-left of left panel)
+annotation(fig_comparison, 'textbox', [0.01, 0.95, 0.03, 0.04], ...
+    'String', 'A', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% B: FR comparison lineplots (bottom-left of left panel, row 3)
+annotation(fig_comparison, 'textbox', [0.01, 0.35, 0.03, 0.04], ...
+    'String', 'B', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% C: Pie charts (top-left of right panel)
+annotation(fig_comparison, 'textbox', [0.51, 0.95, 0.03, 0.04], ...
+    'String', 'C', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% D: Spaghetti plots (bottom-left of right panel)
+annotation(fig_comparison, 'textbox', [0.51, 0.50, 0.03, 0.04], ...
+    'String', 'D', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
 fprintf('\nVisualization complete.\n');
 
 %% Print detailed summary
@@ -949,10 +1017,15 @@ for r = 1:2
                 neuron_pos = find(all_neuron_indices == idx);
                 if ~isempty(neuron_pos)
                     p_vals = neuron_pvalues{neuron_pos};
-                    [min_p, min_idx] = min(p_vals);
-                    window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
-                    fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
-                        idx, cellID, animal, min_p, window_end_ms);
+                    if strcmp(g.testing_method, 'multi_window')
+                        [min_p, min_idx] = min(p_vals);
+                        window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
+                        fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
+                            idx, cellID, animal, min_p, window_end_ms);
+                    elseif strcmp(g.testing_method, 'single_window')
+                        fprintf('  idx=%d, cellID=%d, animal=%s, p=%.4f (%.0f-%.0fms)\n', ...
+                            idx, cellID, animal, p_vals(1), g.test_window_start*1000, g.test_window_end*1000);
+                    end
                 end
             end
         end
@@ -968,10 +1041,15 @@ for r = 1:2
                 neuron_pos = find(all_neuron_indices == idx);
                 if ~isempty(neuron_pos)
                     p_vals = neuron_pvalues{neuron_pos};
-                    [min_p, min_idx] = min(p_vals);
-                    window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
-                    fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
-                        idx, cellID, animal, min_p, window_end_ms);
+                    if strcmp(g.testing_method, 'multi_window')
+                        [min_p, min_idx] = min(p_vals);
+                        window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
+                        fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
+                            idx, cellID, animal, min_p, window_end_ms);
+                    elseif strcmp(g.testing_method, 'single_window')
+                        fprintf('  idx=%d, cellID=%d, animal=%s, p=%.4f (%.0f-%.0fms)\n', ...
+                            idx, cellID, animal, p_vals(1), g.test_window_start*1000, g.test_window_end*1000);
+                    end
                 end
             end
         end
@@ -987,10 +1065,15 @@ for r = 1:2
                 neuron_pos = find(all_neuron_indices == idx);
                 if ~isempty(neuron_pos)
                     p_vals = neuron_pvalues{neuron_pos};
-                    [min_p, min_idx] = min(p_vals);
-                    window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
-                    fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
-                        idx, cellID, animal, min_p, window_end_ms);
+                    if strcmp(g.testing_method, 'multi_window')
+                        [min_p, min_idx] = min(p_vals);
+                        window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
+                        fprintf('  idx=%d, cellID=%d, animal=%s, min_p=%.4f (12-%.0fms)\n', ...
+                            idx, cellID, animal, min_p, window_end_ms);
+                    elseif strcmp(g.testing_method, 'single_window')
+                        fprintf('  idx=%d, cellID=%d, animal=%s, p=%.4f (%.0f-%.0fms)\n', ...
+                            idx, cellID, animal, p_vals(1), g.test_window_start*1000, g.test_window_end*1000);
+                    end
                 end
             end
             if length(comparison_results.(result_field).unchanged_idx) > 5

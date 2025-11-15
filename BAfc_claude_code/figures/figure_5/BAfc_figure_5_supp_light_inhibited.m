@@ -626,9 +626,9 @@ for br = 1:2  % LA, Astria
         % Labels (no titles on heatmap rows - titles are on row 1 rasters)
         if col == 1  % First column gets ylabel
             if br == 1
-                ylabel('LA (Cell #)', 'FontSize', 12);
+                ylabel('LA neurons', 'FontSize', 12);
             else
-                ylabel('AStria (Cell #)', 'FontSize', 12);
+                ylabel('AStria neurons', 'FontSize', 12);
             end
         end
 
@@ -719,6 +719,37 @@ set(cb_ax, 'YDir', 'normal');
 set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
 %ylabel(cb_ax, 'Z-score', 'FontSize', 12);
 cb_ax.FontSize = g.fontSize2;
+
+%% Add panel labels
+% A: Raster plots (row 1)
+annotation(fig, 'textbox', [0.01, 0.95, 0.03, 0.02], ...
+    'String', 'A', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% B: LA heatmaps (row 2)
+annotation(fig, 'textbox', [0.01, 0.77, 0.03, 0.02], ...
+    'String', 'B', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% C: LA lineplots (row 3)
+annotation(fig, 'textbox', [0.01, 0.59, 0.03, 0.02], ...
+    'String', 'C', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% D: AStria heatmaps (row 4)
+annotation(fig, 'textbox', [0.01, 0.41, 0.03, 0.02], ...
+    'String', 'D', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
+
+% E: AStria lineplots (row 5)
+annotation(fig, 'textbox', [0.01, 0.23, 0.03, 0.02], ...
+    'String', 'E', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'EdgeColor', 'none');
 
 fprintf('\nDone. Light-inhibited neurons visualized.\n');
 

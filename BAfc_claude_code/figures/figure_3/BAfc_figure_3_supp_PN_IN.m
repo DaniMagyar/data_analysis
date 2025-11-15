@@ -240,6 +240,32 @@ end
 fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 1000], 'Visible', 'on');
 t = tiledlayout(fig, 6, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
+% Add panel labels
+% A: PN heatmaps (row 1, col 1)
+annotation(fig, 'textbox', [0.01 0.95 0.05 0.05], 'String', 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% B: PN lineplots (row 1, col 2)
+annotation(fig, 'textbox', [0.50 0.95 0.05 0.05], 'String', 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% C: IN heatmaps (row 2, col 1)
+annotation(fig, 'textbox', [0.01 0.71 0.05 0.05], 'String', 'C', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% D: IN lineplots (row 2, col 2)
+annotation(fig, 'textbox', [0.50 0.71 0.05 0.05], 'String', 'D', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% E: Bar graphs (row 4, col 1)
+annotation(fig, 'textbox', [0.01 0.46 0.05 0.05], 'String', 'E', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 % Determine global color limits across all heatmaps (CS, US, and CS+US)
 all_values = [];
 for ct = 1:2
@@ -317,7 +343,7 @@ for ct = 1:2
 
         % Y-label only on first column with cell type
         if stim == 1
-            ylabel(sprintf('%s (Cell #)', cell_types{ct}), 'FontSize', 10);
+            ylabel(sprintf('%s (neuron #)', cell_types{ct}), 'FontSize', 10);
         end
 
         % Set yticks to first and last

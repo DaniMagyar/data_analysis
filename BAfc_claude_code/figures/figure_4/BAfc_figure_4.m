@@ -250,6 +250,42 @@ end
 fig = figure('Units', 'pixels', 'Position', [100, 100, 1200, 800], 'Visible', 'on');
 t = tiledlayout(fig, 4, 6, 'TileSpacing', 'compact', 'Padding', 'compact');
 
+% Add panel labels for main figure
+% A: LA heatmaps (row 1, col 1)
+annotation(fig, 'textbox', [0.01 0.94 0.05 0.05], 'String', 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% B: LA delta FR plots (row 1, col 4)
+annotation(fig, 'textbox', [0.48 0.94 0.05 0.05], 'String', 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% C: AStria heatmaps (row 3, col 1)
+annotation(fig, 'textbox', [0.01 0.47 0.05 0.05], 'String', 'C', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% D: AStria delta FR plots (row 3, col 4)
+annotation(fig, 'textbox', [0.48 0.47 0.05 0.05], 'String', 'D', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% E: Pie charts (row 1, col 5)
+annotation(fig, 'textbox', [0.68 0.94 0.05 0.05], 'String', 'E', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% F: Across region comparison (row 2, col 5)
+annotation(fig, 'textbox', [0.68 0.62 0.05 0.05], 'String', 'F', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% G: Onset latency comparison (row 3, col 5)
+annotation(fig, 'textbox', [0.68 0.28 0.05 0.05], 'String', 'G', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 % Determine global color limits across all heatmaps (CS, US, and CS+US)
 all_values = [];
 for br = 1:2
@@ -350,9 +386,9 @@ for br = 1:2
         if stim == 1
             % Display AStria instead of Astria
             if strcmp(brain_regions{br}, 'Astria')
-                ylabel('AStria', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+                ylabel('AStria neurons', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             else
-                ylabel(brain_regions{br}, 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+                ylabel([brain_regions{br} ' neurons'], 'FontSize', g.fontSize2, 'FontWeight', 'bold');
             end
         else
             set(gca, 'YTickLabel', []);
@@ -425,6 +461,10 @@ cb_ax.FontSize = g.fontSize2;
 %% Add Delta Peak FR bar charts in column 4 of the same nested layout
 cluster_names = {'CS-sel', 'US-sel', 'Multi'};
 
+% Storage for Kruskal-Wallis test data
+% Structure: kw_data_storage{region, cluster, stimulus}
+kw_data_storage = cell(2, 3, 3);  % 2 regions × 3 clusters × 3 stimuli (CS, US, Both)
+
 for br = 1:2
     if isempty(results_all{br})
         continue;
@@ -471,6 +511,11 @@ for br = 1:2
                 Both_metric(n) = peak_fr_Both - baseline_fr;
             end
 
+            % Store data for Kruskal-Wallis test (region, cluster, stimulus)
+            kw_data_storage{br, c, 1} = CS_metric;
+            kw_data_storage{br, c, 2} = US_metric;
+            kw_data_storage{br, c, 3} = Both_metric;
+
             % Calculate means and SEMs
             means_data = mean([CS_metric, US_metric, Both_metric], 1, 'omitnan');
             sems_data = std([CS_metric, US_metric, Both_metric], 0, 1, 'omitnan') ./ sqrt(sum(~isnan(CS_metric)));
@@ -481,10 +526,22 @@ for br = 1:2
             bar([1 2 3], means_data, 0.4, 'FaceColor', bar_color, 'EdgeColor', 'k', 'LineWidth', 1);
             errorbar([1 2 3], means_data, sems_data, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
-            % Statistical comparisons - Wilcoxon signed rank test
-            [p_CS_US, ~] = signrank(CS_metric, US_metric);
-            [p_CS_Both, ~] = signrank(CS_metric, Both_metric);
-            [p_US_Both, ~] = signrank(US_metric, Both_metric);
+            % First perform Kruskal-Wallis test
+            all_values = [CS_metric; US_metric; Both_metric];
+            group_labels = [ones(length(CS_metric), 1); 2*ones(length(US_metric), 1); 3*ones(length(Both_metric), 1)];
+            [p_kw, ~, ~] = kruskalwallis(all_values, group_labels, 'off');
+
+            % Only perform post-hoc tests if Kruskal-Wallis is significant
+            if p_kw < 0.05
+                [p_CS_US, ~] = signrank(CS_metric, US_metric);
+                [p_CS_Both, ~] = signrank(CS_metric, Both_metric);
+                [p_US_Both, ~] = signrank(US_metric, Both_metric);
+            else
+                % Set p-values to 1 (non-significant) if KW is not significant
+                p_CS_US = 1;
+                p_CS_Both = 1;
+                p_US_Both = 1;
+            end
 
             hold off;
         end
@@ -617,9 +674,9 @@ if ~isempty(results_all{1})
         set(p(i), 'LineWidth', 1);
     end
 
-    % Set text properties and move inside pie - FontSize 12
+    % Set text properties and move inside pie - FontSize 14
     for i = 2:2:length(p)  % Text elements
-        set(p(i), 'FontSize', 12);
+        set(p(i), 'FontSize', 14);
         set(p(i), 'FontWeight', 'bold');
         set(p(i), 'Color', 'w');  % White font color
         % Move text closer to center (inside the pie)
@@ -662,14 +719,14 @@ if ~isempty(results_all{2})
         set(p(i), 'LineWidth', 1);
     end
 
-    % Set text properties and move inside pie - FontSize 12
+    % Set text properties and move inside pie - FontSize 14
     for i = 2:2:length(p)  % Text elements
-        set(p(i), 'FontSize', 12);
+        set(p(i), 'FontSize', 14);
         set(p(i), 'FontWeight', 'bold');
         set(p(i), 'Color', 'w');  % White font color
         % Move text closer to center (inside the pie)
         pos = get(p(i), 'Position');
-        set(p(i), 'Position', pos * 0.3);  % Move 30% toward center (more inside)
+        set(p(i), 'Position', pos * 0.33);  % Move 30% toward center (more inside)
     end
 
     title('AStria', 'FontSize', 12, 'FontWeight', 'bold');
@@ -771,14 +828,26 @@ for stim = 1:3  % CS, US, CS+US
 
         b = bar([1 2], means_data, 0.6, 'FaceColor', 'flat', 'EdgeColor', 'k', 'LineWidth', 1);
         b.CData = bar_colors;
+
+        % Plot individual data points as grey circles with jitter
+        n_LA = length(LA_data);
+        n_Astria = length(Astria_data);
+        x_jitter_LA = 1 + (rand(n_LA, 1) - 0.5) * 0.15;
+        x_jitter_Astria = 2 + (rand(n_Astria, 1) - 0.5) * 0.15;
+        scatter(x_jitter_LA, LA_data, 16, [0.5 0.5 0.5], 'LineWidth', 0.5);
+        scatter(x_jitter_Astria, Astria_data, 16, [0.5 0.5 0.5], 'LineWidth', 0.5);
+
         errorbar([1 2], means_data, sems_data, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
         % Statistical comparison - Wilcoxon rank-sum test (unpaired)
         [p_val, ~] = ranksum(LA_data, Astria_data);
 
-        % Add significance marker
-        y_max = max(means_data + sems_data);
-        y_pos = y_max * 1.15;
+        % Use 95th percentile to avoid compression from extreme outliers
+        all_data_values = [LA_data; Astria_data];
+        data_95th = prctile(all_data_values, 95);
+        y_max = max(max(means_data + sems_data), data_95th);
+        y_range = y_max * 1.5;
+        y_pos = y_max + 0.1 * y_range;
 
         plot([1 2], [y_pos y_pos], 'k-', 'LineWidth', 1.5);
 
@@ -796,14 +865,18 @@ for stim = 1:3  % CS, US, CS+US
             'FontSize', g.fontSize2);
 
         hold off;
+
+        % Y-axis scaled to 95th percentile to avoid compression from outliers
+        ylim([0 y_range]);
+    else
+        % No data - use default limits
+        ylim([0 250]);
     end
 
     % Formatting
     xlim([0.5 2.5]);
     xticks([1 2]);
     xticklabels({'LA', 'AStria'});
-    ylim([0 250]);
-    yticks([0 125 250]);
 
     % Y-label and Y-tick labels only on first panel
     if stim == 1
@@ -949,8 +1022,14 @@ fprintf('\nMain figure complete.\n');
 %% Supplementary figure - selective vs multisensory latency comparison + chi-square test
 fprintf('\nGenerating supplementary figure...\n');
 
-fig_supp = figure('Units', 'pixels', 'Position', [200, 200, 1000, 700], 'Visible', 'on');
-t_supp = tiledlayout(fig_supp, 2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+fig_supp = figure('Units', 'pixels', 'Position', [200, 200, 1000, 900], 'Visible', 'on');
+t_supp = tiledlayout(fig_supp, 3, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Add panel labels for supplementary figure
+% A: Onset latencies (row 1)
+annotation(fig_supp, 'textbox', [0.01 0.94 0.05 0.05], 'String', 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % Row 1: Latency comparison (original boxplot content)
 ax_latency = nexttile(t_supp, 1);
@@ -1175,6 +1254,26 @@ end
 t_chi = tiledlayout(t_supp, 1, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
 t_chi.Layout.Tile = 2;
 
+% B: Permutation distribution (row 2, col 1)
+annotation(fig_supp, 'textbox', [0.01 0.63 0.05 0.05], 'String', 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% C: Contingency table (row 2, col 2)
+annotation(fig_supp, 'textbox', [0.35 0.63 0.05 0.05], 'String', 'C', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% D: Statistics (row 2, col 3)
+annotation(fig_supp, 'textbox', [0.68 0.63 0.05 0.05], 'String', 'D', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% E: Kruskal-Wallis tests (row 3)
+annotation(fig_supp, 'textbox', [0.01 0.30 0.05 0.05], 'String', 'E', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 % Panel 1: Permutation distribution
 ax_perm = nexttile(t_chi, 1);
 histogram(ax_perm, chi2_perm, 50, 'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'k');
@@ -1238,6 +1337,115 @@ end
 text(0.5, y_pos - 3*y_step, sig_symbol, 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'Color', sig_color);
 title(ax_stats, 'Statistics', 'FontSize', 10, 'FontWeight', 'bold');
+
+%% Row 3: Kruskal-Wallis test visualization
+% Perform Kruskal-Wallis tests for each region × cluster combination
+kw_results = struct();
+
+fprintf('\n=== Kruskal-Wallis Tests for Bar Charts (CS vs US vs CS+US within each cluster) ===\n');
+
+cluster_names_kw = {'CS-sel', 'US-sel', 'CS&US'};
+
+% Create nested 2×3 tiledlayout for KW test panels (2 regions × 3 clusters)
+t_kw = tiledlayout(t_supp, 2, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_kw.Layout.Tile = 3;
+
+for br = 1:2
+    if isempty(results_all{br})
+        continue;
+    end
+
+    fprintf('\n--- %s ---\n', brain_regions{br});
+
+    for c = 1:3  % CS-selective, US-selective, Multisensory
+        % Check if we have data for this cluster
+        if isempty(kw_data_storage{br, c, 1})
+            fprintf('  %s: No data\n', cluster_names_kw{c});
+            continue;
+        end
+
+        % Combine data for KW test: CS, US, Both stimuli
+        all_values = [kw_data_storage{br, c, 1}; kw_data_storage{br, c, 2}; kw_data_storage{br, c, 3}];
+        group_labels = [ones(length(kw_data_storage{br, c, 1}), 1); ...
+                        2*ones(length(kw_data_storage{br, c, 2}), 1); ...
+                        3*ones(length(kw_data_storage{br, c, 3}), 1)];
+
+        % Kruskal-Wallis test
+        [p_kw, ~, ~] = kruskalwallis(all_values, group_labels, 'off');
+
+        % Only perform post-hoc tests if KW is significant
+        if p_kw < 0.05
+            % Post-hoc pairwise Wilcoxon signed-rank tests
+            p_values = zeros(3, 1);
+            p_values(1) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 2});  % CS vs US
+            p_values(2) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 3});  % CS vs Both
+            p_values(3) = signrank(kw_data_storage{br, c, 2}, kw_data_storage{br, c, 3});  % US vs Both
+        else
+            % Set p-values to 1 (non-significant) if KW is not significant
+            p_values = ones(3, 1);
+        end
+
+        % Store results
+        kw_results(br, c).p_kw = p_kw;
+        kw_results(br, c).p_values = p_values;
+
+        fprintf('  %s: KW p=%.4f, CS-US p=%.4f, CS-Both p=%.4f, US-Both p=%.4f\n', ...
+            cluster_names_kw{c}, p_kw, p_values(1), p_values(2), p_values(3));
+
+        % Calculate tile index for this region × cluster combination
+        % Row 1 (br=1, LA): tiles 1, 2, 3
+        % Row 2 (br=2, AStria): tiles 4, 5, 6
+        tile_idx = (br-1)*3 + c;
+
+        % Create panel with KW p-value and post-hoc results combined
+        ax = nexttile(t_kw, tile_idx);
+        axis off;
+
+        % KW p-value at top
+        text(0.5, 0.85, sprintf('KW p = %.4f', p_kw), 'FontSize', 9, 'FontWeight', 'bold', ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+        if p_kw < 0.001
+            sig_text = '***';
+            text_color = [0.8 0.2 0.2];
+        elseif p_kw < 0.01
+            sig_text = '**';
+            text_color = [0.8 0.2 0.2];
+        elseif p_kw < 0.05
+            sig_text = '*';
+            text_color = [0.8 0.2 0.2];
+        else
+            sig_text = 'n.s.';
+            text_color = [0.4 0.4 0.4];
+        end
+        text(0.5, 0.65, sig_text, 'FontSize', 11, 'FontWeight', 'bold', 'Color', text_color, ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+
+        % Post-hoc p-values below (only show if KW is significant)
+        if p_kw < 0.05
+            y_pos = 0.45;
+            y_step = 0.15;
+            text(0.5, y_pos, 'Post-hoc:', 'FontSize', 8, 'FontWeight', 'bold', ...
+                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+            y_pos = y_pos - y_step;
+            text(0.5, y_pos, sprintf('CS-US: %.3f', p_values(1)), 'FontSize', 7, ...
+                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+            y_pos = y_pos - y_step;
+            text(0.5, y_pos, sprintf('CS-Both: %.3f', p_values(2)), 'FontSize', 7, ...
+                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+            y_pos = y_pos - y_step;
+            text(0.5, y_pos, sprintf('US-Both: %.3f', p_values(3)), 'FontSize', 7, ...
+                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+        end
+
+        % Title showing region and cluster
+        if strcmp(brain_regions{br}, 'Astria')
+            title_text = sprintf('AStria %s', cluster_names_kw{c});
+        else
+            title_text = sprintf('%s %s', brain_regions{br}, cluster_names_kw{c});
+        end
+        title(title_text, 'FontSize', 10, 'FontWeight', 'bold');
+    end
+end
 
 fprintf('\nSupplementary figure complete.\n');
 fprintf('\nDone.\n');

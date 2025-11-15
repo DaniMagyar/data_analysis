@@ -2,7 +2,7 @@
 % Final publication figure with all panels organized as separate functions
 % TO CREATE PRINT QUALITY: exportgraphics(gcf, 'figure.tiff', 'Resolution', 300);
 
-clear all
+close all; clear all
 
 %% Setup
 recordings = {...
@@ -37,7 +37,7 @@ g.cell_metrics = BAfc_match_celltypes('cell_metrics', g.cell_metrics);
 clearvars -except g
 g.mainFolder = 'C:\Users\dmagyar\Desktop\BA_fear_cond';
 g.colors = BAfc_colors;
-g.fontSize1 = 10;  % Title font size
+g.fontSize1 = 12;  % Title font size
 g.fontSize2 = 10;  % Axis font size
 
 %% Initialize figure (A4 dimensions: 210mm x 297mm = 8.27" x 11.69" at 96 DPI)
@@ -45,45 +45,67 @@ fig = figure('Position', [0, 0, 1000, 1000], 'Units', 'pixels');  % A4 size
 t = tiledlayout(fig, 4, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 %% ROW 1: Experimental setup and example traces
-panel_experimental_setup(t, g, 1, [1 2]);  % Spans 2 columns
-panel_example_traces(t, g, 3, 'Example CS response', 'MD312_001', 84);
-panel_example_traces(t, g, 4, 'Example US response', 'MD292_002', 32);
+ax_A = panel_experimental_setup(t, g, 1, [1 2]);  % Spans 2 columns
+ax_B1 = panel_example_traces(t, g, 3, 'Example CS response', 'MD312_001', 84);
+add_panel_label(ax_B1, 'B');
+ax_B2 = panel_example_traces(t, g, 4, 'Example US response', 'MD292_002', 32);
 
 %% ROW 2: ISI examples, spike features, and waveforms
-panel_example_ISI(t, g, 5, 'PN');
-panel_example_ISI(t, g, 6, 'IN');
-panel_spike_features(t, g, 7);
-panel_normalized_waveforms(t, g, 8);
+ax_C1 = panel_example_ISI(t, g, 5, 'PN');
+add_panel_label(ax_C1, 'C');
+ax_C2 = panel_example_ISI(t, g, 6, 'IN');
+ax_D1 = panel_spike_features(t, g, 7);
+add_panel_label(ax_D1, 'D');
+ax_D2 = panel_normalized_waveforms(t, g, 8);
 
 %% ROW 3: Firing rate distributions
-panel_firing_rate_distribution(t, g, 9, 'LA');
-panel_firing_rate_distribution(t, g, 10, 'BA');
-panel_firing_rate_distribution(t, g, 11, 'Astria');
-panel_firing_rate_distribution(t, g, 12, 'CeA');
+t_fr = tiledlayout(t, 1, 4, 'TileSpacing', 'tight');
+t_fr.Layout.Tile = 9;
+t_fr.Layout.TileSpan = [1 4];
+ax_E = panel_firing_rate_distribution(t_fr, g, 1, 'LA', true);
+add_panel_label(ax_E, 'E');
+panel_firing_rate_distribution(t_fr, g, 2, 'BA', false);
+panel_firing_rate_distribution(t_fr, g, 3, 'Astria', false);
+panel_firing_rate_distribution(t_fr, g, 4, 'CeA', false);
 
 %% ROW 4: Burst index distributions
-panel_burst_index_distribution(t, g, 13, 'LA');
-panel_burst_index_distribution(t, g, 14, 'BA');
-panel_burst_index_distribution(t, g, 15, 'Astria');
-panel_burst_index_distribution(t, g, 16, 'CeA');
+t_bi = tiledlayout(t, 1, 4, 'TileSpacing', 'tight');
+t_bi.Layout.Tile = 13;
+t_bi.Layout.TileSpan = [1 4];
+ax_F = panel_burst_index_distribution(t_bi, g, 1, 'LA', true);
+add_panel_label(ax_F, 'F');
+panel_burst_index_distribution(t_bi, g, 2, 'BA', false);
+panel_burst_index_distribution(t_bi, g, 3, 'Astria', false);
+panel_burst_index_distribution(t_bi, g, 4, 'CeA', false);
 
 %% ========================================================================
 %% PANEL FUNCTIONS
 %% ========================================================================
 
-%% Row 1 Functions
-function panel_experimental_setup(t, g, tile_num, tile_span)
-    % Panel: Experimental setup schematic
-    ax = nexttile(t, tile_num, tile_span);
-    [img, cmap] = imread([g.mainFolder '\drawed_mouse.png']);
-    if ~isempty(cmap)
-        img = ind2rgb(img, cmap);
-    end
-    imshow(img, 'Parent', ax);
-    title(ax, 'Experimental setup', 'FontSize', g.fontSize1);
+%% Helper function for panel labels
+function add_panel_label(ax, label)
+    % Add panel label (A, B, C, etc.) outside top-left corner
+    text(ax, -0.20, 1.15, label, 'Units', 'normalized', ...
+        'FontSize', 14, 'FontWeight', 'bold', ...
+        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left');
 end
 
-function panel_example_traces(t, g, tile_num, example_name, animal, channel)
+%% Row 1 Functions
+function ax = panel_experimental_setup(t, g, tile_num, tile_span)
+    % Panel: Experimental setup schematic (placeholder - add image manually)
+    ax = nexttile(t, tile_num, tile_span);
+    xlim(ax, [0 1]);
+    ylim(ax, [0 1]);
+    set(ax, 'XColor', 'none', 'YColor', 'none', 'XTick', [], 'YTick', []);
+    title(ax, 'Experimental setup', 'FontSize', g.fontSize1);
+    box(ax, 'off');
+    % Add label A directly
+    text(ax, -0.10, 1.15, 'A', 'Units', 'normalized', ...
+        'FontSize', 14, 'FontWeight', 'bold', ...
+        'VerticalAlignment', 'middle', 'HorizontalAlignment', 'left');
+end
+
+function ax = panel_example_traces(t, g, tile_num, example_name, animal, channel)
     % Panel: Example raw traces and PSTH
     twin = [-0.04 0.06];
     fs = 30000;
@@ -110,51 +132,51 @@ function panel_example_traces(t, g, tile_num, example_name, animal, channel)
     end
 
     % Subplot 1: Raw traces
-    ax1 = nexttile(t, tile_num, [1 1]);
-    hold(ax1, 'on');
+    ax = nexttile(t, tile_num, [1 1]);
+    hold(ax, 'on');
     for ii = 1:size(ttl_data, 1)
         sn_curr = ttl_data(ii, 1) * fs;
         timeaxis = linspace(twin(1), twin(2), (twin(2)-twin(1))*fs) * 1000;
-        plot(ax1, timeaxis, raw_data(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0]);
+        plot(ax, timeaxis, raw_data(round(sn_curr+twin(1)*fs):round(sn_curr+twin(2)*fs-1)), 'Color', [0 0 0]);
     end
-    xlim(ax1, [twin(1)*1000, twin(2)*1000]);
-    ylabel(ax1, 'Voltage (mV)', 'FontSize', g.fontSize2);
+    xlim(ax, [twin(1)*1000, twin(2)*1000]);
+    ylabel(ax, 'Voltage (mV)', 'FontSize', g.fontSize2);
 
     % Set ylim based on example
     if tile_num == 3
-        ylim(ax1, [-0.12 0.1]);
-        yticks(ax1, [-0.1 0 0.1]);
+        ylim(ax, [-0.12 0.1]);
+        yticks(ax, [-0.1 0 0.1]);
     else
-        ylim(ax1, [-0.5 0.3]);
-        yticks(ax1, [-0.5 -0.1 0.3]);
+        ylim(ax, [-0.5 0.3]);
+        yticks(ax, [-0.5 -0.1 0.3]);
     end
 
-    set(ax1, 'FontSize', g.fontSize2);
-    yLimits = get(ax1, 'YLim');
+    set(ax, 'FontSize', g.fontSize2);
+    yLimits = get(ax, 'YLim');
 
     % Add stimulus indicators
     if tile_num == 3
         % Example 1 (CS): Add speaker symbol (red)
-        text(ax1, 7, yLimits(2), '🔊', 'Color', 'r', 'FontSize', 16, 'FontWeight', 'bold', ...
+        text(ax, 7, yLimits(2), '🔊', 'Color', 'r', 'FontSize', 16, 'FontWeight', 'bold', ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
     else
         % Example 2 (US): Add gray shaded area and lightning bolt (red, bold)
-        fill(ax1, [0 10 10 0], [yLimits(1) yLimits(1) yLimits(2) yLimits(2)], [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-        text(ax1, 5, yLimits(2), '⚡', 'Color', 'r', 'FontSize', 20, 'FontWeight', 'bold', ...
+        fill(ax, [0 10 10 0], [yLimits(1) yLimits(1) yLimits(2) yLimits(2)], [0 0 0], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
+        text(ax, 5, yLimits(2), '⚡', 'Color', 'r', 'FontSize', 20, 'FontWeight', 'bold', ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
     end
 
     % Add dashed line at time 0
-    plot(ax1, [0 0], yLimits, '--k', 'LineWidth', 1);
+    plot(ax, [0 0], yLimits, '--k', 'LineWidth', 1);
 
-    ax1.Layer = 'top';
-    ax1.Box = 'off';
-    xlabel(ax1, 'Time (ms)', 'FontSize', g.fontSize2);
-    title(ax1, example_name, 'FontSize', g.fontSize1);
+    ax.Layer = 'top';
+    ax.Box = 'off';
+    xlabel(ax, 'Time (ms)', 'FontSize', g.fontSize2);
+    title(ax, example_name, 'FontSize', g.fontSize1);
 end
 
 %% Row 2 Functions
-function panel_example_ISI(t, g, tile_num, cell_type)
+function ax = panel_example_ISI(t, g, tile_num, cell_type)
     % Panel: Example ISI with ACG and waveform insets
     ax = nexttile(t, tile_num);
 
@@ -198,7 +220,7 @@ function panel_example_ISI(t, g, tile_num, cell_type)
     acg_ax.YColor = 'none';
 
     % Waveform inset (top right, below ACG)
-    wf_ax = axes('Position', [p(1)+p(3)*0.65 p(2)+p(4)*0.30 p(3)*0.3 p(4)*0.3]);
+    wf_ax = axes('Position', [p(1)+p(3)*0.65 p(2)+p(4)*0.20 p(3)*0.3 p(4)*0.3]);
     plot(wf_ax, g.cell_metrics.waveforms.filt{cellID}, 'Color', color_primary, 'LineWidth', 2);
     hold(wf_ax, 'on');
     y = min(g.cell_metrics.waveforms.filt{cellID}) * 1.2;
@@ -208,7 +230,7 @@ function panel_example_ISI(t, g, tile_num, cell_type)
     wf_ax.YColor = 'none';
 end
 
-function panel_spike_features(t, g, tile_num)
+function ax = panel_spike_features(t, g, tile_num)
     % Panel: Spike features across unit types
     ax = nexttile(t, tile_num);
 
@@ -241,7 +263,7 @@ function panel_spike_features(t, g, tile_num)
     ax.Box = 'off';
 end
 
-function panel_normalized_waveforms(t, g, tile_num)
+function ax = panel_normalized_waveforms(t, g, tile_num)
     % Panel: Normalized waveforms across unit types
     ax = nexttile(t, tile_num);
 
@@ -295,7 +317,7 @@ function panel_normalized_waveforms(t, g, tile_num)
 end
 
 %% Row 3 Functions
-function panel_firing_rate_distribution(t, g, tile_num, brain_region)
+function ax = panel_firing_rate_distribution(t, g, tile_num, brain_region, show_ylabel)
     % Panel: Firing rate distribution by brain region
     ax = nexttile(t, tile_num);
 
@@ -316,7 +338,7 @@ function panel_firing_rate_distribution(t, g, tile_num, brain_region)
         hold(ax, 'on');
         histogram(ax, firing_rate_PN, 'BinEdges', bin_edges, 'FaceColor', g.colors.PN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
         histogram(ax, firing_rate_IN, 'BinEdges', bin_edges, 'FaceColor', g.colors.IN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast');
+        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast', 'Box', 'off');
     else
         % All neurons together
         firing_rate = g.cell_metrics.firingRate(idx_region);
@@ -325,9 +347,11 @@ function panel_firing_rate_distribution(t, g, tile_num, brain_region)
         text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2);
     end
 
-    xlabel(ax, 'Firing Rate (Hz)', 'FontSize', g.fontSize2);
-    ylabel(ax, 'Count', 'FontSize', g.fontSize2);
-    title(ax, [brain_region ' Firing Rate'], 'FontSize', g.fontSize1);
+    xlabel(ax, 'Hz', 'FontSize', g.fontSize2);
+    if show_ylabel
+        ylabel(ax, 'Count', 'FontSize', g.fontSize2);
+    end
+    title(ax, [brain_region ' FR'], 'FontSize', g.fontSize1);
     xlim(ax, [0.1 30]);
     ylim(ax, [0 50]);
     set(ax, 'XScale', 'log');
@@ -338,7 +362,7 @@ function panel_firing_rate_distribution(t, g, tile_num, brain_region)
 end
 
 %% Row 4 Functions
-function panel_burst_index_distribution(t, g, tile_num, brain_region)
+function ax = panel_burst_index_distribution(t, g, tile_num, brain_region, show_ylabel)
     % Panel: Burst index distribution by brain region
     ax = nexttile(t, tile_num);
 
@@ -359,7 +383,7 @@ function panel_burst_index_distribution(t, g, tile_num, brain_region)
         hold(ax, 'on');
         histogram(ax, burst_index_PN, 'BinEdges', bin_edges, 'FaceColor', g.colors.PN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
         histogram(ax, burst_index_IN, 'BinEdges', bin_edges, 'FaceColor', g.colors.IN_primary, 'FaceAlpha', 0.6, 'EdgeColor', 'none');
-        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast');
+        legend(ax, {['PN (n=' num2str(sum(idx_PN)) ')'], ['IN (n=' num2str(sum(idx_IN)) ')']}, 'FontSize', g.fontSize2, 'Location', 'northeast', 'Box', 'off');
     else
         % All neurons together
         burst_index = g.cell_metrics.burstIndex_Royer2012(idx_region);
@@ -368,8 +392,9 @@ function panel_burst_index_distribution(t, g, tile_num, brain_region)
         text(ax, 0.6, 0.9, ['n=' num2str(sum(idx_region))], 'Units', 'normalized', 'FontSize', g.fontSize2);
     end
 
-    xlabel(ax, 'Burst Index', 'FontSize', g.fontSize2);
-    ylabel(ax, 'Count', 'FontSize', g.fontSize2);
+    if show_ylabel
+        ylabel(ax, 'Count', 'FontSize', g.fontSize2);
+    end
     title(ax, [brain_region ' Burst Index'], 'FontSize', g.fontSize1);
     xlim(ax, [0.1 100]);
     ylim(ax, [0 30]);

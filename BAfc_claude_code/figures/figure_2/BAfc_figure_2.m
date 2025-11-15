@@ -66,7 +66,7 @@ g.smoothvalue = 201;
 g.plotwin = [2 2];
 g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
 g.roi = g.pre_time/g.bin_time+1:(g.pre_time+g.test_time)/g.bin_time;
-g.min_cluster_percent = 2;
+g.min_cluster_percent = 2.1;
 
 % Pre-calculate commonly used indices
 g.baseline_idx = 1:(g.pre_time / g.bin_time);
@@ -354,6 +354,11 @@ contingency_table_for_stats = contingency_table;
 %% Create figure
 fig = figure('Position', [100, 100, 1000, 700], 'Units', 'pixels');
 t = tiledlayout(fig, 4, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Add panel label B
+annotation(fig, 'textbox', [0.01 0.95 0.05 0.05], 'String', 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % Determine global color limits
 all_values = [];
@@ -798,13 +803,18 @@ end
 %% US metrics figure
 fprintf('\n=== Creating US Metrics Figure ===\n');
 
-fig_US = figure('Position', [100, 100, 1000, 250], 'Units', 'pixels');
+fig_US = figure('Position', [100, 100, 1000, 300], 'Units', 'pixels');
 t_US = tiledlayout(fig_US, 1, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-bar_color = [0.6 0.6 0.6];
+bar_color = [0.2 0.4 0.7];  % Blue color
 
 % Column 1: Chi-square p-values matrix
 ax_pval = nexttile(t_US, 1);
+
+% Add panel label C
+annotation(fig_US, 'textbox', [0.01 0.97 0.05 0.05], 'String', 'C', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 color_matrix = ones(4, 4, 3);
 for r1 = 1:4
@@ -825,7 +835,7 @@ set(ax_pval, 'XTick', 1:4, 'XTickLabel', region_names_stat);
 set(ax_pval, 'YTick', 1:4, 'YTickLabel', region_names_stat);
 set(ax_pval, 'FontSize', g.fontSize2);
 axis(ax_pval, 'square');
-title('Chi-square P-values', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+title('Chi-square P-values', 'FontSize', 12, 'FontWeight', 'bold');
 
 % Add p-values and significance
 hold(ax_pval, 'on');
@@ -861,6 +871,17 @@ end
 hold(ax_pval, 'off');
 
 % Columns 2-4: US response metrics (OPTIMIZED - pre-calculate all metrics)
+% Create nested tiledlayout for the 3 bar graphs
+t_US_metrics = tiledlayout(t_US, 1, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
+t_US_metrics.Layout.Tile = 2;
+t_US_metrics.Layout.TileSpan = [1 3];
+title(t_US_metrics, 'Comparison of US-evoked excitatory responses', 'FontSize', 12, 'FontWeight', 'bold');
+
+% Add panel label D
+annotation(fig_US, 'textbox', [0.26 0.97 0.05 0.05], 'String', 'D', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 clusters_to_use = [2, 3];
 metric_names = {'\DeltanSpikes', '\DeltaFR (Hz)', 'Response length (ms)'};
 
@@ -922,7 +943,7 @@ end
 
 % Plot each metric
 for metric = 1:3
-    ax = nexttile(t_US, metric + 1);
+    ax = nexttile(t_US_metrics, metric);
     hold on;
 
     positions = [1 2 3];
@@ -943,6 +964,16 @@ for metric = 1:3
         end
     end
 
+    % Plot individual data points as empty grey circles
+    for br = 1:3
+        if ~isempty(all_metric_data{metric, br})
+            n_points = length(all_metric_data{metric, br});
+            % Add small jitter to x-position for visibility
+            x_jitter = positions(br) + (rand(n_points, 1) - 0.5) * 0.15;
+            scatter(x_jitter, all_metric_data{metric, br}, 16, [0.5 0.5 0.5], 'LineWidth', 0.5);
+        end
+    end
+
     % Error bars
     for br = 1:3
         if means(br) > 0 || sems(br) > 0
@@ -951,8 +982,20 @@ for metric = 1:3
     end
 
     % Statistical comparisons
-    y_max = max(means + sems);
-    y_range = y_max * 2.0;
+    % Use 95th percentile to avoid compression from extreme outliers
+    all_data_values = [];
+    for br = 1:3
+        if ~isempty(all_metric_data{metric, br})
+            all_data_values = [all_data_values; all_metric_data{metric, br}];
+        end
+    end
+    if ~isempty(all_data_values)
+        data_95th = prctile(all_data_values, 95);
+        y_max = max(max(means + sems), data_95th);
+    else
+        y_max = max(means + sems);
+    end
+    y_range = y_max * 1.5;  % Add 50% headroom for significance markers
 
     comparison_pairs = [1 2; 1 3; 2 3];
     sig_results = [];
@@ -1014,11 +1057,64 @@ for metric = 1:3
     box off;
 end
 
+%% Kruskal-Wallis test for US metrics
+fprintf('\n=== Kruskal-Wallis Tests for US Metrics ===\n');
+
+kw_results = struct();
+metric_names_kw = {'DeltanSpikes', 'DeltaFR', 'ResponseLength'};
+
+for metric = 1:3
+    % Prepare data for Kruskal-Wallis test
+    group_labels = {};
+    all_values = [];
+
+    for br = 1:3
+        if ~isempty(all_metric_data{metric, br})
+            all_values = [all_values; all_metric_data{metric, br}];
+            group_labels = [group_labels; repmat({brain_regions{br}}, length(all_metric_data{metric, br}), 1)];
+        end
+    end
+
+    if ~isempty(all_values)
+        [p_kw, tbl, stats] = kruskalwallis(all_values, group_labels, 'off');
+
+        fprintf('\n%s:\n', metric_names{metric});
+        fprintf('  Kruskal-Wallis p = %.4f\n', p_kw);
+
+        % Post-hoc pairwise Mann-Whitney U tests
+        region_pairs = {[1 2], [1 3], [2 3]};
+        pair_names = {'LA vs BA', 'LA vs AStria', 'BA vs AStria'};
+        p_values = zeros(3, 1);
+
+        for pair = 1:3
+            br1 = region_pairs{pair}(1);
+            br2 = region_pairs{pair}(2);
+
+            if ~isempty(all_metric_data{metric, br1}) && ~isempty(all_metric_data{metric, br2})
+                p_values(pair) = ranksum(all_metric_data{metric, br1}, all_metric_data{metric, br2});
+                fprintf('    %s: p = %.4f\n', pair_names{pair}, p_values(pair));
+            else
+                p_values(pair) = NaN;
+            end
+        end
+
+        % Store results
+        kw_results.(metric_names_kw{metric}).p_kw = p_kw;
+        kw_results.(metric_names_kw{metric}).p_posthoc = p_values;
+        kw_results.(metric_names_kw{metric}).pair_names = pair_names;
+    end
+end
+
 %% Combined statistical figures
 fprintf('\n=== Creating Combined Statistical Figures ===\n');
 
-fig_stats = figure('Position', [200, 100, 1000, 250]);
-t_stats = tiledlayout(fig_stats, 1, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+fig_stats = figure('Position', [200, 100, 1000, 500]);
+t_stats = tiledlayout(fig_stats, 2, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Add panel label A for supplementary figure
+annotation(fig_stats, 'textbox', [0.01 0.97 0.05 0.05], 'String', 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % Panel 1: Permutation distribution
 ax1 = nexttile(t_stats, 1);
@@ -1034,6 +1130,11 @@ hold off;
 % Panels 2-3: Contingency table (spanning 2 columns)
 ax_table = nexttile(t_stats, 2, [1 2]);
 axis off;
+
+% Add panel label B for contingency table
+annotation(fig_stats, 'textbox', [0.25 0.97 0.05 0.05], 'String', 'B', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 table_text = {'Region', 'CS-sel', 'US-sel', 'CS&US', 'Non-resp', 'Inhib'};
 y_pos = 0.85;  % Start lower to avoid overlap with title
@@ -1066,6 +1167,12 @@ title(ax_table, sprintf('Contingency Table (\\chi^2=%.2f)', chi2_obs), 'FontSize
 
 % Panels 4-5: Cramér's V matrix (spanning 2 columns)
 ax3 = nexttile(t_stats, 4, [1 2]);
+
+% Add panel label C for Cramer's V
+annotation(fig_stats, 'textbox', [0.61 0.97 0.05 0.05], 'String', 'C', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 imagesc(ax3, cramers_v_matrix);
 colormap(ax3, parula);
 cb3 = colorbar(ax3);
@@ -1105,6 +1212,56 @@ for r1 = 1:4
     end
 end
 hold(ax3, 'off');
+
+%% Row 2: Kruskal-Wallis test results
+% Add panel label D for Kruskal-Wallis results
+annotation(fig_stats, 'textbox', [0.01 0.48 0.05 0.05], 'String', 'D', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+for metric = 1:3
+    ax_kw = nexttile(t_stats, 5 + metric);
+
+    if isfield(kw_results, metric_names_kw{metric})
+        kw_data = kw_results.(metric_names_kw{metric});
+
+        % Create a simple table display
+        axis(ax_kw, 'off');
+
+        % Title with overall Kruskal-Wallis p-value
+        text(ax_kw, 0.5, 0.95, sprintf('K-W: p=%.4f', kw_data.p_kw), ...
+            'FontSize', g.fontSize2, 'FontWeight', 'bold', ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
+
+        % Post-hoc comparisons
+        y_pos = 0.75;
+        y_step = 0.20;
+
+        for pair = 1:3
+            if ~isnan(kw_data.p_posthoc(pair))
+                p_val = kw_data.p_posthoc(pair);
+
+                if p_val < 0.001
+                    sig_str = '***';
+                elseif p_val < 0.01
+                    sig_str = '**';
+                elseif p_val < 0.05
+                    sig_str = '*';
+                else
+                    sig_str = 'ns';
+                end
+
+                text(ax_kw, 0.5, y_pos, sprintf('%s: %.4f %s', kw_data.pair_names{pair}, p_val, sig_str), ...
+                    'FontSize', g.fontSize2 - 1, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
+                y_pos = y_pos - y_step;
+            end
+        end
+
+        xlim(ax_kw, [0 1]);
+        ylim(ax_kw, [0 1]);
+        title(ax_kw, metric_names{metric}, 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
+    end
+end
 
 fprintf('\nDone.\n');
 

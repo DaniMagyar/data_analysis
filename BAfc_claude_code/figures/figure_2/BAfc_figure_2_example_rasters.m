@@ -58,6 +58,11 @@ example_neurons = {
 fig = figure('Position', [100, 100, 1000, 300], 'Units', 'pixels');
 t = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
+% Add panel label A
+annotation(fig, 'textbox', [0.01 0.95 0.05 0.05], 'String', 'A', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
 % Get spike times for both conditions once
 fprintf('Loading spike times...\n');
 [~, preAP_norm_cs, postAP_norm_cs] = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{1}, ...
@@ -122,7 +127,7 @@ for ex = 1:4
         ylim(ax_cs, [0 n_trials+1]);
 
         % Y-label for CS (left)
-        ylabel(ax_cs, 'Trial', 'FontSize', g.fontSize2);
+        ylabel(ax_cs, 'Trial #', 'FontSize', g.fontSize2);
 
         % X-label only for bottom row
         if ex > 2
@@ -179,6 +184,3 @@ for ex = 1:4
 end
 
 fprintf('\nDone.\n');
-
-% Save figure
-saveas(fig, 'BAfc_figure_2_example_rasters.png');
