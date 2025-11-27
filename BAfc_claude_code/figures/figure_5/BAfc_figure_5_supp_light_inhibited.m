@@ -753,6 +753,9 @@ annotation(fig, 'textbox', [0.01, 0.23, 0.03, 0.02], ...
 
 fprintf('\nDone. Light-inhibited neurons visualized.\n');
 
+%% Export statistics
+export_figure5_supp_stats(results_all, brain_regions, g, cell_metrics);
+
 %% Helper function
 function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
     seg = z_trace(event_inds);
@@ -784,4 +787,408 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
             offset_lat = (offset_idx - 1) * bin_time;
         end
     end
+end
+
+function export_figure5_supp_stats(results_all, brain_regions, g, cell_metrics)
+    fid = fopen('figure_5_supp_stats.txt', 'w');
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'FIGURE 5 SUPPLEMENTARY STATISTICS\n');
+    fprintf(fid, 'Light-Inhibited Neurons Analysis\n');
+    fprintf(fid, 'Generated: %s\n', datestr(now));
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'This file contains statistics for:\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE Panel A: Example raster plots\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE Panel B: LA heatmaps (CS/US, no-light/light)\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE Panel C: LA population lineplots\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE Panel D: AStria heatmaps (CS/US, no-light/light)\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE Panel E: AStria population lineplots\n\n');
+
+    %% Overall sample sizes
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'OVERALL SAMPLE SIZES\n');
+    fprintf(fid, '========================================\n\n');
+
+    % Collect all animals from light-inhibited neurons
+    all_animals = {};
+    for br = 1:2
+        if ~isempty(results_all{br})
+            neuron_indices = results_all{br}.light_inhibited_idx;
+            for n = 1:length(neuron_indices)
+                ii = neuron_indices(n);
+                all_animals = [all_animals; {cell_metrics.animal{ii}}];
+            end
+        end
+    end
+    unique_animals = unique(all_animals);
+
+    fprintf(fid, 'Number of animals (N): %d\n', length(unique_animals));
+    fprintf(fid, 'Animal IDs: %s\n\n', strjoin(unique_animals, ', '));
+
+    total_neurons = 0;
+    for br = 1:2
+        if ~isempty(results_all{br})
+            n_neurons = results_all{br}.n_neurons;
+            total_neurons = total_neurons + n_neurons;
+            fprintf(fid, '%s: n = %d light-inhibited neurons\n', brain_regions{br}, n_neurons);
+        end
+    end
+    fprintf(fid, 'Total light-inhibited neurons (LA + AStria): %d\n\n', total_neurons);
+
+    %% Light inhibition detection criteria
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'LIGHT INHIBITION DETECTION CRITERIA\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'Detection method:\n');
+    fprintf(fid, '  - Baseline window: -%.1fs to -%.1fs before stimulus onset\n', ...
+        g.light_inhib_window_baseline + g.light_inhib_window_recent, g.light_inhib_window_recent);
+    fprintf(fid, '  - Recent window: -%.1fs to 0s before stimulus onset (light illumination period)\n', ...
+        g.light_inhib_window_recent);
+    fprintf(fid, '  - Statistical test: Wilcoxon ranksum (right-tailed, testing baseline > recent)\n');
+    fprintf(fid, '  - Significance threshold: p < %.2f\n', g.light_inhib_p_threshold);
+    fprintf(fid, '  - Firing rate drop threshold: %.0f%%\n', g.light_inhib_fr_drop * 100);
+    fprintf(fid, '  - Inclusion criteria: Neuron marked as light-inhibited if it meets BOTH criteria\n');
+    fprintf(fid, '    (p-value AND FR drop) in ANY light condition (CS or US)\n\n');
+
+    %% Cluster classification for light-inhibited neurons
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'CLUSTER CLASSIFICATION OF LIGHT-INHIBITED NEURONS\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'Light-inhibited neurons are further classified based on their responses\n');
+    fprintf(fid, 'to CS and US stimuli during NO-LIGHT conditions:\n');
+    fprintf(fid, '  - CS-selective: CS excited (z >= %.1f), US not excited\n', g.excitation_threshold);
+    fprintf(fid, '  - US-selective: US excited (z >= %.1f), CS not excited\n', g.excitation_threshold);
+    fprintf(fid, '  - Multisensory: Both CS and US excited (z >= %.1f)\n', g.excitation_threshold);
+    fprintf(fid, '  - Inhibited: FR drop >= %.0f%% in CS or US (not excited by either)\n', g.inhibition_fr_drop * 100);
+    fprintf(fid, '  - Non-responsive: No significant excitation or inhibition\n\n');
+
+    cluster_names = {'CS-selective', 'US-selective', 'Multisensory', 'Non-responsive', 'Inhibited'};
+
+    % Calculate cluster distributions
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+        fprintf(fid, 'Total light-inhibited neurons: %d\n\n', res.n_neurons);
+
+        % Count neurons in each cluster
+        for c = 1:5
+            n_cluster = sum(res.Clusters == c);
+            pct = 100 * n_cluster / res.n_neurons;
+            fprintf(fid, '%s: %d (%.1f%%)\n', cluster_names{c}, n_cluster, pct);
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Light inhibition metrics
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'LIGHT INHIBITION METRICS\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'P-values and firing rate drops for light-inhibited neurons:\n');
+    fprintf(fid, '(These are the BEST p-values and LARGEST FR drops across CS and US light conditions)\n\n');
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+
+        p_vals = res.light_inhib_pvalues;
+        fr_drops = res.light_inhib_fr_drops;
+
+        fprintf(fid, 'P-values:\n');
+        fprintf(fid, '  Mean ± SEM: %.4f ± %.4f\n', mean(p_vals), std(p_vals)/sqrt(length(p_vals)));
+        fprintf(fid, '  Median: %.4f\n', median(p_vals));
+        fprintf(fid, '  Range: [%.4f, %.4f]\n', min(p_vals), max(p_vals));
+
+        fprintf(fid, '\nFiring rate drops:\n');
+        fprintf(fid, '  Mean ± SEM: %.2f%% ± %.2f%%\n', mean(fr_drops)*100, std(fr_drops)/sqrt(length(fr_drops))*100);
+        fprintf(fid, '  Median: %.2f%%\n', median(fr_drops)*100);
+        fprintf(fid, '  Range: [%.2f%%, %.2f%%]\n', min(fr_drops)*100, max(fr_drops)*100);
+        fprintf(fid, '\n');
+    end
+
+    %% Population firing rate changes
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'SUPPLEMENTARY FIGURE PANELS C & E: POPULATION FIRING RATES\n');
+    fprintf(fid, '========================================\n\n');
+
+    % Define time windows for analysis
+    baseline_idx = round((g.pre_time - 0.5)/g.bin_time + 1 : g.pre_time/g.bin_time);  % -0.5s to 0s
+    response_idx = round(g.pre_time/g.bin_time + 1 : (g.pre_time + 0.5)/g.bin_time);  % 0s to 0.5s
+
+    %% PART 1: Effect of PV silencing (pooled across all trial types)
+    fprintf(fid, '--- PART 1: EFFECT OF PV SILENCING (Pre-stimulus period: -0.5s to 0s) ---\n\n');
+    fprintf(fid, 'Analysis: Pooled across all trial types (CS, US, CS+US)\n');
+    fprintf(fid, 'Comparison: No-light vs Light conditions during laser illumination window (-0.5s to 0s)\n\n');
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s (n = %d neurons) ---\n', region_name, res.n_neurons);
+
+        % Pool all no-light trials (CS + US)
+        psth_nolight_pooled = [res.psth_CS_Hz_nolight; res.psth_US_Hz_nolight];
+
+        % Pool all light trials (CS + US)
+        psth_light_pooled = [res.psth_CS_Hz_light; res.psth_US_Hz_light];
+
+        % Calculate firing rates in the -0.5 to 0s window
+        fr_nolight = mean(psth_nolight_pooled(:, baseline_idx), 2);
+        fr_light = mean(psth_light_pooled(:, baseline_idx), 2);
+
+        mean_nolight = mean(fr_nolight);
+        sem_nolight = std(fr_nolight) / sqrt(length(fr_nolight));
+        mean_light = mean(fr_light);
+        sem_light = std(fr_light) / sqrt(length(fr_light));
+
+        fprintf(fid, '\nFiring rate during -0.5s to 0s (laser illumination period):\n');
+        fprintf(fid, '  No-light trials: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz\n', ...
+            mean_nolight, sem_nolight, median(fr_nolight));
+        fprintf(fid, '  Light trials: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz\n', ...
+            mean_light, sem_light, median(fr_light));
+
+        % Statistical test: Wilcoxon signed-rank test (paired)
+        [p_val, ~, stats] = signrank(fr_nolight, fr_light);
+        fprintf(fid, '\nStatistical Test (Wilcoxon signed-rank test, paired):\n');
+        fprintf(fid, '  p-value: %.4e', p_val);
+        if p_val < 0.001
+            fprintf(fid, ' ***\n');
+        elseif p_val < 0.01
+            fprintf(fid, ' **\n');
+        elseif p_val < 0.05
+            fprintf(fid, ' *\n');
+        else
+            fprintf(fid, ' (n.s.)\n');
+        end
+
+        % Effect size
+        fr_change = mean_light - mean_nolight;
+        fr_change_pct = (fr_change / mean_nolight) * 100;
+        fprintf(fid, '  Mean change: %.2f Hz (%.1f%%)\n', fr_change, fr_change_pct);
+        fprintf(fid, '\n');
+    end
+
+    %% PART 2: Firing rates by stimulus type and condition
+    fprintf(fid, '\n========================================\n');
+    fprintf(fid, '--- PART 2: FIRING RATES BY STIMULUS TYPE ---\n');
+    fprintf(fid, '========================================\n\n');
+    fprintf(fid, 'Baseline window: -0.5s to 0s (pre-stimulus)\n');
+    fprintf(fid, 'Response window: 0s to 0.5s (post-stimulus)\n\n');
+
+    stim_names = {'CS', 'US'};
+    condition_names = {'No-light', 'Light'};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s (n = %d neurons) ---\n\n', region_name, res.n_neurons);
+
+        % Get all Hz PSTHs
+        psth_hz_all = {res.psth_CS_Hz_nolight, res.psth_CS_Hz_light, ...
+                       res.psth_US_Hz_nolight, res.psth_US_Hz_light};
+
+        for stim = 1:2  % CS, US
+            fprintf(fid, '%s trials:\n', stim_names{stim});
+
+            for cond = 1:2  % No-light, Light
+                idx = (stim-1)*2 + cond;
+                psth_hz = psth_hz_all{idx};
+
+                % Calculate mean firing rates
+                baseline_fr = mean(mean(psth_hz(:, baseline_idx), 2));
+                baseline_sem = std(mean(psth_hz(:, baseline_idx), 2)) / sqrt(size(psth_hz, 1));
+
+                response_fr = mean(mean(psth_hz(:, response_idx), 2));
+                response_sem = std(mean(psth_hz(:, response_idx), 2)) / sqrt(size(psth_hz, 1));
+
+                fprintf(fid, '  %s condition:\n', condition_names{cond});
+                fprintf(fid, '    Baseline (-0.5s to 0s): %.2f ± %.2f Hz\n', baseline_fr, baseline_sem);
+                fprintf(fid, '    Response (0s to 0.5s): %.2f ± %.2f Hz\n', response_fr, response_sem);
+            end
+            fprintf(fid, '\n');
+        end
+    end
+
+    %% Response latencies
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'RESPONSE LATENCIES (Based on no-light conditions)\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'Onset and offset latencies for neurons showing excitatory responses:\n\n');
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+
+        % CS latencies
+        CS_onset = res.CS_onset_lat_nolight;
+        CS_offset = res.CS_offset_lat_nolight;
+        valid_CS = ~isnan(CS_onset) & ~isnan(CS_offset);
+
+        if sum(valid_CS) > 0
+            fprintf(fid, '\nCS responses (n = %d neurons with detected latencies):\n', sum(valid_CS));
+            fprintf(fid, '  Onset latency: %.3f ± %.3f s (mean ± SEM), median = %.3f s\n', ...
+                mean(CS_onset(valid_CS)), std(CS_onset(valid_CS))/sqrt(sum(valid_CS)), median(CS_onset(valid_CS)));
+            fprintf(fid, '  Offset latency: %.3f ± %.3f s (mean ± SEM), median = %.3f s\n', ...
+                mean(CS_offset(valid_CS)), std(CS_offset(valid_CS))/sqrt(sum(valid_CS)), median(CS_offset(valid_CS)));
+            fprintf(fid, '  Response duration: %.3f ± %.3f s (mean ± SEM)\n', ...
+                mean(CS_offset(valid_CS) - CS_onset(valid_CS)), ...
+                std(CS_offset(valid_CS) - CS_onset(valid_CS))/sqrt(sum(valid_CS)));
+        else
+            fprintf(fid, '\nCS responses: No neurons with detected latencies\n');
+        end
+
+        % US latencies
+        US_onset = res.US_onset_lat_nolight;
+        US_offset = res.US_offset_lat_nolight;
+        valid_US = ~isnan(US_onset) & ~isnan(US_offset);
+
+        if sum(valid_US) > 0
+            fprintf(fid, '\nUS responses (n = %d neurons with detected latencies):\n', sum(valid_US));
+            fprintf(fid, '  Onset latency: %.3f ± %.3f s (mean ± SEM), median = %.3f s\n', ...
+                mean(US_onset(valid_US)), std(US_onset(valid_US))/sqrt(sum(valid_US)), median(US_onset(valid_US)));
+            fprintf(fid, '  Offset latency: %.3f ± %.3f s (mean ± SEM), median = %.3f s\n', ...
+                mean(US_offset(valid_US)), std(US_offset(valid_US))/sqrt(sum(valid_US)), median(US_offset(valid_US)));
+            fprintf(fid, '  Response duration: %.3f ± %.3f s (mean ± SEM)\n', ...
+                mean(US_offset(valid_US) - US_onset(valid_US)), ...
+                std(US_offset(valid_US) - US_onset(valid_US))/sqrt(sum(valid_US)));
+        else
+            fprintf(fid, '\nUS responses: No neurons with detected latencies\n');
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Individual neuron details
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'SUPPLEMENTARY FIGURE PANEL A: EXAMPLE NEURON\n');
+    fprintf(fid, '========================================\n\n');
+
+    % Find and report the 7th LA neuron if it exists
+    if ~isempty(results_all{1})  % LA
+        res_LA = results_all{1};
+        if length(res_LA.leafOrder) >= 7
+            sorted_position = res_LA.leafOrder(7);
+            example_neuron_idx = res_LA.light_inhibited_idx(sorted_position);
+
+            fprintf(fid, 'Example neuron shown in Panel A (7th neuron in LA heatmap):\n');
+            fprintf(fid, '  Animal: %s\n', cell_metrics.animal{example_neuron_idx});
+            fprintf(fid, '  Cell ID: %d\n', cell_metrics.cellID(example_neuron_idx));
+            fprintf(fid, '  Brain region: %s\n', cell_metrics.brainRegion{example_neuron_idx});
+            if isfield(cell_metrics, 'putativeCellType')
+                fprintf(fid, '  Cell type: %s\n', cell_metrics.putativeCellType{example_neuron_idx});
+            end
+            fprintf(fid, '  Cluster: %s\n', cluster_names{res_LA.Clusters(sorted_position)});
+            fprintf(fid, '  Light inhibition p-value: %.4f\n', res_LA.light_inhib_pvalues(sorted_position));
+            fprintf(fid, '  Firing rate drop: %.2f%%\n', res_LA.light_inhib_fr_drops(sorted_position) * 100);
+            fprintf(fid, '\n');
+        end
+    end
+
+    %% Complete neuron lists
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'COMPLETE NEURON LISTS (Sorted order as shown in heatmaps)\n');
+    fprintf(fid, '========================================\n\n');
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        res = results_all{br};
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s (n = %d neurons) ---\n\n', region_name, res.n_neurons);
+
+        fprintf(fid, '%-4s %-12s %-6s %-10s %-18s %-18s %-10s %-10s\n', ...
+            'Pos', 'Animal', 'CellID', 'Region', 'CellType', 'Cluster', 'P-value', 'FR drop (%)');
+        fprintf(fid, '%s\n', repmat('-', 1, 100));
+
+        for pos = 1:length(res.leafOrder)
+            sorted_idx = res.leafOrder(pos);
+            global_idx = res.light_inhibited_idx(sorted_idx);
+
+            cell_type_str = 'N/A';
+            if isfield(cell_metrics, 'putativeCellType')
+                cell_type_str = cell_metrics.putativeCellType{global_idx};
+            end
+
+            fprintf(fid, '%-4d %-12s %-6d %-10s %-18s %-18s %-10.4f %-10.2f\n', ...
+                pos, ...
+                cell_metrics.animal{global_idx}, ...
+                cell_metrics.cellID(global_idx), ...
+                cell_metrics.brainRegion{global_idx}, ...
+                cell_type_str, ...
+                cluster_names{res.Clusters(sorted_idx)}, ...
+                res.light_inhib_pvalues(sorted_idx), ...
+                res.light_inhib_fr_drops(sorted_idx) * 100);
+        end
+        fprintf(fid, '\n');
+    end
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'END OF STATISTICS\n');
+    fprintf(fid, '========================================\n');
+
+    fclose(fid);
+    fprintf('Statistics exported to: figure_5_supp_stats.txt\n');
 end

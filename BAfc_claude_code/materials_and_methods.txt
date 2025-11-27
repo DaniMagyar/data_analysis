@@ -1,24 +1,29 @@
 **Materials and Methods**
 
+**Materials and Methods**
+
 **Animals and Surgical Procedures**
-All procedures were approved by the Indiana University Bloomington IACUC. A total of 23 male mice (13 PV-Cre and 10 wild-type) were used. Adult male C57BL/6 mice (8–12 weeks; The Jackson Laboratory) or PV-Cre mice (RRID:IMSR_JAX:017320) were single-housed on a 12-h light/dark cycle with ad libitum food and water. 
+All experimental procedures were performed in accordance with the National Institutes of Health Guide for the Care and Use of Laboratory Animals and were approved by the Indiana University Bloomington IACUC. A total of 24 male mice (14 PV-Cre and 10 wild-type) were used. Adult male C57BL/6 mice (8–12 weeks; The Jackson Laboratory) or PV-Cre mice (RRID:IMSR_JAX:017320) were single-housed on a 12-h light/dark cycle with ad libitum food and water. 
 
 For awake head-fixed recordings, mice were anesthetized with isoflurane (1–2% in O2) and implanted with a custom headplate (Luigs & Neumann). For optogenetic experiments in PV-Cre mice, AAV5-CAG-FLEX-ArchT-tdTomato (Addgene #28305) was injected (100 nL per depth) into the right lateral (LA) and basal (BA) amygdala (AP: -1.7, ML: +4.0, DV: -3.0, -3.3, -3.6 mm from bregma, at a 10° angle). A fiber optic cannula (400 µm diameter; Thorlabs) was implanted (AP: -1.7, ML: +2.5, DV: -3.5 mm at a 10° angle). Implants were secured with dental cement. Mice received carprofen (5 mg/kg, s.c.) and recovered for 7–10 days while being habituated to head-fixation.
 
 **Electrophysiology and Optogenetics**
-Acute silicon probes (P1/H15, 64/128-ch; Cambridge Neurotech) were inserted into the right amygdala of awake, head-fixed mice. Signals were acquired at 30 kHz (Intan RHD2000), filtered (0.3–6 kHz), and sorted with Kilosort2.5. Clusters were manually curated in Phy. Clusters with refractory period violations >0.5% were excluded. Units were classified as putative principal neurons (PNs; trough-to-peak > 0.4 ms) or interneurons (INs; trough-to-peak < 0.4 ms, firing rate > 10 Hz).
+Acute silicon probes (P1/H15, 64/128-ch; Cambridge Neurotech) were coated with DiI (Thermo Fisher) for track reconstruction and inserted into the right amygdala of awake, head-fixed mice. Signals were acquired at 30 kHz (Intan RHD2000), filtered (0.3–6 kHz), and sorted with Kilosort2.5. Clusters were manually curated in Phy. Clusters with refractory period violations >0.5% were excluded. Only neurons with stable firing rates across the recording session were included in the analysis. Units were classified as putative principal neurons (PNs; trough-to-peak > 0.4 ms) or interneurons (INs; trough-to-peak < 0.4 ms, firing rate > 10 Hz).
 
 Auditory (2.8 kHz tone, 70 dB, 50 ms) and tail shock (0.7 mA, 10 ms) stimuli were delivered pseudorandomly (50-100 trials/condition, 5-10 s ITI) using custom MATLAB/Arduino software. For optogenetic inhibition, a 635 nm laser (10 mW/mm²) was delivered through the cannula to activate ArchT in PV+ neurons, with light-on/off trials interleaved.
 
 **Data Analysis and Statistics**
-Analyses were performed with custom MATLAB scripts. PSTHs (1 ms bins, -5 to +4 s from stimulus) were smoothed with a Savitzky-Golay filter (201 ms for population, 5 ms for monosynaptic analysis) and delay-corrected. Baselines were from -5 to 0 s.
+Analyses were performed with custom MATLAB scripts (R2024b). PSTHs (1 ms bins, -5 to +4 s from stimulus) were smoothed with a Savitzky-Golay filter (201 ms for population, 5 ms for monosynaptic analysis) and delay-corrected. Baselines were from -5 to 0 s.
 
 The burst index (adapted from Royer et al., 2012) was calculated using the CellExplorer framework. To quantify bursting propensity, we computed the ratio of the mean ACG value (3–5 ms) to the baseline (mean of 200–300 ms). Values > 1 indicate a higher probability of short-interval spikes (bursts) relative to tonic firing.
 
-*Neuronal Classification:* Neurons were classified based on z-scored responses. For population analysis (Figs 2-3), excitation was z ≥ 2 (0-1s window) and inhibition was a ≥50% firing rate drop. For monosynaptic analysis (Fig 4), z ≥ 5 was used. For optogenetics (Fig 5), a two-rule system was used: (z ≥ 3 and response probability ≥ 0.25) or (z ≥ 10 and probability ≥ 0.1). The initial 12 ms post-US were excluded. Functionally, neurons were clustered as CS-selective, US-selective, Multisensory, Non-responsive, or Inhibited. This was validated with unsupervised k-means clustering.
+*Neuronal Classification:* Neurons were classified based on z-scored responses. For population analysis (Figs 2-3), excitation was z ≥ 2 (0-1s window) and inhibition was a ≥50% firing rate drop. For monosynaptic analysis (Fig 4), z ≥ 5 was used. For optogenetics (Fig 5), a two-rule system was used: (z ≥ 3 and response probability ≥ 0.25) or (z ≥ 10 and probability ≥ 0.1). The initial 12 ms post-US were excluded. Functionally, neurons were clustered as CS-selective, US-selective, Multisensory, Non-responsive, or Inhibited.
 
 *Statistical Comparisons:* Proportions were compared using chi-square tests. Response metrics were compared using Kruskal-Wallis tests with post-hoc Wilcoxon rank-sum/signed-rank tests, gated by a significant omnibus test (p<0.05). For optogenetics, light-on/off trials were compared using a Wilcoxon signed-rank test on spike counts in a 12-50 ms window. Data are mean ± SEM.
 
+**Immunohistochemistry and Imaging**
+To verify viral expression and electrode placement, mice were anesthetized with isoflurane and decapitated. Brains were removed, post-fixed for 24 hours in 4% paraformaldehyde (PFA), and sectioned coronally (50 µm) on a vibratome. For verification of PV specificity, sections were blocked (5% goat serum, 0.3% Triton X-100) and incubated overnight with primary antibody (Rabbit anti-PV, 1:1000; Swant). Sections were then incubated with secondary antibody (Goat anti-rabbit Alexa 488, 1:500; Invitrogen) for 2 hours. Images were acquired using a confocal microscope (Leica) to confirm overlap between ArchT-tdTomato expression and PV immunolabeling.
+
 **Histology and Code Accessibility**
-Probe placement and viral expression were confirmed histologically on 150 µm coronal sections. Only data from on-target animals were included. Analysis scripts are available from the corresponding author upon reasonable request.
+Probe placement was confirmed histologically on 150 µm coronal sections using DiI tracks. Only data from on-target animals were included. Analysis scripts are available from the corresponding author upon reasonable request.
 

@@ -75,10 +75,11 @@ Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: 
 ### BAfc_figure_4.m (1200×800px, 4×6 grid)
 Cols 1-3: Monosynaptic heatmaps (LA rows 1-2, AStria rows 3-4, CS/US/CS+US, "LA neurons", "AStria neurons")
 Col 4: ΔPeak FR bars (6×1 nested, 3 clusters each region)
-Cols 5-6: Pie charts (row 1, FontSize 14), Region comparison (row 2, grey circles with jitter, y-axis to 95th percentile), Latency comparison (row 3)
+Cols 5-6: Pie charts (row 1, FontSize 14), Region comparison (row 2, grey circles with jitter, y-axis to 95th percentile), **G**: Latency comparison (row 3, Wilcoxon rank-sum LA vs AStria)
 α=0.0 for rank score sorting, `g.monosyn_window=0.025`
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
 **Supp figure** (3×1, 1000×900px): Selective vs multisensory latency (row 1), Chi-square test (row 2, 1×3), KW tests (row 3, 2×3 nested, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
+**Stats export** (2025-11-27): Panel G latency statistics added (mean±SEM, median, SD, range, Wilcoxon rank-sum tests)
 
 ### BAfc_figure_5.m (1000×500px, 2×4 grid) - Updated 2025-11-14
 **A**: Example rasters (rows 1-2), **B**: FR lineplots (row 3), **C**: Pie charts (row 1 right), **D**: Spaghetti plots (row 2 right)
@@ -90,6 +91,7 @@ Right: Population (2×4: pie charts, spaghetti plots with mean spike count)
 Window parameters: `g.test_window_start = 0.012`, `g.test_window_end = 0.050`
 Example neurons: MD309_001 cell 20 (LA CS/US), MD318_001 cell 46 (AStria CS), MD317_001 cell 43 (AStria US)
 **Supp light_inhibited** (5×4 grid, 1000×1000px): **A**: Example rasters (row 1), **B**: LA heatmaps (row 2), **C**: LA lineplots (row 3), **D**: AStria heatmaps (row 4), **E**: AStria lineplots (row 5)
+**Stats export** (2025-11-27): `figure_5_supp_stats.txt` includes PV silencing effect (pooled CS+US, -0.5-0s baseline comparison, Wilcoxon signed-rank), firing rates by stimulus, latencies, cluster distributions
 
 ### BAfc_supp_stability.m (1500×500px, 1×3 grid)
 Response stability across 10 trial blocks. ΔFR = response FR (0-1s) - baseline FR (−5-0s). LA/BA/Astria, mean±SEM.
@@ -114,13 +116,16 @@ Response stability across 10 trial blocks. ΔFR = response FR (0-1s) - baseline 
 - Default: Single pre-defined window (12-50ms), statistically sound, reviewer-safe
 - Alternative: Multi-window exploratory testing (requires justification, high false positive rate)
 
-## Statistics Export (2025-11-26)
+## Statistics Export (2025-11-26, updated 2025-11-27)
 All figure scripts export comprehensive statistics to `figure_X_stats.txt`:
 - **Clear panel labels**: Indicate which figure (main/supplementary) and panel each section describes
 - **Descriptive statistics**: Mean ± SEM, median, SD for all bar graph data
 - **Exact plotted data**: Use stored data (e.g., `kw_data_storage`) to ensure stats match visualizations
 - **Structured sections**: Separator lines, subsection headers for easy navigation
+- **Statistical tests**: All comparisons with exact p-values and significance markers
 - Figures 2-5 updated 2025-11-26 with improved readability
+- Figure 4 Panel G latency comparisons added 2025-11-27
+- Figure 5 supp stats created 2025-11-27 (PV silencing effect, baseline -0.5-0s, response 0-0.5s)
 
 ## Figure Legends
 All figures have accompanying `.docx` legends created via Python scripts:

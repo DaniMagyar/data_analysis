@@ -1,0 +1,248 @@
+========================================
+FIGURE 5 SUPPLEMENTARY STATISTICS
+Light-Inhibited Neurons Analysis
+Generated: 27-Nov-2025 12:26:32
+========================================
+
+This file contains statistics for:
+  - SUPPLEMENTARY FIGURE Panel A: Example raster plots
+  - SUPPLEMENTARY FIGURE Panel B: LA heatmaps (CS/US, no-light/light)
+  - SUPPLEMENTARY FIGURE Panel C: LA population lineplots
+  - SUPPLEMENTARY FIGURE Panel D: AStria heatmaps (CS/US, no-light/light)
+  - SUPPLEMENTARY FIGURE Panel E: AStria population lineplots
+
+========================================
+OVERALL SAMPLE SIZES
+========================================
+
+Number of animals (N): 8
+Animal IDs: MD298_001, MD300_001, MD307_001, MD309_001, MD315_001, MD317_001, MD318_001, MD318_002
+
+LA: n = 16 light-inhibited neurons
+Astria: n = 6 light-inhibited neurons
+Total light-inhibited neurons (LA + AStria): 22
+
+========================================
+LIGHT INHIBITION DETECTION CRITERIA
+========================================
+
+Detection method:
+  - Baseline window: -5.0s to -0.5s before stimulus onset
+  - Recent window: -0.5s to 0s before stimulus onset (light illumination period)
+  - Statistical test: Wilcoxon ranksum (right-tailed, testing baseline > recent)
+  - Significance threshold: p < 0.05
+  - Firing rate drop threshold: 50%
+  - Inclusion criteria: Neuron marked as light-inhibited if it meets BOTH criteria
+    (p-value AND FR drop) in ANY light condition (CS or US)
+
+========================================
+CLUSTER CLASSIFICATION OF LIGHT-INHIBITED NEURONS
+========================================
+
+Light-inhibited neurons are further classified based on their responses
+to CS and US stimuli during NO-LIGHT conditions:
+  - CS-selective: CS excited (z >= 2.0), US not excited
+  - US-selective: US excited (z >= 2.0), CS not excited
+  - Multisensory: Both CS and US excited (z >= 2.0)
+  - Inhibited: FR drop >= 50% in CS or US (not excited by either)
+  - Non-responsive: No significant excitation or inhibition
+
+--- LA ---
+Total light-inhibited neurons: 16
+
+CS-selective: 5 (31.2%)
+US-selective: 1 (6.2%)
+Multisensory: 2 (12.5%)
+Non-responsive: 5 (31.2%)
+Inhibited: 3 (18.8%)
+
+--- AStria ---
+Total light-inhibited neurons: 6
+
+CS-selective: 1 (16.7%)
+US-selective: 1 (16.7%)
+Multisensory: 0 (0.0%)
+Non-responsive: 3 (50.0%)
+Inhibited: 1 (16.7%)
+
+========================================
+LIGHT INHIBITION METRICS
+========================================
+
+P-values and firing rate drops for light-inhibited neurons:
+(These are the BEST p-values and LARGEST FR drops across CS and US light conditions)
+
+--- LA ---
+P-values:
+  Mean ± SEM: 0.0010 ± 0.0007
+  Median: 0.0000
+  Range: [0.0000, 0.0104]
+
+Firing rate drops:
+  Mean ± SEM: 80.63% ± 3.92%
+  Median: 84.90%
+  Range: [53.94%, 100.00%]
+
+--- AStria ---
+P-values:
+  Mean ± SEM: 0.0002 ± 0.0002
+  Median: 0.0000
+  Range: [0.0000, 0.0013]
+
+Firing rate drops:
+  Mean ± SEM: 79.01% ± 5.21%
+  Median: 75.53%
+  Range: [68.09%, 100.00%]
+
+========================================
+SUPPLEMENTARY FIGURE PANELS C & E: POPULATION FIRING RATES
+========================================
+
+--- PART 1: EFFECT OF PV SILENCING (Pre-stimulus period: -0.5s to 0s) ---
+
+Analysis: Pooled across all trial types (CS, US, CS+US)
+Comparison: No-light vs Light conditions during laser illumination window (-0.5s to 0s)
+
+--- LA (n = 16 neurons) ---
+
+Firing rate during -0.5s to 0s (laser illumination period):
+  No-light trials: 4.59 ± 0.91 Hz (mean ± SEM), median = 2.80 Hz
+  Light trials: 1.69 ± 0.38 Hz (mean ± SEM), median = 0.92 Hz
+
+Statistical Test (Wilcoxon signed-rank test, paired):
+  p-value: 8.7513e-07 ***
+  Mean change: -2.90 Hz (-63.2%)
+
+--- AStria (n = 6 neurons) ---
+
+Firing rate during -0.5s to 0s (laser illumination period):
+  No-light trials: 5.69 ± 0.93 Hz (mean ± SEM), median = 5.87 Hz
+  Light trials: 2.02 ± 0.33 Hz (mean ± SEM), median = 2.25 Hz
+
+Statistical Test (Wilcoxon signed-rank test, paired):
+  p-value: 9.7656e-04 ***
+  Mean change: -3.67 Hz (-64.5%)
+
+
+========================================
+--- PART 2: FIRING RATES BY STIMULUS TYPE ---
+========================================
+
+Baseline window: -0.5s to 0s (pre-stimulus)
+Response window: 0s to 0.5s (post-stimulus)
+
+--- LA (n = 16 neurons) ---
+
+CS trials:
+  No-light condition:
+    Baseline (-0.5s to 0s): 4.76 ± 1.45 Hz
+    Response (0s to 0.5s): 13.12 ± 3.92 Hz
+  Light condition:
+    Baseline (-0.5s to 0s): 1.76 ± 0.55 Hz
+    Response (0s to 0.5s): 4.35 ± 1.74 Hz
+
+US trials:
+  No-light condition:
+    Baseline (-0.5s to 0s): 4.43 ± 1.16 Hz
+    Response (0s to 0.5s): 15.15 ± 9.63 Hz
+  Light condition:
+    Baseline (-0.5s to 0s): 1.62 ± 0.55 Hz
+    Response (0s to 0.5s): 8.85 ± 6.96 Hz
+
+--- AStria (n = 6 neurons) ---
+
+CS trials:
+  No-light condition:
+    Baseline (-0.5s to 0s): 5.79 ± 1.33 Hz
+    Response (0s to 0.5s): 14.41 ± 3.52 Hz
+  Light condition:
+    Baseline (-0.5s to 0s): 1.92 ± 0.50 Hz
+    Response (0s to 0.5s): 5.48 ± 1.91 Hz
+
+US trials:
+  No-light condition:
+    Baseline (-0.5s to 0s): 5.59 ± 1.44 Hz
+    Response (0s to 0.5s): 13.73 ± 3.72 Hz
+  Light condition:
+    Baseline (-0.5s to 0s): 2.11 ± 0.48 Hz
+    Response (0s to 0.5s): 5.62 ± 1.94 Hz
+
+========================================
+RESPONSE LATENCIES (Based on no-light conditions)
+========================================
+
+Onset and offset latencies for neurons showing excitatory responses:
+
+--- LA ---
+
+CS responses (n = 7 neurons with detected latencies):
+  Onset latency: 0.203 ± 0.058 s (mean ± SEM), median = 0.149 s
+  Offset latency: 0.483 ± 0.102 s (mean ± SEM), median = 0.343 s
+  Response duration: 0.280 ± 0.101 s (mean ± SEM)
+
+US responses (n = 3 neurons with detected latencies):
+  Onset latency: 0.097 ± 0.019 s (mean ± SEM), median = 0.102 s
+  Offset latency: 0.364 ± 0.174 s (mean ± SEM), median = 0.192 s
+  Response duration: 0.267 ± 0.160 s (mean ± SEM)
+
+--- AStria ---
+
+CS responses (n = 1 neurons with detected latencies):
+  Onset latency: 0.175 ± 0.000 s (mean ± SEM), median = 0.175 s
+  Offset latency: 0.245 ± 0.000 s (mean ± SEM), median = 0.245 s
+  Response duration: 0.070 ± 0.000 s (mean ± SEM)
+
+US responses: No neurons with detected latencies
+
+========================================
+SUPPLEMENTARY FIGURE PANEL A: EXAMPLE NEURON
+========================================
+
+Example neuron shown in Panel A (7th neuron in LA heatmap):
+  Animal: MD307_001
+  Cell ID: 16
+  Brain region: LA
+  Cell type: PN
+  Cluster: Multisensory
+  Light inhibition p-value: 0.0000
+  Firing rate drop: 80.47%
+
+========================================
+COMPLETE NEURON LISTS (Sorted order as shown in heatmaps)
+========================================
+
+--- LA (n = 16 neurons) ---
+
+Pos  Animal       CellID Region     CellType           Cluster            P-value    FR drop (%)
+----------------------------------------------------------------------------------------------------
+1    MD307_001    2      LA         PN                 CS-selective       0.0000     100.00    
+2    MD309_001    26     LA         PN                 CS-selective       0.0000     93.71     
+3    MD307_001    14     LA         PN                 CS-selective       0.0000     67.31     
+4    MD307_001    12     LA         PN                 CS-selective       0.0000     86.06     
+5    MD307_001    6      LA         PN                 CS-selective       0.0000     84.70     
+6    MD309_001    19     LA         PN                 US-selective       0.0104     86.15     
+7    MD307_001    16     LA         PN                 Multisensory       0.0000     80.47     
+8    MD309_001    14     LA         IN                 Multisensory       0.0000     57.85     
+9    MD309_001    31     LA         PN                 Non-responsive     0.0000     73.48     
+10   MD309_001    21     LA         PN                 Non-responsive     0.0000     95.89     
+11   MD309_001    2      LA         PN                 Non-responsive     0.0000     85.09     
+12   MD318_002    36     LA         PN                 Non-responsive     0.0000     99.02     
+13   MD307_001    3      LA         PN                 Non-responsive     0.0000     59.56     
+14   MD318_002    2      LA         PN                 Inhibited          0.0014     66.87     
+15   MD318_002    15     LA         PN                 Inhibited          0.0035     53.94     
+16   MD300_001    9      LA         PN                 Inhibited          0.0000     100.00    
+
+--- AStria (n = 6 neurons) ---
+
+Pos  Animal       CellID Region     CellType           Cluster            P-value    FR drop (%)
+----------------------------------------------------------------------------------------------------
+1    MD317_001    30     Astria     PN                 CS-selective       0.0000     70.42     
+2    MD315_001    22     Astria     PN                 US-selective       0.0000     86.78     
+3    MD318_001    52     Astria     PN                 Non-responsive     0.0000     68.09     
+4    MD317_001    41     Astria     PN                 Non-responsive     0.0000     100.00    
+5    MD317_001    23     Astria     PN                 Non-responsive     0.0000     68.12     
+6    MD298_001    9      Astria     PN                 Inhibited          0.0013     80.65     
+
+========================================
+END OF STATISTICS
+========================================

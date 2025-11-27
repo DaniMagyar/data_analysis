@@ -1,6 +1,6 @@
 ========================================
 FIGURE 3 STATISTICS
-Generated: 26-Nov-2025 19:46:27
+Generated: 27-Nov-2025 15:28:00
 ========================================
 
 This file contains statistics for:
@@ -46,7 +46,7 @@ SUPPLEMENTARY FIGURE - PANEL A: CHI-SQUARE TEST
 LA vs AStria cluster distribution:
 Overall Chi-square Test:
   Chi-square statistic: 1.4685
-  Permutation p-value (10,000 permutations): 0.4905
+  Permutation p-value (10,000 permutations): 0.4877
   Cramér's V (effect size): 0.0879
   Significant (p < 0.05): false
 
@@ -60,36 +60,36 @@ Delta Peak FR by Cluster and Stimulus Type:
 --- LA ---
 
 CS-sel (n = 34 neurons):
-  CS: 39.91 ± 5.33 Hz (mean ± SEM), median = 33.85 Hz, SD = 31.07 Hz
-  US: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
-  CS+US: 13.67 ± 4.49 Hz (mean ± SEM), median = 0.00 Hz, SD = 26.17 Hz
+  CS: 40.20 ± 5.31 Hz (mean ± SEM), median = 33.85 Hz, SD = 30.94 Hz
+  US: 7.61 ± 1.53 Hz (mean ± SEM), median = 3.60 Hz, SD = 8.94 Hz
+  CS+US: 19.03 ± 4.13 Hz (mean ± SEM), median = 12.31 Hz, SD = 24.09 Hz
 
 US-sel (n = 50 neurons):
-  CS: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
-  US: 31.54 ± 3.09 Hz (mean ± SEM), median = 26.47 Hz, SD = 21.84 Hz
-  CS+US: 25.93 ± 2.95 Hz (mean ± SEM), median = 24.44 Hz, SD = 20.85 Hz
+  CS: 7.44 ± 1.06 Hz (mean ± SEM), median = 4.88 Hz, SD = 7.48 Hz
+  US: 32.63 ± 2.95 Hz (mean ± SEM), median = 28.01 Hz, SD = 20.88 Hz
+  CS+US: 31.00 ± 3.15 Hz (mean ± SEM), median = 26.07 Hz, SD = 22.28 Hz
 
 Multi (n = 51 neurons):
-  CS: 48.49 ± 6.42 Hz (mean ± SEM), median = 37.45 Hz, SD = 45.82 Hz
-  US: 55.38 ± 10.52 Hz (mean ± SEM), median = 34.28 Hz, SD = 75.14 Hz
-  CS+US: 66.88 ± 13.01 Hz (mean ± SEM), median = 36.64 Hz, SD = 92.87 Hz
+  CS: 56.24 ± 7.14 Hz (mean ± SEM), median = 38.58 Hz, SD = 51.01 Hz
+  US: 67.49 ± 10.78 Hz (mean ± SEM), median = 38.63 Hz, SD = 77.00 Hz
+  CS+US: 78.51 ± 12.98 Hz (mean ± SEM), median = 37.76 Hz, SD = 92.70 Hz
 
 --- AStria ---
 
 CS-sel (n = 12 neurons):
-  CS: 18.52 ± 3.12 Hz (mean ± SEM), median = 17.43 Hz, SD = 10.80 Hz
-  US: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
-  CS+US: 5.44 ± 2.47 Hz (mean ± SEM), median = 0.00 Hz, SD = 8.56 Hz
+  CS: 21.22 ± 2.81 Hz (mean ± SEM), median = 21.23 Hz, SD = 9.75 Hz
+  US: 8.58 ± 2.34 Hz (mean ± SEM), median = 5.41 Hz, SD = 8.09 Hz
+  CS+US: 11.86 ± 2.24 Hz (mean ± SEM), median = 10.59 Hz, SD = 7.76 Hz
 
 US-sel (n = 17 neurons):
-  CS: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
-  US: 35.68 ± 7.68 Hz (mean ± SEM), median = 27.24 Hz, SD = 31.67 Hz
-  CS+US: 34.89 ± 7.19 Hz (mean ± SEM), median = 28.57 Hz, SD = 29.66 Hz
+  CS: 11.04 ± 2.97 Hz (mean ± SEM), median = 8.94 Hz, SD = 12.24 Hz
+  US: 37.42 ± 7.37 Hz (mean ± SEM), median = 28.16 Hz, SD = 30.37 Hz
+  CS+US: 35.90 ± 6.91 Hz (mean ± SEM), median = 28.57 Hz, SD = 28.51 Hz
 
 Multi (n = 26 neurons):
-  CS: 49.34 ± 11.91 Hz (mean ± SEM), median = 39.88 Hz, SD = 60.73 Hz
-  US: 55.49 ± 15.90 Hz (mean ± SEM), median = 37.28 Hz, SD = 81.08 Hz
-  CS+US: 55.74 ± 14.86 Hz (mean ± SEM), median = 37.24 Hz, SD = 75.77 Hz
+  CS: 51.93 ± 11.76 Hz (mean ± SEM), median = 43.38 Hz, SD = 59.98 Hz
+  US: 58.13 ± 15.75 Hz (mean ± SEM), median = 39.67 Hz, SD = 80.32 Hz
+  CS+US: 60.56 ± 14.69 Hz (mean ± SEM), median = 38.54 Hz, SD = 74.90 Hz
 
 ========================================
 SUPPLEMENTARY FIGURE - PANELS D, E: KRUSKAL-WALLIS TESTS
@@ -102,41 +102,41 @@ CS-sel:
   Sample sizes (paired data):
     n = 34 neurons
   Descriptive Statistics:
-    CS: 39.914 ± 5.329 (mean ± SEM), median = 33.848
-    US: 0.000 ± 0.000 (mean ± SEM), median = 0.000
-    CS+US: 13.675 ± 4.488 (mean ± SEM), median = 0.000
+    CS: 40.195 ± 5.306 (mean ± SEM), median = 33.848
+    US: 7.606 ± 1.533 (mean ± SEM), median = 3.602
+    CS+US: 19.035 ± 4.131 (mean ± SEM), median = 12.315
   Statistical Test: Kruskal-Wallis test
     p-value: 0.0000
     Significant (p < 0.05): true
   Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
     CS vs US: p = 0.0000 ***
     CS vs CS+US: p = 0.0000 ***
-    US vs CS+US: p = 0.0002 ***
+    US vs CS+US: p = 0.0000 ***
 
 US-sel:
   Sample sizes (paired data):
     n = 50 neurons
   Descriptive Statistics:
-    CS: 0.000 ± 0.000 (mean ± SEM), median = 0.000
-    US: 31.535 ± 3.089 (mean ± SEM), median = 26.470
-    CS+US: 25.933 ± 2.948 (mean ± SEM), median = 24.442
+    CS: 7.444 ± 1.058 (mean ± SEM), median = 4.879
+    US: 32.629 ± 2.954 (mean ± SEM), median = 28.010
+    CS+US: 31.005 ± 3.150 (mean ± SEM), median = 26.069
   Statistical Test: Kruskal-Wallis test
     p-value: 0.0000
     Significant (p < 0.05): true
   Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
     CS vs US: p = 0.0000 ***
     CS vs CS+US: p = 0.0000 ***
-    US vs CS+US: p = 0.0004 ***
+    US vs CS+US: p = 0.0090 **
 
 Multi:
   Sample sizes (paired data):
     n = 51 neurons
   Descriptive Statistics:
-    CS: 48.487 ± 6.416 (mean ± SEM), median = 37.447
-    US: 55.381 ± 10.522 (mean ± SEM), median = 34.285
-    CS+US: 66.878 ± 13.005 (mean ± SEM), median = 36.636
+    CS: 56.237 ± 7.143 (mean ± SEM), median = 38.579
+    US: 67.491 ± 10.782 (mean ± SEM), median = 38.633
+    CS+US: 78.507 ± 12.981 (mean ± SEM), median = 37.758
   Statistical Test: Kruskal-Wallis test
-    p-value: 0.7995
+    p-value: 0.6244
     Significant (p < 0.05): false
   Post-hoc tests not performed (KW not significant)
 
@@ -146,41 +146,41 @@ CS-sel:
   Sample sizes (paired data):
     n = 12 neurons
   Descriptive Statistics:
-    CS: 18.516 ± 3.117 (mean ± SEM), median = 17.434
-    US: 0.000 ± 0.000 (mean ± SEM), median = 0.000
-    CS+US: 5.435 ± 2.471 (mean ± SEM), median = 0.000
+    CS: 21.216 ± 2.814 (mean ± SEM), median = 21.229
+    US: 8.577 ± 2.337 (mean ± SEM), median = 5.411
+    CS+US: 11.862 ± 2.241 (mean ± SEM), median = 10.595
   Statistical Test: Kruskal-Wallis test
-    p-value: 0.0001
+    p-value: 0.0080
     Significant (p < 0.05): true
   Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
-    CS vs US: p = 0.0010 ***
-    CS vs CS+US: p = 0.0049 **
-    US vs CS+US: p = 0.1250 (n.s.)
+    CS vs US: p = 0.0005 ***
+    CS vs CS+US: p = 0.0024 **
+    US vs CS+US: p = 0.0210 *
 
 US-sel:
   Sample sizes (paired data):
     n = 17 neurons
   Descriptive Statistics:
-    CS: 0.000 ± 0.000 (mean ± SEM), median = 0.000
-    US: 35.682 ± 7.680 (mean ± SEM), median = 27.245
-    CS+US: 34.894 ± 7.193 (mean ± SEM), median = 28.571
+    CS: 11.045 ± 2.969 (mean ± SEM), median = 8.941
+    US: 37.416 ± 7.366 (mean ± SEM), median = 28.157
+    CS+US: 35.902 ± 6.915 (mean ± SEM), median = 28.571
   Statistical Test: Kruskal-Wallis test
-    p-value: 0.0000
+    p-value: 0.0003
     Significant (p < 0.05): true
   Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
     CS vs US: p = 0.0004 ***
-    CS vs CS+US: p = 0.0001 ***
-    US vs CS+US: p = 0.4631 (n.s.)
+    CS vs CS+US: p = 0.0003 ***
+    US vs CS+US: p = 0.2868 (n.s.)
 
 Multi:
   Sample sizes (paired data):
     n = 26 neurons
   Descriptive Statistics:
-    CS: 49.336 ± 11.911 (mean ± SEM), median = 39.879
-    US: 55.492 ± 15.901 (mean ± SEM), median = 37.280
-    CS+US: 55.743 ± 14.860 (mean ± SEM), median = 37.237
+    CS: 51.930 ± 11.763 (mean ± SEM), median = 43.384
+    US: 58.127 ± 15.751 (mean ± SEM), median = 39.670
+    CS+US: 60.562 ± 14.688 (mean ± SEM), median = 38.538
   Statistical Test: Kruskal-Wallis test
-    p-value: 0.9259
+    p-value: 0.8095
     Significant (p < 0.05): false
   Post-hoc tests not performed (KW not significant)
 

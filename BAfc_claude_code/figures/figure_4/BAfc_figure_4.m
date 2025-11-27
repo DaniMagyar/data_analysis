@@ -1875,6 +1875,104 @@ function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, 
         fprintf(fid, '\n');
     end
 
+    %% Latency comparison statistics (Panel G)
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'MAIN FIGURE - PANEL G: LATENCY COMPARISON STATISTICS\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, '### LA vs ASTRIA ONSET LATENCY COMPARISONS ###\n\n');
+    fprintf(fid, 'Statistical test: Wilcoxon rank-sum test (unpaired, two-tailed)\n\n');
+
+    stim_names_full = {'CS', 'US', 'CS+US'};
+
+    for stim = 1:3
+        fprintf(fid, '--- %s trials ---\n', stim_names_full{stim});
+
+        % Collect latency data for LA
+        if ~isempty(results_all{1})
+            res_LA = results_all{1};
+
+            if stim == 1  % CS - from CS-selective and Multisensory
+                responsive_idx_LA = find(ismember(res_LA.Clusters_all, [1 3]));
+                onset_lat_LA = res_LA.CS_onset_lat_all(responsive_idx_LA);
+            elseif stim == 2  % US - from US-selective and Multisensory
+                responsive_idx_LA = find(ismember(res_LA.Clusters_all, [2 3]));
+                onset_lat_LA = res_LA.US_onset_lat_all(responsive_idx_LA);
+            else  % CS+US - from all responsive neurons
+                responsive_idx_LA = find(ismember(res_LA.Clusters_all, [1 2 3]));
+                onset_lat_LA = res_LA.Both_onset_lat_all(responsive_idx_LA);
+            end
+
+            % Remove NaN values and convert to ms
+            onset_lat_LA = onset_lat_LA(~isnan(onset_lat_LA)) * 1000;
+        else
+            onset_lat_LA = [];
+        end
+
+        % Collect latency data for AStria
+        if ~isempty(results_all{2})
+            res_AStria = results_all{2};
+
+            if stim == 1  % CS - from CS-selective and Multisensory
+                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [1 3]));
+                onset_lat_AStria = res_AStria.CS_onset_lat_all(responsive_idx_AStria);
+            elseif stim == 2  % US - from US-selective and Multisensory
+                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [2 3]));
+                onset_lat_AStria = res_AStria.US_onset_lat_all(responsive_idx_AStria);
+            else  % CS+US - from all responsive neurons
+                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [1 2 3]));
+                onset_lat_AStria = res_AStria.Both_onset_lat_all(responsive_idx_AStria);
+            end
+
+            % Remove NaN values and convert to ms
+            onset_lat_AStria = onset_lat_AStria(~isnan(onset_lat_AStria)) * 1000;
+        else
+            onset_lat_AStria = [];
+        end
+
+        % Report descriptive statistics
+        if ~isempty(onset_lat_LA)
+            fprintf(fid, 'LA (n = %d neurons):\n', length(onset_lat_LA));
+            fprintf(fid, '  Mean ± SEM: %.2f ± %.2f ms\n', mean(onset_lat_LA), std(onset_lat_LA)/sqrt(length(onset_lat_LA)));
+            fprintf(fid, '  Median: %.2f ms\n', median(onset_lat_LA));
+            fprintf(fid, '  SD: %.2f ms\n', std(onset_lat_LA));
+            fprintf(fid, '  Range: [%.2f, %.2f] ms\n\n', min(onset_lat_LA), max(onset_lat_LA));
+        else
+            fprintf(fid, 'LA: No data\n\n');
+        end
+
+        if ~isempty(onset_lat_AStria)
+            fprintf(fid, 'AStria (n = %d neurons):\n', length(onset_lat_AStria));
+            fprintf(fid, '  Mean ± SEM: %.2f ± %.2f ms\n', mean(onset_lat_AStria), std(onset_lat_AStria)/sqrt(length(onset_lat_AStria)));
+            fprintf(fid, '  Median: %.2f ms\n', median(onset_lat_AStria));
+            fprintf(fid, '  SD: %.2f ms\n', std(onset_lat_AStria));
+            fprintf(fid, '  Range: [%.2f, %.2f] ms\n\n', min(onset_lat_AStria), max(onset_lat_AStria));
+        else
+            fprintf(fid, 'AStria: No data\n\n');
+        end
+
+        % Perform statistical test
+        if ~isempty(onset_lat_LA) && ~isempty(onset_lat_AStria)
+            [p_val, ~] = ranksum(onset_lat_LA, onset_lat_AStria);
+            fprintf(fid, 'LA vs AStria comparison:\n');
+            fprintf(fid, '  Wilcoxon rank-sum test p-value: %.4f', p_val);
+
+            if p_val < 0.001
+                fprintf(fid, ' ***\n');
+            elseif p_val < 0.01
+                fprintf(fid, ' **\n');
+            elseif p_val < 0.05
+                fprintf(fid, ' *\n');
+            else
+                fprintf(fid, ' (n.s.)\n');
+            end
+        else
+            fprintf(fid, 'LA vs AStria comparison: Insufficient data\n');
+        end
+
+        fprintf(fid, '\n');
+    end
+
     fprintf(fid, '========================================\n');
     fprintf(fid, 'END OF FIGURE 4 STATISTICS\n');
     fprintf(fid, '========================================\n');

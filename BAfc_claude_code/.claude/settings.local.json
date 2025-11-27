@@ -6,7 +6,8 @@
       "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_3\\BAfc_figure_3.m'' | Measure-Object -Line\")",
       "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_4\\BAfc_figure_4.m'' | Select-Object -Last 20\")",
       "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_5\\BAfc_figure_5.m'' | Measure-Object -Line\")",
-      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_2\\BAfc_figure_2.m'' | Select-String -Pattern ''metric_data_storage'' -Context 3\")"
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_2\\BAfc_figure_2.m'' | Select-String -Pattern ''metric_data_storage'' -Context 3\")",
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_4\\BAfc_figure_4.m'' | Select-String -Pattern ''export.*stats|fopen.*stats'' -Context 2\")"
     ],
     "deny": [],
     "ask": []
