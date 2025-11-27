@@ -85,7 +85,7 @@ cluster_colors = [
     0.2 0.6 0.3     % Inhibited
 ];
 
-cluster_names = {'CS-sel', 'US-sel', 'CS&US', 'Non-resp', 'Inhibited'};
+cluster_names = {'CS-sel', 'US-sel', 'Multi', 'Non-resp', 'Inhibited'};
 
 %% Calculate PSTHs once
 fprintf('Calculating PSTHs...\n');
@@ -149,8 +149,9 @@ for br = 1:4
         continue;
     end
 
-    % Store indices for later use
+    % Store indices and animal IDs for later use
     results_all{br}.idx_neurons = find(idx_neurons);
+    results_all{br}.animals = g.cell_metrics.animal(idx_neurons);
 
     % Extract PSTHs
     psth_CS = psthZ_full{1}(idx_neurons, :);
@@ -804,7 +805,7 @@ end
 fprintf('\n=== Creating US Metrics Figure ===\n');
 
 fig_US = figure('Position', [100, 100, 1000, 300], 'Units', 'pixels');
-t_US = tiledlayout(fig_US, 1, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
+t_US = tiledlayout(fig_US, 1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 bar_color = [0.2 0.4 0.7];  % Blue color
 
@@ -870,20 +871,20 @@ for r1 = 1:4
 end
 hold(ax_pval, 'off');
 
-% Columns 2-4: US response metrics (OPTIMIZED - pre-calculate all metrics)
-% Create nested tiledlayout for the 3 bar graphs
-t_US_metrics = tiledlayout(t_US, 1, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
+% Columns 2-3: Nested tiledlayout for the 2 bar graphs
+t_US_metrics = tiledlayout(t_US, 1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 t_US_metrics.Layout.Tile = 2;
-t_US_metrics.Layout.TileSpan = [1 3];
+t_US_metrics.Layout.TileSpan = [1 2];
 title(t_US_metrics, 'Comparison of US-evoked excitatory responses', 'FontSize', 12, 'FontWeight', 'bold');
 
 % Add panel label D
-annotation(fig_US, 'textbox', [0.26 0.97 0.05 0.05], 'String', 'D', ...
+annotation(fig_US, 'textbox', [0.35 0.97 0.05 0.05], 'String', 'D', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 clusters_to_use = [2, 3];
-metric_names = {'\DeltanSpikes', '\DeltaFR (Hz)', 'Response length (ms)'};
+metric_names = {'\DeltaFR (Hz)', 'Response length (ms)'};
+metrics_to_plot = [2, 3];  % Only plot DeltaFR and Response length
 
 % Pre-calculate all metrics for all regions (using already computed latencies)
 all_metric_data = cell(3, 3);
@@ -941,9 +942,10 @@ for metric = 1:3
     end
 end
 
-% Plot each metric
-for metric = 1:3
-    ax = nexttile(t_US_metrics, metric);
+% Plot each metric in the nested tiledlayout
+for plot_idx = 1:length(metrics_to_plot)
+    metric = metrics_to_plot(plot_idx);
+    ax = nexttile(t_US_metrics, plot_idx);
     hold on;
 
     positions = [1 2 3];
@@ -1052,7 +1054,7 @@ for metric = 1:3
     ylim([0 y_range]);
     xticks(positions);
     xticklabels({'LA', 'BA', 'AStria'});
-    title(metric_names{metric}, 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
+    title(metric_names{plot_idx}, 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
     set(gca, 'FontSize', g.fontSize2);
     box off;
 end
@@ -1078,23 +1080,29 @@ for metric = 1:3
     if ~isempty(all_values)
         [p_kw, tbl, stats] = kruskalwallis(all_values, group_labels, 'off');
 
-        fprintf('\n%s:\n', metric_names{metric});
+        fprintf('\n%s:\n', metric_names_kw{metric});
         fprintf('  Kruskal-Wallis p = %.4f\n', p_kw);
 
-        % Post-hoc pairwise Mann-Whitney U tests
+        % Post-hoc pairwise Mann-Whitney U tests (only if K-W is significant for DeltaFR)
         region_pairs = {[1 2], [1 3], [2 3]};
         pair_names = {'LA vs BA', 'LA vs AStria', 'BA vs AStria'};
         p_values = zeros(3, 1);
 
-        for pair = 1:3
-            br1 = region_pairs{pair}(1);
-            br2 = region_pairs{pair}(2);
+        % For DeltaFR (metric == 2), only do post-hoc if K-W is significant
+        if metric == 2 && p_kw >= 0.05
+            fprintf('  K-W non-significant, skipping post-hoc comparisons\n');
+            p_values = NaN(3, 1);
+        else
+            for pair = 1:3
+                br1 = region_pairs{pair}(1);
+                br2 = region_pairs{pair}(2);
 
-            if ~isempty(all_metric_data{metric, br1}) && ~isempty(all_metric_data{metric, br2})
-                p_values(pair) = ranksum(all_metric_data{metric, br1}, all_metric_data{metric, br2});
-                fprintf('    %s: p = %.4f\n', pair_names{pair}, p_values(pair));
-            else
-                p_values(pair) = NaN;
+                if ~isempty(all_metric_data{metric, br1}) && ~isempty(all_metric_data{metric, br2})
+                    p_values(pair) = ranksum(all_metric_data{metric, br1}, all_metric_data{metric, br2});
+                    fprintf('    %s: p = %.4f\n', pair_names{pair}, p_values(pair));
+                else
+                    p_values(pair) = NaN;
+                end
             end
         end
 
@@ -1136,7 +1144,7 @@ annotation(fig_stats, 'textbox', [0.25 0.97 0.05 0.05], 'String', 'B', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
-table_text = {'Region', 'CS-sel', 'US-sel', 'CS&US', 'Non-resp', 'Inhib'};
+table_text = {'Region', 'CS-sel', 'US-sel', 'Multi', 'Non-resp', 'Inhib'};
 y_pos = 0.85;  % Start lower to avoid overlap with title
 y_step = 0.15;
 
@@ -1219,8 +1227,13 @@ annotation(fig_stats, 'textbox', [0.01 0.48 0.05 0.05], 'String', 'D', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
-for metric = 1:3
-    ax_kw = nexttile(t_stats, 5 + metric);
+% Show DeltaFR (metric 2) and Response Length (metric 3)
+metrics_to_show = [2, 3];
+metric_names_full = {'\DeltanSpikes', '\DeltaFR (Hz)', 'Response length (ms)'};
+
+for idx = 1:length(metrics_to_show)
+    metric = metrics_to_show(idx);
+    ax_kw = nexttile(t_stats, 5 + idx);
 
     if isfield(kw_results, metric_names_kw{metric})
         kw_data = kw_results.(metric_names_kw{metric});
@@ -1233,35 +1246,42 @@ for metric = 1:3
             'FontSize', g.fontSize2, 'FontWeight', 'bold', ...
             'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
 
-        % Post-hoc comparisons
-        y_pos = 0.75;
-        y_step = 0.20;
+        % Post-hoc comparisons (only show if K-W is significant, i.e., not all NaN)
+        if ~all(isnan(kw_data.p_posthoc))
+            y_pos = 0.75;
+            y_step = 0.20;
 
-        for pair = 1:3
-            if ~isnan(kw_data.p_posthoc(pair))
-                p_val = kw_data.p_posthoc(pair);
+            for pair = 1:3
+                if ~isnan(kw_data.p_posthoc(pair))
+                    p_val = kw_data.p_posthoc(pair);
 
-                if p_val < 0.001
-                    sig_str = '***';
-                elseif p_val < 0.01
-                    sig_str = '**';
-                elseif p_val < 0.05
-                    sig_str = '*';
-                else
-                    sig_str = 'ns';
+                    if p_val < 0.001
+                        sig_str = '***';
+                    elseif p_val < 0.01
+                        sig_str = '**';
+                    elseif p_val < 0.05
+                        sig_str = '*';
+                    else
+                        sig_str = 'ns';
+                    end
+
+                    text(ax_kw, 0.5, y_pos, sprintf('%s: %.4f %s', kw_data.pair_names{pair}, p_val, sig_str), ...
+                        'FontSize', g.fontSize2 - 1, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
+                    y_pos = y_pos - y_step;
                 end
-
-                text(ax_kw, 0.5, y_pos, sprintf('%s: %.4f %s', kw_data.pair_names{pair}, p_val, sig_str), ...
-                    'FontSize', g.fontSize2 - 1, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
-                y_pos = y_pos - y_step;
             end
         end
 
         xlim(ax_kw, [0 1]);
         ylim(ax_kw, [0 1]);
-        title(ax_kw, metric_names{metric}, 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
+        title(ax_kw, metric_names_full{metric}, 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
     end
 end
+
+%% Export statistics
+export_figure2_stats(results_all, contingency_table_for_stats, chi2_obs, p_perm, cramers_v, ...
+    p_value_matrix, cramers_v_matrix, p_adjusted_matrix, kw_results, all_metric_data, ...
+    brain_regions, cluster_names, metric_names, g);
 
 fprintf('\nDone.\n');
 
@@ -1324,4 +1344,229 @@ function add_cluster_lines(n_clu)
         yline(n_clu(i) + 0.5, 'Color', 'k', 'LineWidth', 1);
     end
     hold off;
+end
+
+function export_figure2_stats(results_all, contingency_table, chi2_obs, p_perm, cramers_v, ...
+    p_value_matrix, cramers_v_matrix, p_adjusted_matrix, kw_results, all_metric_data, ...
+    brain_regions, cluster_names, metric_names, g)
+
+    fid = fopen('figure_2_stats.txt', 'w');
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'FIGURE 2 STATISTICS\n');
+    fprintf(fid, 'Generated: %s\n', datestr(now));
+    fprintf(fid, '========================================\n\n');
+
+    %% Sample sizes per region
+    fprintf(fid, '### SAMPLE SIZES BY REGION ###\n\n');
+
+    % Extract unique animals
+    all_animals = {};
+    for br = 1:4
+        if ~isempty(results_all{br})
+            animals_br = results_all{br}.animals;
+            if ~iscell(animals_br)
+                animals_br = {animals_br};
+            end
+            all_animals = [all_animals; animals_br(:)];
+        end
+    end
+    unique_animals = unique(all_animals);
+
+    fprintf(fid, 'Number of animals (N): %d\n', length(unique_animals));
+    fprintf(fid, 'Animal IDs: %s\n\n', strjoin(unique_animals, ', '));
+
+    total_neurons = 0;
+    for br = 1:4
+        if ~isempty(results_all{br})
+            n_neurons = results_all{br}.n_neurons;
+            total_neurons = total_neurons + n_neurons;
+            fprintf(fid, '%s: n = %d neurons\n', brain_regions{br}, n_neurons);
+        else
+            fprintf(fid, '%s: n = 0 neurons\n', brain_regions{br});
+        end
+    end
+    fprintf(fid, 'Total neurons: %d\n\n', total_neurons);
+
+    %% Cluster distributions
+    fprintf(fid, '### PANEL B: CLUSTER DISTRIBUTIONS BY REGION ###\n\n');
+
+    fprintf(fid, 'Contingency Table (neurons per cluster):\n');
+    fprintf(fid, '%-10s', 'Region');
+    for c = 1:5
+        fprintf(fid, '%-12s', cluster_names{c});
+    end
+    fprintf(fid, '%-10s\n', 'Total');
+
+    for br = 1:4
+        fprintf(fid, '%-10s', brain_regions{br});
+        for c = 1:5
+            fprintf(fid, '%-12d', contingency_table(br, c));
+        end
+        fprintf(fid, '%-10d\n', sum(contingency_table(br, :)));
+    end
+    fprintf(fid, '\n');
+
+    % Proportions
+    fprintf(fid, 'Cluster Proportions by Region:\n');
+    for br = 1:4
+        fprintf(fid, '%s:\n', brain_regions{br});
+        total_region = sum(contingency_table(br, :));
+        if total_region > 0
+            for c = 1:5
+                n_cluster = contingency_table(br, c);
+                pct = 100 * n_cluster / total_region;
+                fprintf(fid, '  %s: %d (%.1f%%)\n', cluster_names{c}, n_cluster, pct);
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Chi-square test
+    fprintf(fid, '### PANEL C (SUPPLEMENTARY): CHI-SQUARE TEST ###\n\n');
+
+    fprintf(fid, 'Overall Chi-square Test:\n');
+    fprintf(fid, '  Chi-square statistic: %.4f\n', chi2_obs);
+    fprintf(fid, '  Permutation p-value (10,000 permutations): %.4f\n', p_perm);
+    fprintf(fid, '  Cramér''s V (effect size): %.4f\n', cramers_v);
+    fprintf(fid, '  Significant (p < 0.05): %s\n\n', char(string(p_perm < 0.05)));
+
+    fprintf(fid, 'Pairwise Chi-square Tests (Bonferroni-Holm corrected):\n');
+    region_pairs = {[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]};
+    pair_names = {'LA vs BA', 'LA vs AStria', 'LA vs CeA', 'BA vs AStria', 'BA vs CeA', 'AStria vs CeA'};
+
+    for i = 1:length(region_pairs)
+        r1 = region_pairs{i}(1);
+        r2 = region_pairs{i}(2);
+        chi2_pair = cramers_v_matrix(r1, r2);
+        p_raw = p_value_matrix(r1, r2);
+        p_adj = p_adjusted_matrix(r1, r2);
+        v_pair = cramers_v_matrix(r1, r2);
+
+        fprintf(fid, '  %s:\n', pair_names{i});
+        fprintf(fid, '    Raw p-value: %.4f\n', p_raw);
+        fprintf(fid, '    Adjusted p-value (Bonferroni-Holm): %.4f\n', p_adj);
+        fprintf(fid, '    Cramér''s V: %.4f\n', v_pair);
+        fprintf(fid, '    Significant (adjusted p < 0.05): %s\n', char(string(p_adj < 0.05)));
+    end
+    fprintf(fid, '\n');
+
+    %% US metrics
+    fprintf(fid, '### PANEL D: US-EVOKED RESPONSE METRICS ###\n\n');
+
+    metric_names_full = {'Delta nSpikes', 'Delta Peak FR (Hz)', 'Response Length (ms)'};
+    metric_names_kw = {'DeltanSpikes', 'DeltaFR', 'ResponseLength'};
+
+    for metric = 1:3
+        fprintf(fid, '--- %s ---\n', metric_names_full{metric});
+
+        fprintf(fid, 'Sample sizes (US-responsive neurons: US-sel + Multi):\n');
+        for br = 1:3
+            if ~isempty(all_metric_data{metric, br})
+                fprintf(fid, '  %s: n = %d\n', brain_regions{br}, length(all_metric_data{metric, br}));
+            else
+                fprintf(fid, '  %s: n = 0\n', brain_regions{br});
+            end
+        end
+
+        fprintf(fid, '\nDescriptive Statistics:\n');
+        for br = 1:3
+            if ~isempty(all_metric_data{metric, br})
+                data = all_metric_data{metric, br};
+                fprintf(fid, '  %s: %.3f ± %.3f (mean ± SEM), median = %.3f, IQR = [%.3f, %.3f]\n', ...
+                    brain_regions{br}, mean(data), std(data)/sqrt(length(data)), ...
+                    median(data), prctile(data, 25), prctile(data, 75));
+            end
+        end
+
+        if isfield(kw_results, metric_names_kw{metric})
+            kw_data = kw_results.(metric_names_kw{metric});
+
+            fprintf(fid, '\nStatistical Test: Kruskal-Wallis test\n');
+            fprintf(fid, '  p-value: %.4f\n', kw_data.p_kw);
+            fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(kw_data.p_kw < 0.05)));
+
+            fprintf(fid, '\nPost-hoc Pairwise Comparisons (Mann-Whitney U test):\n');
+            for pair = 1:3
+                if ~isnan(kw_data.p_posthoc(pair))
+                    fprintf(fid, '  %s: p = %.4f', kw_data.pair_names{pair}, kw_data.p_posthoc(pair));
+                    if kw_data.p_posthoc(pair) < 0.001
+                        fprintf(fid, ' ***\n');
+                    elseif kw_data.p_posthoc(pair) < 0.01
+                        fprintf(fid, ' **\n');
+                    elseif kw_data.p_posthoc(pair) < 0.05
+                        fprintf(fid, ' *\n');
+                    else
+                        fprintf(fid, ' (n.s.)\n');
+                    end
+                end
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Cluster-specific statistics
+    fprintf(fid, '### CLUSTER-SPECIFIC STATISTICS ###\n\n');
+
+    for br = 1:4
+        if isempty(results_all{br})
+            continue;
+        end
+
+        fprintf(fid, '--- %s ---\n', brain_regions{br});
+        res = results_all{br};
+
+        for c = 1:5
+            clust_idx = res.Clusters == c;
+            n_cluster = sum(clust_idx);
+
+            if n_cluster == 0
+                continue;
+            end
+
+            fprintf(fid, '\n%s (n = %d):\n', cluster_names{c}, n_cluster);
+
+            % CS latencies (for CS-sel and Multi)
+            if c == 1 || c == 3
+                cs_onsets = res.CS_onset_lat(clust_idx);
+                cs_onsets = cs_onsets(~isnan(cs_onsets));
+                if ~isempty(cs_onsets)
+                    fprintf(fid, '  CS onset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(cs_onsets)*1000, std(cs_onsets)*1000, median(cs_onsets)*1000, length(cs_onsets));
+                end
+
+                cs_offsets = res.CS_offset_lat(clust_idx);
+                cs_offsets = cs_offsets(~isnan(cs_offsets));
+                if ~isempty(cs_offsets)
+                    fprintf(fid, '  CS offset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(cs_offsets)*1000, std(cs_offsets)*1000, median(cs_offsets)*1000, length(cs_offsets));
+                end
+            end
+
+            % US latencies (for US-sel and Multi)
+            if c == 2 || c == 3
+                us_onsets = res.US_onset_lat(clust_idx);
+                us_onsets = us_onsets(~isnan(us_onsets));
+                if ~isempty(us_onsets)
+                    fprintf(fid, '  US onset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(us_onsets)*1000, std(us_onsets)*1000, median(us_onsets)*1000, length(us_onsets));
+                end
+
+                us_offsets = res.US_offset_lat(clust_idx);
+                us_offsets = us_offsets(~isnan(us_offsets));
+                if ~isempty(us_offsets)
+                    fprintf(fid, '  US offset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(us_offsets)*1000, std(us_offsets)*1000, median(us_offsets)*1000, length(us_offsets));
+                end
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'END OF FIGURE 2 STATISTICS\n');
+    fprintf(fid, '========================================\n');
+
+    fclose(fid);
+    fprintf('Statistics exported to: figure_2_stats.txt\n');
 end

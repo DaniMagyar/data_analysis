@@ -70,7 +70,7 @@ cluster_colors = [
     0.6 0.2 0.6;    % Multisensory
 ];
 
-cluster_names = {'CS-sel', 'US-sel', 'CS&US'};
+cluster_names = {'CS-sel', 'US-sel', 'Multi'};
 
 %% Calculate PSTHs once
 fprintf('Calculating PSTHs...\n');
@@ -238,6 +238,7 @@ for br = 1:2
     results_all{br}.Both_onset_lat = Both_onset_lat;
     results_all{br}.Both_offset_lat = Both_offset_lat;
     results_all{br}.n_neurons = n_neurons;
+    results_all{br}.animals = g.cell_metrics.animal(idx_neurons);
 end
 
 %% Create main figure (heatmaps, lineplots, and delta Peak FR bars)
@@ -517,6 +518,8 @@ for br = 1:2
             Both_metric = zeros(length(clust_idx), 1);
 
             baseline_idx = 1:(g.pre_time / g.bin_time);
+            response_start_bin = g.roi(1);
+            response_end_bin = g.roi(1) + round(1.0 / g.bin_time) - 1;
 
             for n = 1:length(clust_idx)
                 idx_n = clust_idx(n);
@@ -524,35 +527,17 @@ for br = 1:2
                 % Calculate baseline firing rate for this neuron
                 baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
 
-                % CS peak firing rate change
-                if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                    onset_bin = round(res.CS_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.CS_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_CS_Hz(idx_n, onset_bin:offset_bin));
-                    CS_metric(n) = peak_fr - baseline_fr;
-                else
-                    CS_metric(n) = 0;
-                end
+                % CS peak firing rate change (using fixed 0-1s window for all neurons)
+                peak_fr_CS = max(res.psth_CS_Hz(idx_n, response_start_bin:response_end_bin));
+                CS_metric(n) = peak_fr_CS - baseline_fr;
 
-                % US peak firing rate change
-                if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                    onset_bin = round(res.US_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.US_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_US_Hz(idx_n, onset_bin:offset_bin));
-                    US_metric(n) = peak_fr - baseline_fr;
-                else
-                    US_metric(n) = 0;
-                end
+                % US peak firing rate change (using fixed 0-1s window for all neurons)
+                peak_fr_US = max(res.psth_US_Hz(idx_n, response_start_bin:response_end_bin));
+                US_metric(n) = peak_fr_US - baseline_fr;
 
-                % CS+US peak firing rate change
-                if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                    onset_bin = round(res.Both_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.Both_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_Both_Hz(idx_n, onset_bin:offset_bin));
-                    Both_metric(n) = peak_fr - baseline_fr;
-                else
-                    Both_metric(n) = 0;
-                end
+                % CS+US peak firing rate change (using fixed 0-1s window for all neurons)
+                peak_fr_Both = max(res.psth_Both_Hz(idx_n, response_start_bin:response_end_bin));
+                Both_metric(n) = peak_fr_Both - baseline_fr;
             end
 
             % Store data for Kruskal-Wallis test (region, cluster, stimulus)
@@ -748,7 +733,7 @@ for br = 1:2
         h1 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(1, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
         h2 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(2, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
         h3 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(3, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
-        lgd = legend(ax_pie, [h1, h2, h3], {'CS-sel', 'US-sel', 'CS&US'}, ...
+        lgd = legend(ax_pie, [h1, h2, h3], {'CS-sel', 'US-sel', 'Multi'}, ...
                      'Location', 'eastoutside', 'FontSize', 10, 'Box', 'off');
         lgd.ItemTokenSize = [30, 30];  % Increase marker size in legend
     end
@@ -1060,9 +1045,11 @@ t_metrics = t_bars;
 metric_names = {'ΔnSpikes', 'ΔFR (Hz)', 'Response length (ms)'};
 
 for c = [1 2 3]  % CS-selective, US-selective, Multisensory
-    for metric = 1:3  % ΔnSpikes, ΔPeak FR, Response length
+    for metric = 2:3  % ΔPeak FR, Response length (skip metric 1 - ΔnSpikes)
         % Offset by 3 to move bars to rows 2-4
-        ax_metric = nexttile(t_metrics, c*3 + metric);
+        % Adjust tile index: metric 2 -> col 1, metric 3 -> col 2
+        tile_idx = c*3 + (metric - 1);
+        ax_metric = nexttile(t_metrics, tile_idx);
 
         % Collect data for LA and Astria
         data_LA = [];
@@ -1133,6 +1120,8 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
                     Both_metric = zeros(length(clust_idx), 1);
 
                     baseline_idx = 1:(g.pre_time / g.bin_time);
+                    response_start_bin = g.roi(1);
+                    response_end_bin = g.roi(1) + round(1.0 / g.bin_time) - 1;
 
                     for n = 1:length(clust_idx)
                         idx_n = clust_idx(n);
@@ -1140,35 +1129,17 @@ for c = [1 2 3]  % CS-selective, US-selective, Multisensory
                         % Calculate baseline firing rate for this neuron
                         baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
 
-                        % CS peak firing rate change
-                        if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                            onset_bin = round(res.CS_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.CS_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            peak_fr = max(res.psth_CS_Hz(idx_n, onset_bin:offset_bin));
-                            CS_metric(n) = peak_fr - baseline_fr;
-                        else
-                            CS_metric(n) = 0;  % No response detected
-                        end
+                        % CS peak firing rate change (using fixed 0-1s window for all neurons)
+                        peak_fr_CS = max(res.psth_CS_Hz(idx_n, response_start_bin:response_end_bin));
+                        CS_metric(n) = peak_fr_CS - baseline_fr;
 
-                        % US peak firing rate change
-                        if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                            onset_bin = round(res.US_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.US_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            peak_fr = max(res.psth_US_Hz(idx_n, onset_bin:offset_bin));
-                            US_metric(n) = peak_fr - baseline_fr;
-                        else
-                            US_metric(n) = 0;  % No response detected
-                        end
+                        % US peak firing rate change (using fixed 0-1s window for all neurons)
+                        peak_fr_US = max(res.psth_US_Hz(idx_n, response_start_bin:response_end_bin));
+                        US_metric(n) = peak_fr_US - baseline_fr;
 
-                        % CS+US peak firing rate change
-                        if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                            onset_bin = round(res.Both_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.Both_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            peak_fr = max(res.psth_Both_Hz(idx_n, onset_bin:offset_bin));
-                            Both_metric(n) = peak_fr - baseline_fr;
-                        else
-                            Both_metric(n) = 0;  % No response detected
-                        end
+                        % CS+US peak firing rate change (using fixed 0-1s window for all neurons)
+                        peak_fr_Both = max(res.psth_Both_Hz(idx_n, response_start_bin:response_end_bin));
+                        Both_metric(n) = peak_fr_Both - baseline_fr;
                     end
                 elseif metric == 3  % Response length (time between onset and offset in ms)
                     CS_metric = zeros(length(clust_idx), 1);
@@ -1471,7 +1442,7 @@ y_step = 0.2;
 text(0.05, y_start, 'Region', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
 text(0.35, y_start, 'CS-sel', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
 text(0.58, y_start, 'US-sel', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
-text(0.80, y_start, 'CS+US', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
+text(0.80, y_start, 'Multi', 'FontSize', g.fontSize2, 'FontWeight', 'bold');
 
 % Data rows
 y_pos = y_start - y_step;
@@ -1528,7 +1499,7 @@ kw_results = struct();
 
 fprintf('\n=== Kruskal-Wallis Tests for Bar Charts (CS vs US vs CS+US within each cluster) ===\n');
 
-cluster_names_kw = {'CS-sel', 'US-sel', 'CS&US'};
+cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
 
 % Row 5: KW p-values for each region × cluster
 % Row 6: Post-hoc p-values
@@ -1571,7 +1542,7 @@ for br = 1:2
         kw_results(br, c).p_kw = p_kw;
         kw_results(br, c).p_values = p_values;
 
-        fprintf('  %s: KW p=%.4f, CS-US p=%.4f, CS-Both p=%.4f, US-Both p=%.4f\n', ...
+        fprintf('  %s: KW p=%.4f, CS-US p=%.4f, CS-Multi p=%.4f, US-Multi p=%.4f\n', ...
             cluster_names_kw{c}, p_kw, p_values(1), p_values(2), p_values(3));
 
         % Calculate tile index for this region × cluster combination
@@ -1596,8 +1567,8 @@ for br = 1:2
         % This won't work with 3 columns for 6 groups
 
         % Solution: Use rows 5-6 with 3 columns each
-        % Row 5: LA CS-sel, LA US-sel, LA CS&US
-        % Row 6: AStria CS-sel, AStria US-sel, AStria CS&US
+        % Row 5: LA CS-sel, LA US-sel, LA Multi
+        % Row 6: AStria CS-sel, AStria US-sel, AStria Multi
         tile_idx_row = 4 + br;  % Row 5 for LA (br=1), Row 6 for AStria (br=2)
         tile_idx = (tile_idx_row - 1) * 3 + c;  % Calculate tile index
 
@@ -1634,10 +1605,10 @@ for br = 1:2
             text(0.5, y_pos, sprintf('CS-US: %.3f', p_values(1)), 'FontSize', 7, ...
                 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
             y_pos = y_pos - y_step;
-            text(0.5, y_pos, sprintf('CS-Both: %.3f', p_values(2)), 'FontSize', 7, ...
+            text(0.5, y_pos, sprintf('CS-Multi: %.3f', p_values(2)), 'FontSize', 7, ...
                 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
             y_pos = y_pos - y_step;
-            text(0.5, y_pos, sprintf('US-Both: %.3f', p_values(3)), 'FontSize', 7, ...
+            text(0.5, y_pos, sprintf('US-Multi: %.3f', p_values(3)), 'FontSize', 7, ...
                 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
         end
 
@@ -1650,6 +1621,10 @@ for br = 1:2
         title(title_text, 'FontSize', 10, 'FontWeight', 'bold');
     end
 end
+
+%% Export statistics
+export_figure3_stats(results_all, contingency_table, chi2_obs, p_perm, cramers_v, ...
+    kw_results, kw_data_storage, brain_regions, cluster_names, metric_names, g);
 
 fprintf('\nDone.\n');
 
@@ -1684,4 +1659,370 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
             offset_lat = (offset_idx - 1) * bin_time;
         end
     end
+end
+
+function export_figure3_stats(results_all, contingency_table, chi2_obs, p_perm, cramers_v, ...
+    kw_results, kw_data_storage, brain_regions, cluster_names, metric_names, g)
+
+    fid = fopen('figure_3_stats.txt', 'w');
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'FIGURE 3 STATISTICS\n');
+    fprintf(fid, 'Generated: %s\n', datestr(now));
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'This file contains statistics for:\n');
+    fprintf(fid, '  - MAIN FIGURE (Panels A-H): Heatmaps, lineplots, delta FR bars, pie charts, region comparison\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE (Panels A-E): Chi-square, metrics, Kruskal-Wallis tests\n\n');
+
+    %% Sample sizes
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'OVERALL SAMPLE SIZES\n');
+    fprintf(fid, '========================================\n\n');
+
+    all_animals = {};
+    for br = 1:2
+        if ~isempty(results_all{br})
+            animals_br = results_all{br}.animals;
+            if ~iscell(animals_br)
+                animals_br = {animals_br};
+            end
+            all_animals = [all_animals; animals_br(:)];
+        end
+    end
+    unique_animals = unique(all_animals);
+
+    fprintf(fid, 'Number of animals (N): %d\n', length(unique_animals));
+    fprintf(fid, 'Animal IDs: %s\n\n', strjoin(unique_animals, ', '));
+
+    total_neurons = 0;
+    for br = 1:2
+        if ~isempty(results_all{br})
+            n_neurons = results_all{br}.n_neurons;
+            total_neurons = total_neurons + n_neurons;
+            fprintf(fid, '%s: n = %d neurons\n', brain_regions{br}, n_neurons);
+        end
+    end
+    fprintf(fid, 'Total neurons (LA + AStria): %d\n\n', total_neurons);
+
+    %% Cluster distributions
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'MAIN FIGURE - PANELS A, B, D, E: HEATMAPS AND LINEPLOTS\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'Cluster Distributions by Region:\n');
+
+    fprintf(fid, 'Contingency Table (neurons per cluster):\n');
+    fprintf(fid, '%-10s', 'Region');
+    for c = 1:3
+        fprintf(fid, '%-12s', cluster_names{c});
+    end
+    fprintf(fid, '%-10s\n', 'Total');
+
+    for br = 1:2
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+        fprintf(fid, '%-10s', region_name);
+        for c = 1:3
+            fprintf(fid, '%-12d', contingency_table(br, c));
+        end
+        fprintf(fid, '%-10d\n', sum(contingency_table(br, :)));
+    end
+    fprintf(fid, '\n');
+
+    fprintf(fid, 'Cluster Proportions by Region:\n');
+    for br = 1:2
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+        fprintf(fid, '%s:\n', region_name);
+        total_region = sum(contingency_table(br, :));
+        if total_region > 0
+            for c = 1:3
+                n_cluster = contingency_table(br, c);
+                pct = 100 * n_cluster / total_region;
+                fprintf(fid, '  %s: %d (%.1f%%)\n', cluster_names{c}, n_cluster, pct);
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Chi-square test
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'SUPPLEMENTARY FIGURE - PANEL A: CHI-SQUARE TEST\n');
+    fprintf(fid, '========================================\n\n');
+    fprintf(fid, 'LA vs AStria cluster distribution:\n');
+
+    fprintf(fid, 'Overall Chi-square Test:\n');
+    fprintf(fid, '  Chi-square statistic: %.4f\n', chi2_obs);
+    fprintf(fid, '  Permutation p-value (10,000 permutations): %.4f\n', p_perm);
+    fprintf(fid, '  Cramér''s V (effect size): %.4f\n', cramers_v);
+    fprintf(fid, '  Significant (p < 0.05): %s\n\n', char(string(p_perm < 0.05)));
+
+    %% Delta Peak FR bar charts (column 7 of main figure)
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'MAIN FIGURE - PANELS C, F: DELTA PEAK FR BARS (Right column)\n');
+    fprintf(fid, '========================================\n\n');
+    fprintf(fid, 'Delta Peak FR by Cluster and Stimulus Type:\n');
+    fprintf(fid, '(Uses exact data plotted in panels C and F)\n\n');
+
+    stim_names = {'CS', 'US', 'CS+US'};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+
+        for c = 1:3
+            % Use the exact data stored during plotting
+            if isempty(kw_data_storage{br, c, 1})
+                continue;
+            end
+
+            n_cluster = length(kw_data_storage{br, c, 1});
+            fprintf(fid, '\n%s (n = %d neurons):\n', cluster_names{c}, n_cluster);
+
+            % Report statistics for each stimulus type
+            for stim = 1:3
+                data = kw_data_storage{br, c, stim};
+
+                fprintf(fid, '  %s: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz, SD = %.2f Hz\n', ...
+                    stim_names{stim}, mean(data), std(data)/sqrt(length(data)), ...
+                    median(data), std(data));
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Kruskal-Wallis tests (within-region, across stimuli)
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'SUPPLEMENTARY FIGURE - PANELS D, E: KRUSKAL-WALLIS TESTS\n');
+    fprintf(fid, '========================================\n\n');
+    fprintf(fid, 'CS vs US vs CS+US within each cluster:\n');
+
+    cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
+    stim_names = {'CS', 'US', 'CS+US'};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+
+        for c = 1:3
+            if isempty(kw_data_storage{br, c, 1})
+                fprintf(fid, '\n%s: No data\n', cluster_names_kw{c});
+                continue;
+            end
+
+            fprintf(fid, '\n%s:\n', cluster_names_kw{c});
+
+            fprintf(fid, '  Sample sizes (paired data):\n');
+            fprintf(fid, '    n = %d neurons\n', length(kw_data_storage{br, c, 1}));
+
+            fprintf(fid, '  Descriptive Statistics:\n');
+            for stim = 1:3
+                data = kw_data_storage{br, c, stim};
+                fprintf(fid, '    %s: %.3f ± %.3f (mean ± SEM), median = %.3f\n', ...
+                    stim_names{stim}, mean(data), std(data)/sqrt(length(data)), median(data));
+            end
+
+            p_kw = kw_results(br, c).p_kw;
+            p_values = kw_results(br, c).p_values;
+
+            fprintf(fid, '  Statistical Test: Kruskal-Wallis test\n');
+            fprintf(fid, '    p-value: %.4f\n', p_kw);
+            fprintf(fid, '    Significant (p < 0.05): %s\n', char(string(p_kw < 0.05)));
+
+            if p_kw < 0.05
+                fprintf(fid, '  Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):\n');
+                fprintf(fid, '    CS vs US: p = %.4f', p_values(1));
+                if p_values(1) < 0.001; fprintf(fid, ' ***\n');
+                elseif p_values(1) < 0.01; fprintf(fid, ' **\n');
+                elseif p_values(1) < 0.05; fprintf(fid, ' *\n');
+                else; fprintf(fid, ' (n.s.)\n'); end
+
+                fprintf(fid, '    CS vs CS+US: p = %.4f', p_values(2));
+                if p_values(2) < 0.001; fprintf(fid, ' ***\n');
+                elseif p_values(2) < 0.01; fprintf(fid, ' **\n');
+                elseif p_values(2) < 0.05; fprintf(fid, ' *\n');
+                else; fprintf(fid, ' (n.s.)\n'); end
+
+                fprintf(fid, '    US vs CS+US: p = %.4f', p_values(3));
+                if p_values(3) < 0.001; fprintf(fid, ' ***\n');
+                elseif p_values(3) < 0.01; fprintf(fid, ' **\n');
+                elseif p_values(3) < 0.05; fprintf(fid, ' *\n');
+                else; fprintf(fid, ' (n.s.)\n'); end
+            else
+                fprintf(fid, '  Post-hoc tests not performed (KW not significant)\n');
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    %% Across-region comparison (bottom right bar graphs)
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'MAIN FIGURE - PANEL H: ACROSS-REGION COMPARISON\n');
+    fprintf(fid, '========================================\n\n');
+    fprintf(fid, 'LA vs AStria Delta Peak FR (all responsive neurons):\n');
+
+    stim_names = {'CS', 'US', 'CS+US'};
+
+    for stim = 1:3
+        fprintf(fid, '--- %s trials ---\n', stim_names{stim});
+
+        % Collect data from LA and Astria
+        LA_data = [];
+        Astria_data = [];
+
+        for br = 1:2
+            if isempty(results_all{br})
+                continue;
+            end
+
+            res = results_all{br};
+
+            % Select appropriate PSTH and latencies
+            if stim == 1  % CS
+                psth_Hz = res.psth_CS_Hz;
+                onset_lat = res.CS_onset_lat;
+                offset_lat = res.CS_offset_lat;
+            elseif stim == 2  % US
+                psth_Hz = res.psth_US_Hz;
+                onset_lat = res.US_onset_lat;
+                offset_lat = res.US_offset_lat;
+            else  % CS+US
+                psth_Hz = res.psth_Both_Hz;
+                onset_lat = res.Both_onset_lat;
+                offset_lat = res.Both_offset_lat;
+            end
+
+            % Find responsive neurons (have onset and offset detected)
+            responsive_idx = find(~isnan(onset_lat) & ~isnan(offset_lat));
+
+            if ~isempty(responsive_idx)
+                % Calculate Delta Peak FR for each responsive neuron
+                delta_peak_fr = zeros(length(responsive_idx), 1);
+                baseline_idx = 1:(g.pre_time / g.bin_time);
+
+                for n = 1:length(responsive_idx)
+                    idx_n = responsive_idx(n);
+                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
+                    onset_bin = round(onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
+                    offset_bin = round(offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
+                    peak_fr = max(psth_Hz(idx_n, onset_bin:offset_bin));
+                    delta_peak_fr(n) = peak_fr - baseline_fr;
+                end
+
+                if br == 1
+                    LA_data = delta_peak_fr;
+                else
+                    Astria_data = delta_peak_fr;
+                end
+            end
+        end
+
+        % Report descriptive statistics
+        if ~isempty(LA_data)
+            fprintf(fid, '  LA: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz, IQR = [%.2f, %.2f], n = %d\n', ...
+                mean(LA_data), std(LA_data)/sqrt(length(LA_data)), median(LA_data), ...
+                prctile(LA_data, 25), prctile(LA_data, 75), length(LA_data));
+        end
+
+        if ~isempty(Astria_data)
+            fprintf(fid, '  AStria: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz, IQR = [%.2f, %.2f], n = %d\n', ...
+                mean(Astria_data), std(Astria_data)/sqrt(length(Astria_data)), median(Astria_data), ...
+                prctile(Astria_data, 25), prctile(Astria_data, 75), length(Astria_data));
+        end
+
+        % Statistical test
+        if ~isempty(LA_data) && ~isempty(Astria_data) && length(LA_data) > 1 && length(Astria_data) > 1
+            [p_val, ~, stats] = ranksum(LA_data, Astria_data);
+            fprintf(fid, '  Statistical Test: Wilcoxon rank-sum test (LA vs AStria)\n');
+            fprintf(fid, '    Z-statistic: %.4f\n', stats.zval);
+            fprintf(fid, '    p-value: %.4f\n', p_val);
+            fprintf(fid, '    Significant (p < 0.05): %s\n', char(string(p_val < 0.05)));
+        end
+
+        fprintf(fid, '\n');
+    end
+
+    %% Cluster-specific latencies
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'CLUSTER-SPECIFIC ONSET LATENCIES\n');
+    fprintf(fid, '========================================\n\n');
+
+    stim_types = {'CS', 'US', 'Both'};
+
+    for br = 1:2
+        if isempty(results_all{br})
+            continue;
+        end
+
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        fprintf(fid, '--- %s ---\n', region_name);
+        res = results_all{br};
+
+        for c = 1:3
+            clust_idx = res.Clusters == c;
+            n_cluster = sum(clust_idx);
+
+            if n_cluster == 0
+                continue;
+            end
+
+            fprintf(fid, '\n%s (n = %d):\n', cluster_names{c}, n_cluster);
+
+            if c == 1 || c == 3  % CS-sel or Multi
+                cs_onsets = res.CS_onset_lat(clust_idx);
+                cs_onsets = cs_onsets(~isnan(cs_onsets));
+                if ~isempty(cs_onsets)
+                    fprintf(fid, '  CS onset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(cs_onsets)*1000, std(cs_onsets)*1000, median(cs_onsets)*1000, length(cs_onsets));
+                end
+            end
+
+            if c == 2 || c == 3  % US-sel or Multi
+                us_onsets = res.US_onset_lat(clust_idx);
+                us_onsets = us_onsets(~isnan(us_onsets));
+                if ~isempty(us_onsets)
+                    fprintf(fid, '  US onset latency: %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
+                        mean(us_onsets)*1000, std(us_onsets)*1000, median(us_onsets)*1000, length(us_onsets));
+                end
+            end
+        end
+        fprintf(fid, '\n');
+    end
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'END OF FIGURE 3 STATISTICS\n');
+    fprintf(fid, '========================================\n');
+
+    fclose(fid);
+    fprintf('Statistics exported to: figure_3_stats.txt\n');
 end

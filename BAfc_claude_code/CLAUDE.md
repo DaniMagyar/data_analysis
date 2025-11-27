@@ -60,15 +60,16 @@ Rows 3-4 use nested tiledlayouts with tight spacing, ylabel 'Count' on left only
 
 ### BAfc_figure_2.m (1000×700px, 4 regions × 5 cols)
 **B**: Main heatmaps + lineplots. Cols 1-2: CS+US heatmaps (z-score, 99th percentile), Col 3: Stacked bars, Cols 4-5: CS/US lineplots (Hz)
-**C**: Chi-square p-values (1×4 layout, tile 1)
-**D**: US metrics bar graphs (nested 1×3, tiles 2-4, title "Comparison of US-evoked excitatory responses")
-**Supp A-C**: Permutation test, Contingency table (spans 2 tiles), Cramér's V (spans 2 tiles). 1×5 layout.
+**C**: Chi-square p-values (1×3 layout, tile 1)
+**D**: US metrics bar graphs (nested 1×2, tiles 2-3, title "Comparison of US-evoked excitatory responses"). Shows ΔFR and Response length only (ΔnSpikes removed 2025-11-26)
+**Supp A-C**: Permutation test, Contingency table (spans 2 tiles), Cramér's V (spans 2 tiles). 1×5 layout. Shows ΔFR and Response length (ΔnSpikes removed 2025-11-26). K-W post-hoc only shown if K-W p<0.05.
 
 ### BAfc_figure_3.m (1000×1000px, 5×7 grid)
 Rows 1-4: LA/AStria heatmaps (cols 1-3: CS/US/CS+US, "LA neurons", "AStria neurons"), lineplots (cols 4-6: 3 clusters stacked), ΔFR bars (col 7)
 Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: CS/US/CS+US, grey circles with jitter, y-axis to 95th percentile)
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
-**Supp figure** (6×3, 1000×1200px): Chi-square (row 1, 1×3), Metrics bars (rows 2-4, 3 clusters × 3 metrics), KW tests (rows 5-6, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
+**ΔPeak FR calculation** (2025-11-26): Uses fixed 0-1s response window for ALL neurons regardless of latency detection (ensures non-zero values for sub-threshold responses)
+**Supp figure** (6×3, 1000×1200px): Chi-square (row 1, 1×3), Metrics bars (rows 2-4, 3 clusters × 2 metrics - ΔFR and Response length only, ΔnSpikes removed 2025-11-26), KW tests (rows 5-6, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
 **Supp PN_IN**: LA PN vs IN comparison (6×2 grid: rows 1-3 heatmaps/lineplots, rows 4-6 bar charts)
 
 ### BAfc_figure_4.m (1200×800px, 4×6 grid)
@@ -112,6 +113,14 @@ Response stability across 10 trial blocks. ΔFR = response FR (0-1s) - baseline 
 ### Figure 5 Optogenetic Testing
 - Default: Single pre-defined window (12-50ms), statistically sound, reviewer-safe
 - Alternative: Multi-window exploratory testing (requires justification, high false positive rate)
+
+## Statistics Export (2025-11-26)
+All figure scripts export comprehensive statistics to `figure_X_stats.txt`:
+- **Clear panel labels**: Indicate which figure (main/supplementary) and panel each section describes
+- **Descriptive statistics**: Mean ± SEM, median, SD for all bar graph data
+- **Exact plotted data**: Use stored data (e.g., `kw_data_storage`) to ensure stats match visualizations
+- **Structured sections**: Separator lines, subsection headers for easy navigation
+- Figures 2-5 updated 2025-11-26 with improved readability
 
 ## Figure Legends
 All figures have accompanying `.docx` legends created via Python scripts:

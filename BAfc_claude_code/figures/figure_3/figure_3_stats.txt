@@ -1,0 +1,246 @@
+========================================
+FIGURE 3 STATISTICS
+Generated: 26-Nov-2025 19:46:27
+========================================
+
+This file contains statistics for:
+  - MAIN FIGURE (Panels A-H): Heatmaps, lineplots, delta FR bars, pie charts, region comparison
+  - SUPPLEMENTARY FIGURE (Panels A-E): Chi-square, metrics, Kruskal-Wallis tests
+
+========================================
+OVERALL SAMPLE SIZES
+========================================
+
+Number of animals (N): 22
+Animal IDs: MD294_001, MD295_001, MD296_001, MD297_001, MD298_001, MD299_001, MD300_001, MD304_001, MD305_001, MD307_001, MD309_001, MD310_001, MD311_002, MD312_001, MD313_001, MD314_001, MD315_001, MD316_002, MD317_001, MD318_001, MD318_002, MD319_003
+
+LA: n = 293 neurons
+Astria: n = 120 neurons
+Total neurons (LA + AStria): 413
+
+========================================
+MAIN FIGURE - PANELS A, B, D, E: HEATMAPS AND LINEPLOTS
+========================================
+
+Cluster Distributions by Region:
+Contingency Table (neurons per cluster):
+Region    CS-sel      US-sel      Multi       Total     
+LA        34          50          51          135       
+AStria    12          17          26          55        
+
+Cluster Proportions by Region:
+LA:
+  CS-sel: 34 (25.2%)
+  US-sel: 50 (37.0%)
+  Multi: 51 (37.8%)
+
+AStria:
+  CS-sel: 12 (21.8%)
+  US-sel: 17 (30.9%)
+  Multi: 26 (47.3%)
+
+========================================
+SUPPLEMENTARY FIGURE - PANEL A: CHI-SQUARE TEST
+========================================
+
+LA vs AStria cluster distribution:
+Overall Chi-square Test:
+  Chi-square statistic: 1.4685
+  Permutation p-value (10,000 permutations): 0.4905
+  Cramér's V (effect size): 0.0879
+  Significant (p < 0.05): false
+
+========================================
+MAIN FIGURE - PANELS C, F: DELTA PEAK FR BARS (Right column)
+========================================
+
+Delta Peak FR by Cluster and Stimulus Type:
+(Uses exact data plotted in panels C and F)
+
+--- LA ---
+
+CS-sel (n = 34 neurons):
+  CS: 39.91 ± 5.33 Hz (mean ± SEM), median = 33.85 Hz, SD = 31.07 Hz
+  US: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
+  CS+US: 13.67 ± 4.49 Hz (mean ± SEM), median = 0.00 Hz, SD = 26.17 Hz
+
+US-sel (n = 50 neurons):
+  CS: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
+  US: 31.54 ± 3.09 Hz (mean ± SEM), median = 26.47 Hz, SD = 21.84 Hz
+  CS+US: 25.93 ± 2.95 Hz (mean ± SEM), median = 24.44 Hz, SD = 20.85 Hz
+
+Multi (n = 51 neurons):
+  CS: 48.49 ± 6.42 Hz (mean ± SEM), median = 37.45 Hz, SD = 45.82 Hz
+  US: 55.38 ± 10.52 Hz (mean ± SEM), median = 34.28 Hz, SD = 75.14 Hz
+  CS+US: 66.88 ± 13.01 Hz (mean ± SEM), median = 36.64 Hz, SD = 92.87 Hz
+
+--- AStria ---
+
+CS-sel (n = 12 neurons):
+  CS: 18.52 ± 3.12 Hz (mean ± SEM), median = 17.43 Hz, SD = 10.80 Hz
+  US: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
+  CS+US: 5.44 ± 2.47 Hz (mean ± SEM), median = 0.00 Hz, SD = 8.56 Hz
+
+US-sel (n = 17 neurons):
+  CS: 0.00 ± 0.00 Hz (mean ± SEM), median = 0.00 Hz, SD = 0.00 Hz
+  US: 35.68 ± 7.68 Hz (mean ± SEM), median = 27.24 Hz, SD = 31.67 Hz
+  CS+US: 34.89 ± 7.19 Hz (mean ± SEM), median = 28.57 Hz, SD = 29.66 Hz
+
+Multi (n = 26 neurons):
+  CS: 49.34 ± 11.91 Hz (mean ± SEM), median = 39.88 Hz, SD = 60.73 Hz
+  US: 55.49 ± 15.90 Hz (mean ± SEM), median = 37.28 Hz, SD = 81.08 Hz
+  CS+US: 55.74 ± 14.86 Hz (mean ± SEM), median = 37.24 Hz, SD = 75.77 Hz
+
+========================================
+SUPPLEMENTARY FIGURE - PANELS D, E: KRUSKAL-WALLIS TESTS
+========================================
+
+CS vs US vs CS+US within each cluster:
+--- LA ---
+
+CS-sel:
+  Sample sizes (paired data):
+    n = 34 neurons
+  Descriptive Statistics:
+    CS: 39.914 ± 5.329 (mean ± SEM), median = 33.848
+    US: 0.000 ± 0.000 (mean ± SEM), median = 0.000
+    CS+US: 13.675 ± 4.488 (mean ± SEM), median = 0.000
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.0000
+    Significant (p < 0.05): true
+  Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0002 ***
+
+US-sel:
+  Sample sizes (paired data):
+    n = 50 neurons
+  Descriptive Statistics:
+    CS: 0.000 ± 0.000 (mean ± SEM), median = 0.000
+    US: 31.535 ± 3.089 (mean ± SEM), median = 26.470
+    CS+US: 25.933 ± 2.948 (mean ± SEM), median = 24.442
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.0000
+    Significant (p < 0.05): true
+  Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0004 ***
+
+Multi:
+  Sample sizes (paired data):
+    n = 51 neurons
+  Descriptive Statistics:
+    CS: 48.487 ± 6.416 (mean ± SEM), median = 37.447
+    US: 55.381 ± 10.522 (mean ± SEM), median = 34.285
+    CS+US: 66.878 ± 13.005 (mean ± SEM), median = 36.636
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.7995
+    Significant (p < 0.05): false
+  Post-hoc tests not performed (KW not significant)
+
+--- AStria ---
+
+CS-sel:
+  Sample sizes (paired data):
+    n = 12 neurons
+  Descriptive Statistics:
+    CS: 18.516 ± 3.117 (mean ± SEM), median = 17.434
+    US: 0.000 ± 0.000 (mean ± SEM), median = 0.000
+    CS+US: 5.435 ± 2.471 (mean ± SEM), median = 0.000
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.0001
+    Significant (p < 0.05): true
+  Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
+    CS vs US: p = 0.0010 ***
+    CS vs CS+US: p = 0.0049 **
+    US vs CS+US: p = 0.1250 (n.s.)
+
+US-sel:
+  Sample sizes (paired data):
+    n = 17 neurons
+  Descriptive Statistics:
+    CS: 0.000 ± 0.000 (mean ± SEM), median = 0.000
+    US: 35.682 ± 7.680 (mean ± SEM), median = 27.245
+    CS+US: 34.894 ± 7.193 (mean ± SEM), median = 28.571
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.0000
+    Significant (p < 0.05): true
+  Post-hoc Pairwise Comparisons (Wilcoxon signed-rank test):
+    CS vs US: p = 0.0004 ***
+    CS vs CS+US: p = 0.0001 ***
+    US vs CS+US: p = 0.4631 (n.s.)
+
+Multi:
+  Sample sizes (paired data):
+    n = 26 neurons
+  Descriptive Statistics:
+    CS: 49.336 ± 11.911 (mean ± SEM), median = 39.879
+    US: 55.492 ± 15.901 (mean ± SEM), median = 37.280
+    CS+US: 55.743 ± 14.860 (mean ± SEM), median = 37.237
+  Statistical Test: Kruskal-Wallis test
+    p-value: 0.9259
+    Significant (p < 0.05): false
+  Post-hoc tests not performed (KW not significant)
+
+========================================
+MAIN FIGURE - PANEL H: ACROSS-REGION COMPARISON
+========================================
+
+LA vs AStria Delta Peak FR (all responsive neurons):
+--- CS trials ---
+  LA: 47.28 ± 4.48 Hz (mean ± SEM), median = 38.53 Hz, IQR = [23.12, 53.88], n = 81
+  AStria: 41.80 ± 8.82 Hz (mean ± SEM), median = 28.32 Hz, IQR = [17.63, 52.31], n = 36
+  Statistical Test: Wilcoxon rank-sum test (LA vs AStria)
+    Z-statistic: 1.0541
+    p-value: 0.2918
+    Significant (p < 0.05): false
+
+--- US trials ---
+  LA: 47.56 ± 5.91 Hz (mean ± SEM), median = 33.75 Hz, IQR = [21.13, 51.03], n = 93
+  AStria: 49.97 ± 10.34 Hz (mean ± SEM), median = 32.00 Hz, IQR = [19.13, 54.59], n = 41
+  Statistical Test: Wilcoxon rank-sum test (LA vs AStria)
+    Z-statistic: -0.3187
+    p-value: 0.7500
+    Significant (p < 0.05): false
+
+--- CS+US trials ---
+  LA: 50.32 ± 6.62 Hz (mean ± SEM), median = 32.43 Hz, IQR = [21.45, 50.05], n = 106
+  AStria: 47.28 ± 8.87 Hz (mean ± SEM), median = 32.81 Hz, IQR = [22.33, 53.71], n = 46
+  Statistical Test: Wilcoxon rank-sum test (LA vs AStria)
+    Z-statistic: -0.1023
+    p-value: 0.9185
+    Significant (p < 0.05): false
+
+========================================
+CLUSTER-SPECIFIC ONSET LATENCIES
+========================================
+
+--- LA ---
+
+CS-sel (n = 34):
+  CS onset latency: 192.176 ± 129.723 ms (mean ± SD), median = 153.000 ms, n = 34
+
+US-sel (n = 50):
+  US onset latency: 167.333 ± 109.250 ms (mean ± SD), median = 134.000 ms, n = 48
+
+Multi (n = 51):
+  CS onset latency: 116.898 ± 24.287 ms (mean ± SD), median = 111.000 ms, n = 49
+  US onset latency: 141.429 ± 78.622 ms (mean ± SD), median = 113.000 ms, n = 49
+
+--- AStria ---
+
+CS-sel (n = 12):
+  CS onset latency: 139.182 ± 37.698 ms (mean ± SD), median = 132.000 ms, n = 11
+
+US-sel (n = 17):
+  US onset latency: 160.875 ± 79.695 ms (mean ± SD), median = 136.500 ms, n = 16
+
+Multi (n = 26):
+  CS onset latency: 105.808 ± 27.685 ms (mean ± SD), median = 100.500 ms, n = 26
+  US onset latency: 126.038 ± 52.921 ms (mean ± SD), median = 110.500 ms, n = 26
+
+========================================
+END OF FIGURE 3 STATISTICS
+========================================

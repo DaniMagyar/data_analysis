@@ -964,25 +964,25 @@ annotation(fig_comparison, 'textbox', [0.55, 0.9, 0.4, 0.04], ...
 %% Add panel labels
 % A: Rasterplots (top-left of left panel)
 annotation(fig_comparison, 'textbox', [0.01, 0.95, 0.03, 0.04], ...
-    'String', 'A', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'String', 'C', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 % B: FR comparison lineplots (bottom-left of left panel, row 3)
 annotation(fig_comparison, 'textbox', [0.01, 0.35, 0.03, 0.04], ...
-    'String', 'B', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'String', 'D', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 % C: Pie charts (top-left of right panel)
 annotation(fig_comparison, 'textbox', [0.51, 0.95, 0.03, 0.04], ...
-    'String', 'C', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'String', 'E', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 % D: Spaghetti plots (bottom-left of right panel)
 annotation(fig_comparison, 'textbox', [0.51, 0.50, 0.03, 0.04], ...
-    'String', 'D', 'FontSize', 14, 'FontWeight', 'bold', ...
+    'String', 'F', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
@@ -1083,7 +1083,321 @@ for r = 1:2
     end
 end
 
+%% Export statistics
+export_figure5_stats(comparison_results, cell_metrics, results_all, region_names, stim_names, g);
+
 fprintf('\n========================================\n');
 fprintf('To check neurons in UI:\n');
 fprintf('  BAfc_monosyn_raster_ui(g_ui, monosyn_results, ttl)\n');
 fprintf('========================================\n');
+
+%% Statistics Export Function
+function export_figure5_stats(comparison_results, cell_metrics, results_all, region_names, stim_names, g)
+    fid = fopen('figure_5_stats.txt', 'w');
+
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'FIGURE 5 STATISTICS (Optogenetic Modulation)\n');
+    fprintf(fid, 'Generated: %s\n', datestr(now));
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, 'This file contains statistics for:\n');
+    fprintf(fid, '  - MAIN FIGURE (Panels C-F): Example rasters, FR lineplots, pie charts, spaghetti plots\n');
+    fprintf(fid, '  - SUPPLEMENTARY FIGURE: Light-inhibited neurons (see BAfc_figure_5_supp_light_inhibited.m)\n\n');
+
+    fprintf(fid, 'Testing method: %s\n', g.testing_method);
+    if strcmp(g.testing_method, 'single_window')
+        fprintf(fid, 'Test window: %.0f-%.0f ms\n', g.test_window_start*1000, g.test_window_end*1000);
+    elseif strcmp(g.testing_method, 'multi_window')
+        fprintf(fid, 'Test window range: 12-%.0f ms (1ms steps)\n', g.monosyn_window*1000);
+    end
+    fprintf(fid, '\n');
+
+    %% Overall sample sizes
+    fprintf(fid, '### OVERALL SAMPLE SIZES ###\n\n');
+
+    all_animals = unique(cell_metrics.animal);
+    fprintf(fid, 'Number of animals (N): %d\n', length(all_animals));
+    fprintf(fid, 'Animal IDs: %s\n\n', strjoin(all_animals, ', '));
+
+    total_neurons = length(cell_metrics.cellID);
+    fprintf(fid, 'Total neurons recorded: %d\n', total_neurons);
+
+    % Count by region
+    for r = 1:2
+        idx_region = strcmp(cell_metrics.brainRegion, region_names{r});
+        fprintf(fid, '  %s: %d neurons\n', region_names{r}, sum(idx_region));
+    end
+    fprintf(fid, '\n');
+
+    %% Results by region and stimulus
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'MAIN FIGURE - PANELS C, D: EXAMPLE NEURONS\n');
+    fprintf(fid, 'MAIN FIGURE - PANEL E: PIE CHARTS\n');
+    fprintf(fid, 'MAIN FIGURE - PANEL F: SPAGHETTI PLOTS\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, '### OPTOGENETIC MODULATION RESULTS ###\n\n');
+
+    for r = 1:2
+        for s = 1:2
+            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
+            result = comparison_results.(result_field);
+
+            fprintf(fid, '--- %s %s ---\n', region_names{r}, stim_names{s});
+
+            fprintf(fid, '\nSample sizes:\n');
+            fprintf(fid, '  Total monosynaptic responsive neurons: %d\n', result.n_total);
+            fprintf(fid, '  Neurons with light modulation tested: %d\n', result.n_total);
+
+            if result.n_total == 0
+                fprintf(fid, '  No data available\n\n');
+                continue;
+            end
+
+            fprintf(fid, '\nLight modulation effects:\n');
+            fprintf(fid, '  Increased (p < 0.05): %d (%.1f%%)\n', result.n_increased, 100*result.n_increased/result.n_total);
+            fprintf(fid, '  Decreased (p < 0.05): %d (%.1f%%)\n', result.n_decreased, 100*result.n_decreased/result.n_total);
+            fprintf(fid, '  Unchanged (p >= 0.05): %d (%.1f%%)\n', result.n_unchanged, 100*result.n_unchanged/result.n_total);
+
+            % Detailed neuron information
+            if result.n_increased > 0
+                fprintf(fid, '\nNeurons with INCREASED response:\n');
+                for i = 1:length(result.increased_idx)
+                    idx = result.increased_idx(i);
+                    cellID = cell_metrics.cellID(idx);
+                    animal = cell_metrics.animal{idx};
+
+                    neuron_pos = find(result.all_neuron_indices == idx);
+                    if ~isempty(neuron_pos)
+                        p_vals = result.neuron_pvalues{neuron_pos};
+                        if strcmp(g.testing_method, 'multi_window')
+                            [min_p, min_idx] = min(p_vals);
+                            window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
+                            fprintf(fid, '  Cell #%d (animal %s): p = %.4f (best window: 12-%.0fms)\n', ...
+                                cellID, animal, min_p, window_end_ms);
+                        elseif strcmp(g.testing_method, 'single_window')
+                            fprintf(fid, '  Cell #%d (animal %s): p = %.4f (window: %.0f-%.0fms)\n', ...
+                                cellID, animal, p_vals(1), g.test_window_start*1000, g.test_window_end*1000);
+                        end
+                    end
+                end
+            end
+
+            if result.n_decreased > 0
+                fprintf(fid, '\nNeurons with DECREASED response:\n');
+                for i = 1:length(result.decreased_idx)
+                    idx = result.decreased_idx(i);
+                    cellID = cell_metrics.cellID(idx);
+                    animal = cell_metrics.animal{idx};
+
+                    neuron_pos = find(result.all_neuron_indices == idx);
+                    if ~isempty(neuron_pos)
+                        p_vals = result.neuron_pvalues{neuron_pos};
+                        if strcmp(g.testing_method, 'multi_window')
+                            [min_p, min_idx] = min(p_vals);
+                            window_end_ms = (0.013 + (min_idx-1)*0.001) * 1000;
+                            fprintf(fid, '  Cell #%d (animal %s): p = %.4f (best window: 12-%.0fms)\n', ...
+                                cellID, animal, min_p, window_end_ms);
+                        elseif strcmp(g.testing_method, 'single_window')
+                            fprintf(fid, '  Cell #%d (animal %s): p = %.4f (window: %.0f-%.0fms)\n', ...
+                                cellID, animal, p_vals(1), g.test_window_start*1000, g.test_window_end*1000);
+                        end
+                    end
+                end
+            end
+
+            fprintf(fid, '\n');
+        end
+    end
+
+    %% Descriptive statistics for spaghetti plots (Panel F)
+    fprintf(fid, '### DESCRIPTIVE STATISTICS FOR PANEL F (SPAGHETTI PLOTS) ###\n\n');
+
+    % Window ends for multi-window testing
+    if strcmp(g.testing_method, 'multi_window')
+        artifact_end = 0.012;
+        window_ends = artifact_end + 0.001:0.001:g.monosyn_window;
+    end
+
+    for r = 1:2
+        for s = 1:2
+            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
+            result = comparison_results.(result_field);
+
+            if result.n_increased > 0
+                fprintf(fid, '--- %s %s (Enhanced neurons: n = %d) ---\n', region_names{r}, stim_names{s}, result.n_increased);
+
+                % Get data from results_all
+                if isempty(results_all{r, s})
+                    fprintf(fid, 'No data available\n\n');
+                    continue;
+                end
+
+                res = results_all{r, s};
+                postAP_norm_nolight = res.postAP_norm_nolight;
+                postAP_norm_light = res.postAP_norm_light;
+
+                % Get enhanced neuron indices
+                increased_idx = result.increased_idx;
+                all_neuron_indices = result.all_neuron_indices;
+                neuron_pvalues = result.neuron_pvalues;
+                n_enhanced = result.n_increased;
+
+                % Calculate spike count statistics for enhanced neurons
+                all_nolight_spikes = [];
+                all_light_spikes = [];
+
+                for i = 1:n_enhanced
+                    idx = increased_idx(i);
+
+                    % Define response window based on testing method
+                    if strcmp(g.testing_method, 'multi_window')
+                        % Find this neuron's most significant window
+                        neuron_pos = find(all_neuron_indices == idx);
+                        if ~isempty(neuron_pos)
+                            p_vals = neuron_pvalues{neuron_pos};
+                            [~, min_window_idx] = min(p_vals);
+                            window_end = window_ends(min_window_idx);
+                        else
+                            window_end = window_ends(1);  % Fallback
+                        end
+                        test_window = [0.012, window_end];
+                    elseif strcmp(g.testing_method, 'single_window')
+                        % Use the pre-defined window for all neurons
+                        test_window = [g.test_window_start, g.test_window_end];
+                    end
+
+                    % Get spike counts for no-light trials
+                    spikes_nolight_trials = [];
+                    if ~isempty(postAP_norm_nolight{idx})
+                        for trial = 1:length(postAP_norm_nolight{idx})
+                            trial_spikes = postAP_norm_nolight{idx}{trial};
+                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                            spikes_nolight_trials = [spikes_nolight_trials; spike_count];
+                        end
+                    end
+
+                    % Get spike counts for light trials
+                    spikes_light_trials = [];
+                    if ~isempty(postAP_norm_light{idx})
+                        for trial = 1:length(postAP_norm_light{idx})
+                            trial_spikes = postAP_norm_light{idx}{trial};
+                            spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                            spikes_light_trials = [spikes_light_trials; spike_count];
+                        end
+                    end
+
+                    % Accumulate for all enhanced neurons
+                    all_nolight_spikes = [all_nolight_spikes; mean(spikes_nolight_trials)];
+                    all_light_spikes = [all_light_spikes; mean(spikes_light_trials)];
+                end
+
+                fprintf(fid, 'Mean spike count (no light): %.2f ± %.2f (mean ± SEM), median = %.2f, SD = %.2f\n', ...
+                    mean(all_nolight_spikes), std(all_nolight_spikes)/sqrt(length(all_nolight_spikes)), ...
+                    median(all_nolight_spikes), std(all_nolight_spikes));
+                fprintf(fid, 'Mean spike count (with light): %.2f ± %.2f (mean ± SEM), median = %.2f, SD = %.2f\n', ...
+                    mean(all_light_spikes), std(all_light_spikes)/sqrt(length(all_light_spikes)), ...
+                    median(all_light_spikes), std(all_light_spikes));
+                fprintf(fid, 'Mean change: %.2f ± %.2f (mean ± SEM)\n\n', ...
+                    mean(all_light_spikes - all_nolight_spikes), ...
+                    std(all_light_spikes - all_nolight_spikes)/sqrt(length(all_light_spikes)));
+            else
+                fprintf(fid, '--- %s %s ---\n', region_names{r}, stim_names{s});
+                fprintf(fid, 'No enhanced neurons\n\n');
+            end
+        end
+    end
+
+    %% Summary statistics
+    fprintf(fid, '========================================\n');
+    fprintf(fid, 'SUMMARY STATISTICS (ALL PANELS)\n');
+    fprintf(fid, '========================================\n\n');
+
+    fprintf(fid, '### SUMMARY STATISTICS ###\n\n');
+
+    % Overall proportions
+    total_tested = 0;
+    total_increased = 0;
+    total_decreased = 0;
+    total_unchanged = 0;
+
+    for r = 1:2
+        for s = 1:2
+            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
+            result = comparison_results.(result_field);
+            total_tested = total_tested + result.n_total;
+            total_increased = total_increased + result.n_increased;
+            total_decreased = total_decreased + result.n_decreased;
+            total_unchanged = total_unchanged + result.n_unchanged;
+        end
+    end
+
+    fprintf(fid, 'Overall (all regions and stimuli):\n');
+    fprintf(fid, '  Total neurons tested: %d\n', total_tested);
+    fprintf(fid, '  Increased: %d (%.1f%%)\n', total_increased, 100*total_increased/total_tested);
+    fprintf(fid, '  Decreased: %d (%.1f%%)\n', total_decreased, 100*total_decreased/total_tested);
+    fprintf(fid, '  Unchanged: %d (%.1f%%)\n', total_unchanged, 100*total_unchanged/total_tested);
+
+    fprintf(fid, '\n');
+
+    % By region
+    fprintf(fid, 'By region:\n');
+    for r = 1:2
+        region_tested = 0;
+        region_increased = 0;
+        region_decreased = 0;
+        region_unchanged = 0;
+
+        for s = 1:2
+            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
+            result = comparison_results.(result_field);
+            region_tested = region_tested + result.n_total;
+            region_increased = region_increased + result.n_increased;
+            region_decreased = region_decreased + result.n_decreased;
+            region_unchanged = region_unchanged + result.n_unchanged;
+        end
+
+        if region_tested > 0
+            fprintf(fid, '  %s:\n', region_names{r});
+            fprintf(fid, '    Total: %d\n', region_tested);
+            fprintf(fid, '    Increased: %d (%.1f%%)\n', region_increased, 100*region_increased/region_tested);
+            fprintf(fid, '    Decreased: %d (%.1f%%)\n', region_decreased, 100*region_decreased/region_tested);
+            fprintf(fid, '    Unchanged: %d (%.1f%%)\n', region_unchanged, 100*region_unchanged/region_tested);
+        end
+    end
+
+    fprintf(fid, '\n');
+
+    % By stimulus
+    fprintf(fid, 'By stimulus:\n');
+    for s = 1:2
+        stim_tested = 0;
+        stim_increased = 0;
+        stim_decreased = 0;
+        stim_unchanged = 0;
+
+        for r = 1:2
+            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
+            result = comparison_results.(result_field);
+            stim_tested = stim_tested + result.n_total;
+            stim_increased = stim_increased + result.n_increased;
+            stim_decreased = stim_decreased + result.n_decreased;
+            stim_unchanged = stim_unchanged + result.n_unchanged;
+        end
+
+        if stim_tested > 0
+            fprintf(fid, '  %s:\n', stim_names{s});
+            fprintf(fid, '    Total: %d\n', stim_tested);
+            fprintf(fid, '    Increased: %d (%.1f%%)\n', stim_increased, 100*stim_increased/stim_tested);
+            fprintf(fid, '    Decreased: %d (%.1f%%)\n', stim_decreased, 100*stim_decreased/stim_tested);
+            fprintf(fid, '    Unchanged: %d (%.1f%%)\n', stim_unchanged, 100*stim_unchanged/stim_tested);
+        end
+    end
+
+    fprintf(fid, '\n========================================\n');
+    fprintf(fid, 'END OF FIGURE 5 STATISTICS\n');
+    fprintf(fid, '========================================\n');
+
+    fclose(fid);
+    fprintf('Statistics exported to: figure_5_stats.txt\n');
+end

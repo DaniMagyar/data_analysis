@@ -1,25 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/dmagyar/Documents/data_analysis/neuron_analysis/BA_fear_cond_project/**)",
-      "WebSearch",
-      "Bash(matlab:*)",
-      "Bash(dir:*)",
-      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
-      "Bash(cp:*)",
-      "WebFetch(domain:elifesciences.org)",
-      "WebFetch(domain:www.nature.com)",
-      "Bash(mkdir uni_optogenetics)",
-      "WebFetch(domain:www.jneurosci.org)",
-      "WebFetch(domain:www.ncbi.nlm.nih.gov)",
-      "Read(//c/Users/dmagyar/Documents/data_analysis/**)",
-      "WebFetch(domain:www.researchgate.net)",
-      "Bash(git checkout:*)",
-      "Bash(findstr:*)",
-      "Bash(nul)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(python:*)"
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\methods.txt'' | Measure-Object -Line\")",
+      "Bash(powershell -Command \"Get-Content 'C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_2\\BAfc_figure_2.m' | Measure-Object -Line\":*)",
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_3\\BAfc_figure_3.m'' | Measure-Object -Line\")",
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_4\\BAfc_figure_4.m'' | Select-Object -Last 20\")",
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_5\\BAfc_figure_5.m'' | Measure-Object -Line\")",
+      "Bash(powershell -Command \"Get-Content ''C:\\Users\\dmagyar\\Documents\\data_analysis\\BAfc_claude_code\\figures\\figure_2\\BAfc_figure_2.m'' | Select-String -Pattern ''metric_data_storage'' -Context 3\")"
     ],
     "deny": [],
     "ask": []

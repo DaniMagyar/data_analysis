@@ -1,0 +1,220 @@
+========================================
+FIGURE 2 STATISTICS
+Generated: 26-Nov-2025 18:38:35
+========================================
+
+### SAMPLE SIZES BY REGION ###
+
+Number of animals (N): 24
+Animal IDs: MD292_002, MD293_001, MD294_001, MD295_001, MD296_001, MD297_001, MD298_001, MD299_001, MD300_001, MD304_001, MD305_001, MD307_001, MD309_001, MD310_001, MD311_002, MD312_001, MD313_001, MD314_001, MD315_001, MD316_002, MD317_001, MD318_001, MD318_002, MD319_003
+
+LA: n = 293 neurons
+BA: n = 219 neurons
+Astria: n = 120 neurons
+CeA: n = 50 neurons
+Total neurons: 682
+
+### PANEL B: CLUSTER DISTRIBUTIONS BY REGION ###
+
+Contingency Table (neurons per cluster):
+Region    CS-sel      US-sel      Multi       Non-resp    Inhibited   Total     
+LA        34          50          51          81          77          293       
+BA        0           29          0           106         84          219       
+Astria    12          17          26          38          27          120       
+CeA       0           0           2           29          19          50        
+
+Cluster Proportions by Region:
+LA:
+  CS-sel: 34 (11.6%)
+  US-sel: 50 (17.1%)
+  Multi: 51 (17.4%)
+  Non-resp: 81 (27.6%)
+  Inhibited: 77 (26.3%)
+
+BA:
+  CS-sel: 0 (0.0%)
+  US-sel: 29 (13.2%)
+  Multi: 0 (0.0%)
+  Non-resp: 106 (48.4%)
+  Inhibited: 84 (38.4%)
+
+Astria:
+  CS-sel: 12 (10.0%)
+  US-sel: 17 (14.2%)
+  Multi: 26 (21.7%)
+  Non-resp: 38 (31.7%)
+  Inhibited: 27 (22.5%)
+
+CeA:
+  CS-sel: 0 (0.0%)
+  US-sel: 0 (0.0%)
+  Multi: 2 (4.0%)
+  Non-resp: 29 (58.0%)
+  Inhibited: 19 (38.0%)
+
+### PANEL C (SUPPLEMENTARY): CHI-SQUARE TEST ###
+
+Overall Chi-square Test:
+  Chi-square statistic: 117.2305
+  Permutation p-value (10,000 permutations): 0.0000
+  Cramér's V (effect size): 0.2394
+  Significant (p < 0.05): true
+
+Pairwise Chi-square Tests (Bonferroni-Holm corrected):
+  LA vs BA:
+    Raw p-value: 0.0000
+    Adjusted p-value (Bonferroni-Holm): 0.0000
+    Cramér's V: 0.4082
+    Significant (adjusted p < 0.05): true
+  LA vs AStria:
+    Raw p-value: 0.6577
+    Adjusted p-value (Bonferroni-Holm): 0.6577
+    Cramér's V: 0.0767
+    Significant (adjusted p < 0.05): false
+  LA vs CeA:
+    Raw p-value: 0.0000
+    Adjusted p-value (Bonferroni-Holm): 0.0000
+    Cramér's V: 0.3133
+    Significant (adjusted p < 0.05): true
+  BA vs AStria:
+    Raw p-value: 0.0000
+    Adjusted p-value (Bonferroni-Holm): 0.0000
+    Cramér's V: 0.4872
+    Significant (adjusted p < 0.05): true
+  BA vs CeA:
+    Raw p-value: 0.0011
+    Adjusted p-value (Bonferroni-Holm): 0.0013
+    Cramér's V: 0.2449
+    Significant (adjusted p < 0.05): true
+  AStria vs CeA:
+    Raw p-value: 0.0000
+    Adjusted p-value (Bonferroni-Holm): 0.0000
+    Cramér's V: 0.4067
+    Significant (adjusted p < 0.05): true
+
+### PANEL D: US-EVOKED RESPONSE METRICS ###
+
+--- Delta nSpikes ---
+Sample sizes (US-responsive neurons: US-sel + Multi):
+  LA: n = 101
+  BA: n = 29
+  Astria: n = 43
+
+Descriptive Statistics:
+  LA: 10.317 ± 2.167 (mean ± SEM), median = 3.423, IQR = [1.607, 10.758]
+  BA: 4.465 ± 0.779 (mean ± SEM), median = 2.766, IQR = [1.273, 6.301]
+  Astria: 8.960 ± 1.801 (mean ± SEM), median = 3.682, IQR = [1.530, 11.995]
+
+Statistical Test: Kruskal-Wallis test
+  p-value: 0.3905
+  Significant (p < 0.05): false
+
+Post-hoc Pairwise Comparisons (Mann-Whitney U test):
+  LA vs BA: p = 0.2754 (n.s.)
+  LA vs AStria: p = 0.6687 (n.s.)
+  BA vs AStria: p = 0.1613 (n.s.)
+
+--- Delta Peak FR (Hz) ---
+Sample sizes (US-responsive neurons: US-sel + Multi):
+  LA: n = 101
+  BA: n = 29
+  Astria: n = 43
+
+Descriptive Statistics:
+  LA: 43.794 ± 5.592 (mean ± SEM), median = 31.443, IQR = [17.367, 48.920]
+  BA: 40.272 ± 5.463 (mean ± SEM), median = 31.088, IQR = [20.865, 53.927]
+  Astria: 47.647 ± 9.989 (mean ± SEM), median = 30.958, IQR = [18.151, 53.133]
+
+Statistical Test: Kruskal-Wallis test
+  p-value: 0.7340
+  Significant (p < 0.05): false
+
+Post-hoc Pairwise Comparisons (Mann-Whitney U test):
+
+--- Response Length (ms) ---
+Sample sizes (US-responsive neurons: US-sel + Multi):
+  LA: n = 101
+  BA: n = 29
+  Astria: n = 43
+
+Descriptive Statistics:
+  LA: 233.683 ± 19.968 (mean ± SEM), median = 146.000, IQR = [95.250, 348.750]
+  BA: 122.897 ± 18.266 (mean ± SEM), median = 95.000, IQR = [64.000, 134.000]
+  Astria: 240.488 ± 29.098 (mean ± SEM), median = 142.000, IQR = [91.000, 365.500]
+
+Statistical Test: Kruskal-Wallis test
+  p-value: 0.0092
+  Significant (p < 0.05): true
+
+Post-hoc Pairwise Comparisons (Mann-Whitney U test):
+  LA vs BA: p = 0.0036 **
+  LA vs AStria: p = 0.8596 (n.s.)
+  BA vs AStria: p = 0.0079 **
+
+### CLUSTER-SPECIFIC STATISTICS ###
+
+--- LA ---
+
+CS-sel (n = 34):
+  CS onset latency: 192.176 ± 129.723 ms (mean ± SD), median = 153.000 ms, n = 34
+  CS offset latency: 414.088 ± 187.588 ms (mean ± SD), median = 356.000 ms, n = 34
+
+US-sel (n = 50):
+  US onset latency: 167.333 ± 109.250 ms (mean ± SD), median = 134.000 ms, n = 48
+  US offset latency: 404.688 ± 202.956 ms (mean ± SD), median = 363.500 ms, n = 48
+
+Multi (n = 51):
+  CS onset latency: 116.898 ± 24.287 ms (mean ± SD), median = 111.000 ms, n = 49
+  CS offset latency: 354.596 ± 227.449 ms (mean ± SD), median = 236.000 ms, n = 47
+  US onset latency: 141.429 ± 78.622 ms (mean ± SD), median = 113.000 ms, n = 49
+  US offset latency: 416.044 ± 216.548 ms (mean ± SD), median = 418.000 ms, n = 45
+
+Non-resp (n = 81):
+
+Inhibited (n = 77):
+
+--- BA ---
+
+US-sel (n = 29):
+  US onset latency: 141.857 ± 81.238 ms (mean ± SD), median = 117.000 ms, n = 28
+  US offset latency: 269.143 ± 154.352 ms (mean ± SD), median = 216.500 ms, n = 28
+
+Non-resp (n = 106):
+
+Inhibited (n = 84):
+
+--- Astria ---
+
+CS-sel (n = 12):
+  CS onset latency: 139.182 ± 37.698 ms (mean ± SD), median = 132.000 ms, n = 11
+  CS offset latency: 303.455 ± 207.364 ms (mean ± SD), median = 209.000 ms, n = 11
+
+US-sel (n = 17):
+  US onset latency: 160.875 ± 79.695 ms (mean ± SD), median = 136.500 ms, n = 16
+  US offset latency: 361.062 ± 170.058 ms (mean ± SD), median = 333.500 ms, n = 16
+
+Multi (n = 26):
+  CS onset latency: 105.808 ± 27.685 ms (mean ± SD), median = 100.500 ms, n = 26
+  CS offset latency: 295.720 ± 149.306 ms (mean ± SD), median = 237.000 ms, n = 25
+  US onset latency: 126.038 ± 52.921 ms (mean ± SD), median = 110.500 ms, n = 26
+  US offset latency: 407.760 ± 185.161 ms (mean ± SD), median = 380.000 ms, n = 25
+
+Non-resp (n = 38):
+
+Inhibited (n = 27):
+
+--- CeA ---
+
+Multi (n = 2):
+  CS onset latency: 96.000 ± 21.213 ms (mean ± SD), median = 96.000 ms, n = 2
+  CS offset latency: 316.500 ± 173.241 ms (mean ± SD), median = 316.500 ms, n = 2
+  US onset latency: 100.000 ± 4.243 ms (mean ± SD), median = 100.000 ms, n = 2
+  US offset latency: 768.000 ± 0.000 ms (mean ± SD), median = 768.000 ms, n = 1
+
+Non-resp (n = 29):
+
+Inhibited (n = 19):
+
+========================================
+END OF FIGURE 2 STATISTICS
+========================================

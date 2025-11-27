@@ -1,0 +1,179 @@
+========================================
+FIGURE 1 STATISTICS
+Generated: 26-Nov-2025 18:00:40
+========================================
+
+### OVERALL SAMPLE SIZES ###
+
+Number of animals (N): 24
+Animal IDs: MD292_002, MD293_001, MD294_001, MD295_001, MD296_001, MD297_001, MD298_001, MD299_001, MD300_001, MD304_001, MD305_001, MD307_001, MD309_001, MD310_001, MD311_002, MD312_001, MD313_001, MD314_001, MD315_001, MD316_002, MD317_001, MD318_001, MD318_002, MD319_003
+
+Total neurons recorded: 963
+  Putative pyramidal neurons (PNs): 883 (91.7%)
+  Putative interneurons (INs): 52 (5.4%)
+  Unknown cell type: 0 (0.0%)
+
+By brain region:
+  LA: 293 neurons (30.4%)
+    PNs: 276 (94.2% of LA)
+    INs: 17 (5.8% of LA)
+    Unknown: 0 (0.0% of LA)
+  BA: 219 neurons (22.7%)
+    PNs: 196 (89.5% of BA)
+    INs: 23 (10.5% of BA)
+    Unknown: 0 (0.0% of BA)
+  Astria: 120 neurons (12.5%)
+  CeA: 50 neurons (5.2%)
+
+### PANEL D: SPIKE FEATURES (LA + BA NEURONS) ###
+
+Sample sizes (LA + BA only):
+  Total neurons: 512
+  PNs: 472
+  INs: 40
+  Unknown: 0
+
+Trough-to-peak (TTP) duration (ms):
+  PNs: 0.617 ± 0.162 (mean ± SD), median = 0.687, IQR = [0.520, 0.746], n = 472
+  INs: 0.298 ± 0.050 (mean ± SD), median = 0.298, IQR = [0.267, 0.335], n = 40
+  Unknown: NaN ± NaN (mean ± SD), median = NaN, IQR = [NaN, NaN], n = 0
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN TTP)
+  Test statistic (Z): 9.1282
+  p-value: 6.967653e-20
+  Significant (p < 0.05): true
+
+Firing rate (Hz):
+  PNs: 3.767 ± 3.889 (mean ± SD), median = 2.526, IQR = [0.935, 5.148], n = 472
+  INs: 19.110 ± 7.687 (mean ± SD), median = 15.976, IQR = [13.190, 24.351], n = 40
+  Unknown: NaN ± NaN (mean ± SD), median = NaN, IQR = [NaN, NaN], n = 0
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN firing rate)
+  Test statistic (Z): -10.0473
+  p-value: 9.439760e-24
+  Significant (p < 0.05): true
+
+### PANEL E: FIRING RATE DISTRIBUTIONS BY REGION ###
+
+--- LA ---
+Sample sizes:
+  PNs: n = 276
+  INs: n = 17
+
+Firing rate (Hz):
+  PNs: 3.327 ± 3.355 (mean ± SD), median = 2.489, IQR = [0.934, 4.465]
+  INs: 16.576 ± 6.744 (mean ± SD), median = 14.552, IQR = [11.741, 20.658]
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN)
+  Test statistic (Z): -6.7026
+  p-value: 2.047748e-11
+  Significant (p < 0.05): true
+
+--- BA ---
+Sample sizes:
+  PNs: n = 196
+  INs: n = 23
+
+Firing rate (Hz):
+  PNs: 4.385 ± 4.472 (mean ± SD), median = 2.735, IQR = [0.943, 6.512]
+  INs: 20.984 ± 7.940 (mean ± SD), median = 19.007, IQR = [14.915, 26.773]
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN)
+  Test statistic (Z): -7.4317
+  p-value: 1.071822e-13
+  Significant (p < 0.05): true
+
+--- Astria ---
+Sample size: n = 120
+
+Firing rate (Hz):
+  All neurons: 4.992 ± 6.798 (mean ± SD), median = 2.506, IQR = [0.852, 6.844]
+
+--- CeA ---
+Sample size: n = 50
+
+Firing rate (Hz):
+  All neurons: 2.041 ± 2.963 (mean ± SD), median = 0.981, IQR = [0.455, 2.719]
+
+### PANEL F: BURST INDEX DISTRIBUTIONS BY REGION ###
+
+--- LA ---
+Sample sizes:
+  PNs: n = 276
+  INs: n = 17
+
+Burst Index (Royer 2012):
+  PNs: NaN ± NaN (mean ± SD), median = NaN, IQR = [0.042, 0.504]
+  INs: 1.212 ± 0.914 (mean ± SD), median = 1.177, IQR = [0.386, 1.986]
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN)
+  Test statistic (Z): -3.1243
+  p-value: 1.782236e-03
+  Significant (p < 0.05): true
+
+--- BA ---
+Sample sizes:
+  PNs: n = 196
+  INs: n = 23
+
+Burst Index (Royer 2012):
+  PNs: 4.565 ± 10.211 (mean ± SD), median = 0.384, IQR = [0.074, 2.969]
+  INs: 0.711 ± 0.652 (mean ± SD), median = 0.514, IQR = [0.232, 0.860]
+
+Statistical Test: Wilcoxon rank-sum test (PN vs IN)
+  Test statistic (Z): -0.0330
+  p-value: 9.736367e-01
+  Significant (p < 0.05): false
+
+--- Astria ---
+Sample size: n = 120
+
+Burst Index (Royer 2012):
+  All neurons: 0.536 ± 1.169 (mean ± SD), median = 0.117, IQR = [0.012, 0.564]
+
+--- CeA ---
+Sample size: n = 50
+
+Burst Index (Royer 2012):
+  All neurons: 0.437 ± 1.023 (mean ± SD), median = 0.064, IQR = [0.000, 0.414]
+
+### CROSS-REGION COMPARISONS ###
+
+--- Pyramidal Neurons (PN) Firing Rate Comparison ---
+Sample sizes:
+  LA PNs: n = 276
+  BA PNs: n = 196
+  AStria: n = 120
+  CeA: n = 50
+
+Kruskal-Wallis Test: Firing rate across regions
+  Chi-square statistic: 20.8138
+  Degrees of freedom: 3
+  p-value: 1.150756e-04
+  Significant (p < 0.05): true
+
+Post-hoc pairwise comparisons (Dunn-Sidak correction):
+  LA_PN vs BA_PN: p = 3.736284e-01
+  LA_PN vs AStria: p = 3.941395e-01
+  LA_PN vs CeA: p = 6.962627e-03
+  BA_PN vs AStria: p = 9.999749e-01
+  BA_PN vs CeA: p = 1.600199e-04
+  AStria vs CeA: p = 2.455254e-04
+
+--- Interneurons (IN) Firing Rate Comparison ---
+Sample sizes:
+  LA INs: n = 17
+  BA INs: n = 23
+
+Firing rate (Hz):
+  LA INs: 16.576 ± 6.744 (mean ± SD), median = 14.552
+  BA INs: 20.984 ± 7.940 (mean ± SD), median = 19.007
+
+Statistical Test: Wilcoxon rank-sum test (LA IN vs BA IN)
+  Test statistic (Z): -2.0520
+  p-value: 4.017232e-02
+  Significant (p < 0.05): true
+
+========================================
+END OF FIGURE 1 STATISTICS
+========================================
