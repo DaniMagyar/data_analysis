@@ -1,0 +1,298 @@
+========================================
+FIGURE 3 - SUPPLEMENTARY PANEL D DATA
+Generated: 01-Dec-2025 17:56:28
+========================================
+
+This table contains the data from Supplementary Figure Panel D:
+Delta FR and Response Length values for LA and AStria neurons
+across three cluster types (CS-selective, US-selective, Multisensory)
+
+
+========================================
+ΔFR (Hz)
+========================================
+
+--- LA ---
+
+CS-sel (n = 34 neurons):
+  CS:
+    Mean ± SEM: 40.20 ± 5.31 Hz
+    Median: 33.85 Hz
+    SD: 30.94 Hz
+    Range: [6.52, 154.78] Hz
+  US:
+    Mean ± SEM: 7.61 ± 1.53 Hz
+    Median: 3.60 Hz
+    SD: 8.94 Hz
+    Range: [-0.92, 32.96] Hz
+  CS+US:
+    Mean ± SEM: 19.03 ± 4.13 Hz
+    Median: 12.31 Hz
+    SD: 24.09 Hz
+    Range: [0.81, 133.87] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0000 ***
+
+US-sel (n = 50 neurons):
+  CS:
+    Mean ± SEM: 7.44 ± 1.06 Hz
+    Median: 4.88 Hz
+    SD: 7.48 Hz
+    Range: [-0.63, 28.73] Hz
+  US:
+    Mean ± SEM: 32.63 ± 2.95 Hz
+    Median: 28.01 Hz
+    SD: 20.88 Hz
+    Range: [3.86, 109.42] Hz
+  CS+US:
+    Mean ± SEM: 31.00 ± 3.15 Hz
+    Median: 26.07 Hz
+    SD: 22.28 Hz
+    Range: [0.35, 108.10] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0090 **
+
+Multi (n = 51 neurons):
+  CS:
+    Mean ± SEM: 56.24 ± 7.14 Hz
+    Median: 38.58 Hz
+    SD: 51.01 Hz
+    Range: [4.20, 212.05] Hz
+  US:
+    Mean ± SEM: 67.49 ± 10.78 Hz
+    Median: 38.63 Hz
+    SD: 77.00 Hz
+    Range: [1.61, 456.62] Hz
+  CS+US:
+    Mean ± SEM: 78.51 ± 12.98 Hz
+    Median: 37.76 Hz
+    SD: 92.70 Hz
+    Range: [3.80, 511.30] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.1801 (n.s.)
+    CS vs CS+US: p = 0.0041 **
+    US vs CS+US: p = 0.0004 ***
+
+
+--- AStria ---
+
+CS-sel (n = 12 neurons):
+  CS:
+    Mean ± SEM: 21.22 ± 2.81 Hz
+    Median: 21.23 Hz
+    SD: 9.75 Hz
+    Range: [9.03, 39.63] Hz
+  US:
+    Mean ± SEM: 8.58 ± 2.34 Hz
+    Median: 5.41 Hz
+    SD: 8.09 Hz
+    Range: [-0.12, 24.66] Hz
+  CS+US:
+    Mean ± SEM: 11.86 ± 2.24 Hz
+    Median: 10.59 Hz
+    SD: 7.76 Hz
+    Range: [0.18, 24.37] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0005 ***
+    CS vs CS+US: p = 0.0024 **
+    US vs CS+US: p = 0.0210 *
+
+US-sel (n = 17 neurons):
+  CS:
+    Mean ± SEM: 11.04 ± 2.97 Hz
+    Median: 8.94 Hz
+    SD: 12.24 Hz
+    Range: [-0.31, 38.71] Hz
+  US:
+    Mean ± SEM: 37.42 ± 7.37 Hz
+    Median: 28.16 Hz
+    SD: 30.37 Hz
+    Range: [14.66, 123.84] Hz
+  CS+US:
+    Mean ± SEM: 35.90 ± 6.91 Hz
+    Median: 28.57 Hz
+    SD: 28.51 Hz
+    Range: [8.55, 116.42] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0004 ***
+    CS vs CS+US: p = 0.0003 ***
+    US vs CS+US: p = 0.2868 (n.s.)
+
+Multi (n = 26 neurons):
+  CS:
+    Mean ± SEM: 51.93 ± 11.76 Hz
+    Median: 43.38 Hz
+    SD: 59.98 Hz
+    Range: [8.02, 330.85] Hz
+  US:
+    Mean ± SEM: 58.13 ± 15.75 Hz
+    Median: 39.67 Hz
+    SD: 80.32 Hz
+    Range: [8.26, 434.37] Hz
+  CS+US:
+    Mean ± SEM: 60.56 ± 14.69 Hz
+    Median: 38.54 Hz
+    SD: 74.90 Hz
+    Range: [8.76, 403.69] Hz
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.2180 (n.s.)
+    CS vs CS+US: p = 0.0865 (n.s.)
+    US vs CS+US: p = 0.0962 (n.s.)
+
+
+
+========================================
+Response length (ms)
+========================================
+
+--- LA ---
+
+CS-sel (n = 34 neurons):
+  CS:
+    Mean ± SEM: 221.91 ± 29.13 ms
+    Median: 181.50 ms
+    SD: 169.85 ms
+    Range: [68.00, 763.00] ms
+  US:
+    Mean ± SEM: 0.00 ± 0.00 ms
+    Median: 0.00 ms
+    SD: 0.00 ms
+    Range: [0.00, 0.00] ms
+  CS+US:
+    Mean ± SEM: 76.41 ± 26.47 ms
+    Median: 0.00 ms
+    SD: 154.32 ms
+    Range: [0.00, 715.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0002 ***
+
+US-sel (n = 50 neurons):
+  CS:
+    Mean ± SEM: 0.00 ± 0.00 ms
+    Median: 0.00 ms
+    SD: 0.00 ms
+    Range: [0.00, 0.00] ms
+  US:
+    Mean ± SEM: 227.86 ± 26.70 ms
+    Median: 148.00 ms
+    SD: 188.78 ms
+    Range: [0.00, 766.00] ms
+  CS+US:
+    Mean ± SEM: 167.94 ± 21.80 ms
+    Median: 114.50 ms
+    SD: 154.16 ms
+    Range: [0.00, 676.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0000 ***
+    CS vs CS+US: p = 0.0000 ***
+    US vs CS+US: p = 0.0032 **
+
+Multi (n = 51 neurons):
+  CS:
+    Mean ± SEM: 218.41 ± 32.30 ms
+    Median: 129.00 ms
+    SD: 230.64 ms
+    Range: [0.00, 839.00] ms
+  US:
+    Mean ± SEM: 239.39 ± 29.89 ms
+    Median: 141.00 ms
+    SD: 213.42 ms
+    Range: [0.00, 773.00] ms
+  CS+US:
+    Mean ± SEM: 325.57 ± 36.05 ms
+    Median: 264.00 ms
+    SD: 257.44 ms
+    Range: [0.00, 845.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.5084 (n.s.)
+    CS vs CS+US: p = 0.0046 **
+    US vs CS+US: p = 0.0010 ***
+
+
+--- AStria ---
+
+CS-sel (n = 12 neurons):
+  CS:
+    Mean ± SEM: 150.58 ± 52.52 ms
+    Median: 88.00 ms
+    SD: 181.93 ms
+    Range: [0.00, 676.00] ms
+  US:
+    Mean ± SEM: 0.00 ± 0.00 ms
+    Median: 0.00 ms
+    SD: 0.00 ms
+    Range: [0.00, 0.00] ms
+  CS+US:
+    Mean ± SEM: 19.50 ± 8.98 ms
+    Median: 0.00 ms
+    SD: 31.11 ms
+    Range: [0.00, 85.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0010 ***
+    CS vs CS+US: p = 0.0020 **
+    US vs CS+US: p = 0.1250 (n.s.)
+
+US-sel (n = 17 neurons):
+  CS:
+    Mean ± SEM: 0.00 ± 0.00 ms
+    Median: 0.00 ms
+    SD: 0.00 ms
+    Range: [0.00, 0.00] ms
+  US:
+    Mean ± SEM: 188.41 ± 45.66 ms
+    Median: 114.00 ms
+    SD: 188.25 ms
+    Range: [0.00, 738.00] ms
+  CS+US:
+    Mean ± SEM: 218.47 ± 46.16 ms
+    Median: 138.00 ms
+    SD: 190.31 ms
+    Range: [0.00, 696.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0004 ***
+    CS vs CS+US: p = 0.0001 ***
+    US vs CS+US: p = 0.1421 (n.s.)
+
+Multi (n = 26 neurons):
+  CS:
+    Mean ± SEM: 182.35 ± 28.65 ms
+    Median: 135.00 ms
+    SD: 146.06 ms
+    Range: [0.00, 696.00] ms
+  US:
+    Mean ± SEM: 274.54 ± 36.92 ms
+    Median: 245.00 ms
+    SD: 188.24 ms
+    Range: [0.00, 640.00] ms
+  CS+US:
+    Mean ± SEM: 321.19 ± 49.05 ms
+    Median: 294.50 ms
+    SD: 250.09 ms
+    Range: [0.00, 874.00] ms
+
+  Statistical Tests (Wilcoxon signed-rank):
+    CS vs US: p = 0.0176 *
+    CS vs CS+US: p = 0.0068 **
+    US vs CS+US: p = 0.1218 (n.s.)
+
+
+========================================
+END OF TABLE
+========================================

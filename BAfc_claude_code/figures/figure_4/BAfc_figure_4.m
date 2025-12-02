@@ -37,12 +37,12 @@ g.min_consec_bins = max(1, round(0.001 / g.bin_time));  % 3ms for brief monosyna
 g.alpha = 0.0;
 
 % Responsiveness detection method
-g.use_two_rule = false;  % true: two-rule (Rule 1 OR Rule 2), false: one-rule (z-score only)
+g.use_two_rule = true;  % true: two-rule (Rule 1 OR Rule 2), false: one-rule (z-score only)
 
 % Two-rule responsiveness parameters (used if g.use_two_rule = true)
-g.zscore_threshold_rule1 = 3;   % Rule 1: z-score threshold
-g.prob_threshold_rule1 = 0.25;  % Rule 1: probability threshold
-g.zscore_threshold_rule2 = 10;  % Rule 2: z-score threshold
+g.zscore_threshold_rule1 = 5;   % Rule 1: z-score threshold
+g.prob_threshold_rule1 = 0.1;  % Rule 1: probability threshold
+g.zscore_threshold_rule2 = 5;  % Rule 2: z-score threshold
 g.prob_threshold_rule2 = 0.1;   % Rule 2: probability threshold
 
 % One-rule responsiveness parameter (used if g.use_two_rule = false)
@@ -104,10 +104,6 @@ for br = 1:2
         continue;
     end
 
-    % Get number of trials
-    num_trials_CS = size(cell_metrics.general.(ttl{1}){1}, 1);
-    num_trials_US = size(cell_metrics.general.(ttl{2}){1}, 1);
-    num_trials_Both = size(cell_metrics.general.(ttl{3}){1}, 1);
 
     % Extract monosynaptic window responses for CS, US, CS+US
     % Pool all neurons together
@@ -145,6 +141,7 @@ for br = 1:2
                     responsive_trials_CS = responsive_trials_CS + 1;
                 end
             end
+            num_trials_CS = size(cell_metrics.general.(ttl{1}){global_idx}, 1);
             CS_prob_all(n) = responsive_trials_CS / num_trials_CS;
         end
 
@@ -157,6 +154,7 @@ for br = 1:2
                     responsive_trials_US = responsive_trials_US + 1;
                 end
             end
+            num_trials_US = size(cell_metrics.general.(ttl{2}){global_idx}, 1);
             US_prob_all(n) = responsive_trials_US / num_trials_US;
         end
     end
@@ -241,6 +239,7 @@ for br = 1:2
     results_all{br}.Both_onset_lat_all = Both_onset_lat_all;
     results_all{br}.Both_offset_lat_all = Both_offset_lat_all;
     results_all{br}.n_neurons = n_neurons;
+    results_all{br}.neuron_indices_all = neuron_indices_all;
     results_all{br}.animals = cell_metrics.animal(idx_neurons);
 
     fprintf('  All neurons: %d | CS-sel: %d | US-sel: %d | Multi: %d\n', ...
@@ -336,6 +335,20 @@ for br = 1:2
     responsive_leafOrder_all = res.leafOrder_all(responsive_mask_all);
     Clusters_sorted_responsive_all = Clusters_sorted_all(responsive_mask_all);
     n_clu_all = find(diff(Clusters_sorted_responsive_all) ~= 0);
+
+    % Print all neurons in heatmap order (responsive only)
+    fprintf('\n=== %s Heatmap Neurons (in display order, responsive only) ===\n', brain_regions{br});
+    cluster_names = {'CS-sel', 'US-sel', 'Multi', 'Non-resp', 'Inhibited'};
+    for n = 1:length(responsive_leafOrder_all)
+        global_idx = res.neuron_indices_all(responsive_leafOrder_all(n));
+        animal_id = cell_metrics.animal{global_idx};
+        cell_id = cell_metrics.cellID(global_idx);
+        brain_region = cell_metrics.brainRegion{global_idx};
+        cluster_id = Clusters_sorted_responsive_all(n);
+        fprintf('  Heatmap row %3d: cell_metrics_idx=%d, Animal=%s, CellID=%d, Region=%s, Cluster=%d (%s)\n', ...
+            n, global_idx, animal_id, cell_id, brain_region, cluster_id, cluster_names{cluster_id});
+    end
+    fprintf('\n');
 
     % Heatmaps for CS, US, CS+US (columns 1-3)
     for stim = 1:3
@@ -462,7 +475,7 @@ cb_ax.FontSize = g.fontSize2;
 %% Add Delta Peak FR bar charts in column 4 of the same nested layout
 cluster_names = {'CS-sel', 'US-sel', 'Multi'};
 
-% Storage for Kruskal-Wallis test data
+% Storage for Friedman test data
 % Structure: kw_data_storage{region, cluster, stimulus}
 kw_data_storage = cell(2, 3, 3);  % 2 regions × 3 clusters × 3 stimuli (CS, US, Both)
 
@@ -512,7 +525,7 @@ for br = 1:2
                 Both_metric(n) = peak_fr_Both - baseline_fr;
             end
 
-            % Store data for Kruskal-Wallis test (region, cluster, stimulus)
+            % Store data for Friedman test (region, cluster, stimulus)
             kw_data_storage{br, c, 1} = CS_metric;
             kw_data_storage{br, c, 2} = US_metric;
             kw_data_storage{br, c, 3} = Both_metric;
@@ -527,18 +540,28 @@ for br = 1:2
             bar([1 2 3], means_data, 0.4, 'FaceColor', bar_color, 'EdgeColor', 'k', 'LineWidth', 1);
             errorbar([1 2 3], means_data, sems_data, 'k', 'LineStyle', 'none', 'LineWidth', 1.5, 'CapSize', 4);
 
-            % First perform Kruskal-Wallis test
-            all_values = [CS_metric; US_metric; Both_metric];
-            group_labels = [ones(length(CS_metric), 1); 2*ones(length(US_metric), 1); 3*ones(length(Both_metric), 1)];
-            [p_kw, ~, ~] = kruskalwallis(all_values, group_labels, 'off');
+            % First perform Friedman test (repeated measures)
+            % Data must be in format: rows = subjects (neurons), columns = conditions (CS, US, Both)
+            % Friedman test requires at least 2 neurons
+            if length(CS_metric) >= 2
+                % Ensure data is properly formatted as column vectors
+                data_matrix = [CS_metric(:), US_metric(:), Both_metric(:)];
+                [p_friedman, ~, ~] = friedman(data_matrix, 1, 'off');
 
-            % Only perform post-hoc tests if Kruskal-Wallis is significant
-            if p_kw < 0.05
-                [p_CS_US, ~] = signrank(CS_metric, US_metric);
-                [p_CS_Both, ~] = signrank(CS_metric, Both_metric);
-                [p_US_Both, ~] = signrank(US_metric, Both_metric);
+                % Only perform post-hoc tests if Friedman test is significant
+                if p_friedman < 0.05
+                    [p_CS_US, ~] = signrank(CS_metric, US_metric);
+                    [p_CS_Both, ~] = signrank(CS_metric, Both_metric);
+                    [p_US_Both, ~] = signrank(US_metric, Both_metric);
+                else
+                    % Set p-values to 1 (non-significant) if Friedman is not significant
+                    p_CS_US = 1;
+                    p_CS_Both = 1;
+                    p_US_Both = 1;
+                end
             else
-                % Set p-values to 1 (non-significant) if KW is not significant
+                % Not enough data for Friedman test (n < 2)
+                p_friedman = 1;
                 p_CS_US = 1;
                 p_CS_Both = 1;
                 p_US_Both = 1;
@@ -1020,137 +1043,10 @@ title(t_latency, 'Onset latency comparison', 'FontSize', 12, 'FontWeight', 'bold
 
 fprintf('\nMain figure complete.\n');
 
-%% Supplementary figure - selective vs multisensory latency comparison + chi-square test
-fprintf('\nGenerating supplementary figure...\n');
+%% Prepare statistical data for Excel export
+fprintf('\nCalculating statistics for export...\n');
 
-fig_supp = figure('Units', 'pixels', 'Position', [200, 200, 1000, 900], 'Visible', 'on');
-t_supp = tiledlayout(fig_supp, 3, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
-
-% Add panel labels for supplementary figure
-% A: Onset latencies (row 1)
-annotation(fig_supp, 'textbox', [0.01 0.94 0.05 0.05], 'String', 'A', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% Row 1: Latency comparison (original boxplot content)
-ax_latency = nexttile(t_supp, 1);
-
-% Collect latency data for each group
-% LA CS-selective and Multisensory (CS latency)
-LA_CS_sel_lat = results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 1) * 1000;  % Convert to ms
-LA_Multi_CS_lat = results_all{1}.CS_onset_lat_all(results_all{1}.Clusters_all == 3) * 1000;
-
-% Astria CS-selective and Multisensory (CS latency)
-Astria_CS_sel_lat = results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 1) * 1000;
-Astria_Multi_CS_lat = results_all{2}.CS_onset_lat_all(results_all{2}.Clusters_all == 3) * 1000;
-
-% LA US-selective and Multisensory (US latency)
-LA_US_sel_lat = results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 2) * 1000;
-LA_Multi_US_lat = results_all{1}.US_onset_lat_all(results_all{1}.Clusters_all == 3) * 1000;
-
-% Astria US-selective and Multisensory (US latency)
-Astria_US_sel_lat = results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 2) * 1000;
-Astria_Multi_US_lat = results_all{2}.US_onset_lat_all(results_all{2}.Clusters_all == 3) * 1000;
-
-% Remove NaN values
-LA_CS_sel_lat = LA_CS_sel_lat(~isnan(LA_CS_sel_lat));
-LA_Multi_CS_lat = LA_Multi_CS_lat(~isnan(LA_Multi_CS_lat));
-Astria_CS_sel_lat = Astria_CS_sel_lat(~isnan(Astria_CS_sel_lat));
-Astria_Multi_CS_lat = Astria_Multi_CS_lat(~isnan(Astria_Multi_CS_lat));
-LA_US_sel_lat = LA_US_sel_lat(~isnan(LA_US_sel_lat));
-LA_Multi_US_lat = LA_Multi_US_lat(~isnan(LA_Multi_US_lat));
-Astria_US_sel_lat = Astria_US_sel_lat(~isnan(Astria_US_sel_lat));
-Astria_Multi_US_lat = Astria_Multi_US_lat(~isnan(Astria_Multi_US_lat));
-
-hold on;
-
-% Positions for 4 pairs of boxplots
-positions = [1 2, 4 5, 7 8, 10 11];
-all_data = {LA_CS_sel_lat, LA_Multi_CS_lat, Astria_CS_sel_lat, Astria_Multi_CS_lat, ...
-            LA_US_sel_lat, LA_Multi_US_lat, Astria_US_sel_lat, Astria_Multi_US_lat};
-
-% Plot boxplots
-boxplot([all_data{1}; all_data{2}; all_data{3}; all_data{4}; ...
-         all_data{5}; all_data{6}; all_data{7}; all_data{8}], ...
-        [ones(length(all_data{1}),1)*1; ones(length(all_data{2}),1)*2; ...
-         ones(length(all_data{3}),1)*4; ones(length(all_data{4}),1)*5; ...
-         ones(length(all_data{5}),1)*7; ones(length(all_data{6}),1)*8; ...
-         ones(length(all_data{7}),1)*10; ones(length(all_data{8}),1)*11], ...
-        'Positions', positions, 'Widths', 0.6, 'Colors', 'k');
-
-% Overlay scatter points with jitter
-jitter_amount = 0.15;
-for i = 1:8
-    if ~isempty(all_data{i})
-        x_jitter = positions(i) + (rand(length(all_data{i}), 1) - 0.5) * jitter_amount;
-
-        % Color based on group type (selective vs multisensory)
-        if mod(i, 2) == 1  % Selective groups (odd indices)
-            color = [0.5 0.5 0.5];  % Gray
-        else  % Multisensory groups (even indices)
-            color = [0.6 0.2 0.6];  % Purple
-        end
-
-        scatter(x_jitter, all_data{i}, 20, color, 'filled', 'MarkerFaceAlpha', 0.4);
-    end
-end
-
-hold off;
-
-% Formatting
-xlim([0 12]);
-ylim([0 50]);
-xticks([1.5 4.5 7.5 10.5]);
-xticklabels({'LA CS', 'AStria CS', 'LA US', 'AStria US'});
-ylabel('Onset Latency (ms)', 'FontSize', 10);
-title('Onset Latencies: Selective vs Multisensory', 'FontSize', 10, 'FontWeight', 'bold');
-set(gca, 'FontSize', 10);
-box off;
-
-% Add statistics - ranksum test for each pair (selective vs multisensory)
-y_pos_sig = 45;  % Position for significance markers
-pairs_to_test = {
-    {LA_CS_sel_lat, LA_Multi_CS_lat, 1.5};      % LA CS pair, x-position for text
-    {Astria_CS_sel_lat, Astria_Multi_CS_lat, 4.5};  % Astria CS pair
-    {LA_US_sel_lat, LA_Multi_US_lat, 7.5};      % LA US pair
-    {Astria_US_sel_lat, Astria_Multi_US_lat, 10.5};  % Astria US pair
-};
-
-hold on;
-for p = 1:4
-    data1 = pairs_to_test{p}{1};
-    data2 = pairs_to_test{p}{2};
-    x_center = pairs_to_test{p}{3};
-
-    if ~isempty(data1) && ~isempty(data2) && length(data1) > 0 && length(data2) > 0
-        [p_val, ~] = ranksum(data1, data2);
-
-        % Draw line connecting the two boxplots
-        x_left = x_center - 0.5;
-        x_right = x_center + 0.5;
-        plot([x_left x_right], [y_pos_sig y_pos_sig], 'k-', 'LineWidth', 1.5);
-
-        if p_val < 0.05
-            sig_text = get_sig_stars(p_val);
-        else
-            sig_text = 'n.s.';
-        end
-
-        text(x_center, y_pos_sig, sig_text, 'HorizontalAlignment', 'center', ...
-            'VerticalAlignment', 'bottom', 'FontSize', 10);
-    end
-end
-hold off;
-
-% Add legend
-legend_ax = axes('Position', [0.75 0.8 0.15 0.1], 'Visible', 'off');
-hold(legend_ax, 'on');
-h1 = scatter(legend_ax, NaN, NaN, 50, [0.5 0.5 0.5], 'filled');
-h2 = scatter(legend_ax, NaN, NaN, 50, [0.6 0.2 0.6], 'filled');
-legend(legend_ax, [h1, h2], {'Selective', 'Multisensory'}, 'Location', 'best', 'FontSize', 10);
-hold(legend_ax, 'off');
-
-%% Row 2: Chi-square test analysis (3 panels)
+% Chi-square test
 fprintf('\n=== Chi-square Test: LA vs Astria (Monosynaptic) ===\n');
 
 % Build contingency table: 2 regions × 3 clusters (CS-sel, US-sel, Multi)
@@ -1251,105 +1147,12 @@ else
     fprintf('Significance (p < 0.05): NO\n');
 end
 
-% Create nested 1×3 tiledlayout for chi-square panels
-t_chi = tiledlayout(t_supp, 1, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
-t_chi.Layout.Tile = 2;
-
-% B: Permutation distribution (row 2, col 1)
-annotation(fig_supp, 'textbox', [0.01 0.63 0.05 0.05], 'String', 'B', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% C: Contingency table (row 2, col 2)
-annotation(fig_supp, 'textbox', [0.35 0.63 0.05 0.05], 'String', 'C', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% D: Statistics (row 2, col 3)
-annotation(fig_supp, 'textbox', [0.68 0.63 0.05 0.05], 'String', 'D', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% E: Kruskal-Wallis tests (row 3)
-annotation(fig_supp, 'textbox', [0.01 0.30 0.05 0.05], 'String', 'E', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% Panel 1: Permutation distribution
-ax_perm = nexttile(t_chi, 1);
-histogram(ax_perm, chi2_perm, 50, 'FaceColor', [0.7 0.7 0.7], 'EdgeColor', 'k');
-hold on;
-xline(chi2_obs, 'r-', 'LineWidth', 2);
-hold off;
-xlabel('Chi-square statistic', 'FontSize', 10);
-ylabel('Frequency', 'FontSize', 10);
-title('Permutation Distribution', 'FontSize', 10, 'FontWeight', 'bold');
-legend({'Null', 'Observed'}, 'Location', 'northeast', 'FontSize', 10);
-set(gca, 'FontSize', 10);
-box off;
-
-% Panel 2: Contingency table
-ax_table = nexttile(t_chi, 2);
-axis(ax_table, 'off');
-% Display contingency table as text
-y_start = 0.7;
-y_step = 0.2;
-text(0.1, y_start, 'Region', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-text(0.3, y_start, 'CS-sel', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-text(0.5, y_start, 'US-sel', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-text(0.7, y_start, 'Multi', 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-for br = 1:2
-    if strcmp(brain_regions{br}, 'Astria')
-        region_name = 'AStria';
-    else
-        region_name = brain_regions{br};
-    end
-    text(0.1, y_start - br*y_step, region_name, 'FontSize', 10, 'HorizontalAlignment', 'center');
-    text(0.3, y_start - br*y_step, sprintf('%d', contingency_table(br, 1)), 'FontSize', 10, 'HorizontalAlignment', 'center');
-    text(0.5, y_start - br*y_step, sprintf('%d', contingency_table(br, 2)), 'FontSize', 10, 'HorizontalAlignment', 'center');
-    text(0.7, y_start - br*y_step, sprintf('%d', contingency_table(br, 3)), 'FontSize', 10, 'HorizontalAlignment', 'center');
-end
-title(ax_table, sprintf('Contingency Table (χ²=%.2f)', chi2_obs), 'FontSize', 10, 'FontWeight', 'bold');
-
-% Panel 3: Statistical summary
-ax_stats = nexttile(t_chi, 3);
-axis(ax_stats, 'off');
-% Compact display of statistics
-y_pos = 0.7;
-y_step = 0.15;
-text(0.5, y_pos, sprintf('χ²: %.2f', chi2_obs), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-text(0.5, y_pos - y_step, sprintf('p: %.4f', p_perm), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-text(0.5, y_pos - 2*y_step, sprintf('V: %.3f', cramers_v), 'FontSize', 10, 'FontWeight', 'bold', 'HorizontalAlignment', 'center');
-
-% Add significance symbol
-if p_perm < 0.001
-    sig_symbol = '***';
-    sig_color = [0.8 0.2 0.2];
-elseif p_perm < 0.01
-    sig_symbol = '**';
-    sig_color = [0.8 0.4 0.2];
-elseif p_perm < 0.05
-    sig_symbol = '*';
-    sig_color = [0.8 0.6 0.2];
-else
-    sig_symbol = 'n.s.';
-    sig_color = [0.5 0.5 0.5];
-end
-text(0.5, y_pos - 3*y_step, sig_symbol, 'FontSize', 14, 'FontWeight', 'bold', ...
-    'HorizontalAlignment', 'center', 'Color', sig_color);
-title(ax_stats, 'Statistics', 'FontSize', 10, 'FontWeight', 'bold');
-
-%% Row 3: Kruskal-Wallis test visualization
-% Perform Kruskal-Wallis tests for each region × cluster combination
+% Friedman tests for each region × cluster combination
 kw_results = struct();
 
-fprintf('\n=== Kruskal-Wallis Tests for Bar Charts (CS vs US vs CS+US within each cluster) ===\n');
+fprintf('\n=== Friedman Tests for Bar Charts (CS vs US vs CS+US within each cluster, repeated measures) ===\n');
 
 cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
-
-% Create nested 2×3 tiledlayout for KW test panels (2 regions × 3 clusters)
-t_kw = tiledlayout(t_supp, 2, 3, 'TileSpacing', 'compact', 'Padding', 'tight');
-t_kw.Layout.Tile = 3;
 
 for br = 1:2
     if isempty(results_all{br})
@@ -1365,110 +1168,51 @@ for br = 1:2
             continue;
         end
 
-        % Combine data for KW test: CS, US, Both stimuli
-        all_values = [kw_data_storage{br, c, 1}; kw_data_storage{br, c, 2}; kw_data_storage{br, c, 3}];
-        group_labels = [ones(length(kw_data_storage{br, c, 1}), 1); ...
-                        2*ones(length(kw_data_storage{br, c, 2}), 1); ...
-                        3*ones(length(kw_data_storage{br, c, 3}), 1)];
+        % Prepare data matrix for Friedman test (repeated measures)
+        % Rows = subjects (neurons), Columns = conditions (CS, US, Both)
+        % Friedman test requires at least 2 neurons
+        if length(kw_data_storage{br, c, 1}) >= 2
+            % Ensure data is properly formatted as column vectors
+            data_matrix = [kw_data_storage{br, c, 1}(:), kw_data_storage{br, c, 2}(:), kw_data_storage{br, c, 3}(:)];
 
-        % Kruskal-Wallis test
-        [p_kw, ~, ~] = kruskalwallis(all_values, group_labels, 'off');
+            % Friedman test (repeated measures)
+            [p_friedman, ~, ~] = friedman(data_matrix, 1, 'off');
 
-        % Only perform post-hoc tests if KW is significant
-        if p_kw < 0.05
-            % Post-hoc pairwise Wilcoxon signed-rank tests
-            p_values = zeros(3, 1);
-            p_values(1) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 2});  % CS vs US
-            p_values(2) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 3});  % CS vs Both
-            p_values(3) = signrank(kw_data_storage{br, c, 2}, kw_data_storage{br, c, 3});  % US vs Both
+            % Only perform post-hoc tests if Friedman test is significant
+            if p_friedman < 0.05
+                % Post-hoc pairwise Wilcoxon signed-rank tests
+                p_values = zeros(3, 1);
+                p_values(1) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 2});  % CS vs US
+                p_values(2) = signrank(kw_data_storage{br, c, 1}, kw_data_storage{br, c, 3});  % CS vs Both
+                p_values(3) = signrank(kw_data_storage{br, c, 2}, kw_data_storage{br, c, 3});  % US vs Both
+            else
+                % Set p-values to 1 (non-significant) if Friedman is not significant
+                p_values = ones(3, 1);
+            end
         else
-            % Set p-values to 1 (non-significant) if KW is not significant
+            % Not enough data for Friedman test (n < 2)
+            p_friedman = 1;
             p_values = ones(3, 1);
         end
 
         % Store results
-        kw_results(br, c).p_kw = p_kw;
+        kw_results(br, c).p_friedman = p_friedman;
         kw_results(br, c).p_values = p_values;
 
-        fprintf('  %s: KW p=%.4f, CS-US p=%.4f, CS-Multi p=%.4f, US-Multi p=%.4f\n', ...
-            cluster_names_kw{c}, p_kw, p_values(1), p_values(2), p_values(3));
-
-        % Calculate tile index for this region × cluster combination
-        % Row 1 (br=1, LA): tiles 1, 2, 3
-        % Row 2 (br=2, AStria): tiles 4, 5, 6
-        tile_idx = (br-1)*3 + c;
-
-        % Create panel with KW p-value and post-hoc results combined
-        ax = nexttile(t_kw, tile_idx);
-        axis off;
-
-        % KW p-value at top
-        text(0.5, 0.85, sprintf('KW p = %.4f', p_kw), 'FontSize', 9, 'FontWeight', 'bold', ...
-            'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-        if p_kw < 0.001
-            sig_text = '***';
-            text_color = [0.8 0.2 0.2];
-        elseif p_kw < 0.01
-            sig_text = '**';
-            text_color = [0.8 0.2 0.2];
-        elseif p_kw < 0.05
-            sig_text = '*';
-            text_color = [0.8 0.2 0.2];
-        else
-            sig_text = 'n.s.';
-            text_color = [0.4 0.4 0.4];
-        end
-        text(0.5, 0.65, sig_text, 'FontSize', 11, 'FontWeight', 'bold', 'Color', text_color, ...
-            'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-
-        % Post-hoc p-values below (only show if KW is significant)
-        if p_kw < 0.05
-            y_pos = 0.45;
-            y_step = 0.15;
-            text(0.5, y_pos, 'Post-hoc:', 'FontSize', 8, 'FontWeight', 'bold', ...
-                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-            y_pos = y_pos - y_step;
-            text(0.5, y_pos, sprintf('CS-US: %.3f', p_values(1)), 'FontSize', 7, ...
-                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-            y_pos = y_pos - y_step;
-            text(0.5, y_pos, sprintf('CS-Multi: %.3f', p_values(2)), 'FontSize', 7, ...
-                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-            y_pos = y_pos - y_step;
-            text(0.5, y_pos, sprintf('US-Multi: %.3f', p_values(3)), 'FontSize', 7, ...
-                'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-        end
-
-        % Title showing region and cluster
-        if strcmp(brain_regions{br}, 'Astria')
-            title_text = sprintf('AStria %s', cluster_names_kw{c});
-        else
-            title_text = sprintf('%s %s', brain_regions{br}, cluster_names_kw{c});
-        end
-        title(title_text, 'FontSize', 10, 'FontWeight', 'bold');
+        fprintf('  %s: Friedman p=%.4f, CS-US p=%.4f, CS-Multi p=%.4f, US-Multi p=%.4f\n', ...
+            cluster_names_kw{c}, p_friedman, p_values(1), p_values(2), p_values(3));
     end
 end
 
-fprintf('\nSupplementary figure complete.\n');
+fprintf('\nStatistical calculations complete.\n');
 
-%% Export statistics
-export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, cramers_v, ...
-    kw_results, kw_data_storage, brain_regions, cluster_names, g);
+%% Export data to Excel
+export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
+    chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, cell_metrics, g, 'figure_4_data.xlsx');
 
 fprintf('\nDone.\n');
 
 %% Helper functions
-function sig_text = get_sig_stars(p_value)
-    if p_value < 0.001
-        sig_text = '***';
-    elseif p_value < 0.01
-        sig_text = '**';
-    elseif p_value < 0.05
-        sig_text = '*';
-    else
-        sig_text = '';
-    end
-end
-
 function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
     seg = z_trace(event_inds);
     if any(isnan(seg))
@@ -1537,147 +1281,21 @@ function [chi2_stat, p_value] = calculate_chi_square(contingency_table)
     p_value = 1 - chi2cdf(chi2_stat, df);
 end
 
-function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, cramers_v, ...
-    kw_results, kw_data_storage, brain_regions, cluster_names, g)
+function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
+    chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, cell_metrics, g, output_filename)
 
-    fid = fopen('figure_4_stats.txt', 'w');
-
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'FIGURE 4 STATISTICS (Monosynaptic Responses)\n');
-    fprintf(fid, 'Generated: %s\n', datestr(now));
-    fprintf(fid, '========================================\n\n');
-
-    fprintf(fid, 'This file contains statistics for:\n');
-    fprintf(fid, '  - MAIN FIGURE (Panels A-G): Heatmaps, delta FR bars, pie charts, region comparison, latency comparison\n');
-    fprintf(fid, '  - SUPPLEMENTARY FIGURE (Panels A-E): Latency boxplots, chi-square test, Kruskal-Wallis tests\n\n');
-
-    fprintf(fid, 'Analysis window: 0-%d ms (monosynaptic)\n', g.monosyn_window*1000);
-    fprintf(fid, 'Rank score alpha: %.1f\n\n', g.alpha);
-
-    %% Sample sizes
-    fprintf(fid, '### SAMPLE SIZES BY REGION ###\n\n');
-
-    all_animals = {};
-    for br = 1:2
-        if ~isempty(results_all{br})
-            animals_br = results_all{br}.animals;
-            if ~iscell(animals_br)
-                animals_br = {animals_br};
-            end
-            all_animals = [all_animals; animals_br(:)];
-        end
-    end
-    unique_animals = unique(all_animals);
-
-    fprintf(fid, 'Number of animals (N): %d\n', length(unique_animals));
-    fprintf(fid, 'Animal IDs: %s\n\n', strjoin(unique_animals, ', '));
-
-    total_neurons = 0;
-    for br = 1:2
-        if ~isempty(results_all{br})
-            n_neurons = results_all{br}.n_neurons;
-            total_neurons = total_neurons + n_neurons;
-            fprintf(fid, '%s: n = %d neurons\n', brain_regions{br}, n_neurons);
-        end
-    end
-    fprintf(fid, 'Total neurons (LA + AStria): %d\n\n', total_neurons);
-
-    %% Cluster distributions
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'MAIN FIGURE - PANEL E: PIE CHARTS\n');
-    fprintf(fid, 'SUPPLEMENTARY FIGURE - PANELS B, C, D: CHI-SQUARE TEST\n');
-    fprintf(fid, '========================================\n\n');
-
-    fprintf(fid, '### CLUSTER DISTRIBUTIONS BY REGION ###\n\n');
-
-    fprintf(fid, 'Contingency Table (neurons per cluster):\n');
-    fprintf(fid, '%-10s', 'Region');
-    for c = 1:3
-        fprintf(fid, '%-12s', cluster_names{c});
-    end
-    fprintf(fid, '%-10s\n', 'Total');
-
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-        fprintf(fid, '%-10s', region_name);
-        for c = 1:3
-            fprintf(fid, '%-12d', contingency_table(br, c));
-        end
-        fprintf(fid, '%-10d\n', sum(contingency_table(br, :)));
-    end
-    fprintf(fid, '\n');
-
-    fprintf(fid, 'Cluster Proportions by Region:\n');
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-        fprintf(fid, '%s:\n', region_name);
-        total_region = sum(contingency_table(br, :));
-        if total_region > 0
-            for c = 1:3
-                n_cluster = contingency_table(br, c);
-                pct = 100 * n_cluster / total_region;
-                fprintf(fid, '  %s: %d (%.1f%%)\n', cluster_names{c}, n_cluster, pct);
-            end
-        end
-        fprintf(fid, '\n');
+    if exist(output_filename, 'file')
+        delete(output_filename);
     end
 
-    %% Chi-square test
-    fprintf(fid, '\n### CHI-SQUARE TEST (LA vs AStria) ###\n\n');
-
-    fprintf(fid, 'Overall Chi-square Test:\n');
-    fprintf(fid, '  Chi-square statistic: %.4f\n', chi2_obs);
-    fprintf(fid, '  Permutation p-value (10,000 permutations): %.4f\n', p_perm);
-    fprintf(fid, '  Cramér''s V (effect size): %.4f\n', cramers_v);
-    fprintf(fid, '  Significant (p < 0.05): %s\n\n', char(string(p_perm < 0.05)));
-
-    %% Kruskal-Wallis tests
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'MAIN FIGURE - PANELS B, D: DELTA PEAK FR BARS\n');
-    fprintf(fid, 'SUPPLEMENTARY FIGURE - PANEL E: KRUSKAL-WALLIS TESTS\n');
-    fprintf(fid, '========================================\n\n');
-
-    fprintf(fid, '### KRUSKAL-WALLIS TESTS (CS vs US vs CS+US WITHIN EACH CLUSTER) ###\n\n');
-
-    cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
-
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-
-        fprintf(fid, '--- %s ---\n', region_name);
-
-        for c = 1:3
-            fprintf(fid, '\n%s:\n', cluster_names_kw{c});
-            fprintf(fid, '  Kruskal-Wallis p-value: %.4f\n', kw_results(br, c).p_kw);
-            fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(kw_results(br, c).p_kw < 0.05)));
-
-            if kw_results(br, c).p_kw < 0.05
-                fprintf(fid, '  Post-hoc comparisons (Wilcoxon signed-rank):\n');
-                fprintf(fid, '    CS vs US: p = %.4f\n', kw_results(br, c).p_values(1));
-                fprintf(fid, '    CS vs CS+US: p = %.4f\n', kw_results(br, c).p_values(2));
-                fprintf(fid, '    US vs CS+US: p = %.4f\n', kw_results(br, c).p_values(3));
-            end
-        end
-        fprintf(fid, '\n');
-    end
-
-    %% Descriptive statistics for Delta Peak FR bars
-    fprintf(fid, '### DESCRIPTIVE STATISTICS FOR DELTA PEAK FR BARS (PANELS B, D) ###\n\n');
-
-    cluster_names_stats = {'CS-selective', 'US-selective', 'Multisensory'};
     stim_names = {'CS', 'US', 'CS+US'};
+    baseline_bins = round(g.pre_time / g.bin_time);
+
+    %% PANELS B & D: Delta Peak FR Bar Charts (main figure)
+    sheet_data = {};
+    sheet_data{1, 1} = 'PANELS B & D: Delta Peak FR Bar Charts (Monosynaptic 12-25ms window)';
+    sheet_data{2, 1} = '';
+    row = 3;
 
     for br = 1:2
         if strcmp(brain_regions{br}, 'Astria')
@@ -1686,94 +1304,149 @@ function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, 
             region_name = brain_regions{br};
         end
 
-        fprintf(fid, '--- %s ---\n', region_name);
+        sheet_data{row, 1} = sprintf('=== %s ===', region_name);
+        row = row + 1;
 
         for c = 1:3
-            % Use the exact data stored during plotting
             if isempty(kw_data_storage{br, c, 1})
                 continue;
             end
 
-            n_cluster = length(kw_data_storage{br, c, 1});
-            fprintf(fid, '\n%s (n = %d neurons):\n', cluster_names_stats{c}, n_cluster);
+            sheet_data{row, 1} = cluster_names{c};
+            sheet_data{row, 2} = sprintf('(n = %d neurons)', length(kw_data_storage{br, c, 1}));
+            row = row + 1;
 
+            % Header
+            sheet_data{row, 1} = 'Stimulus';
+            sheet_data{row, 2} = 'Mean (Hz)';
+            sheet_data{row, 3} = 'SEM (Hz)';
+            sheet_data{row, 4} = 'Median (Hz)';
+            sheet_data{row, 5} = 'SD (Hz)';
+            row = row + 1;
+
+            % Data for each stimulus
             for stim = 1:3
-                data = kw_data_storage{br, c, stim};
-                fprintf(fid, '  %s: %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz, SD = %.2f Hz\n', ...
-                    stim_names{stim}, mean(data), std(data)/sqrt(length(data)), ...
-                    median(data), std(data));
+                data_fr = kw_data_storage{br, c, stim};
+                sheet_data{row, 1} = stim_names{stim};
+                sheet_data{row, 2} = mean(data_fr);
+                sheet_data{row, 3} = std(data_fr)/sqrt(length(data_fr));
+                sheet_data{row, 4} = median(data_fr);
+                sheet_data{row, 5} = std(data_fr);
+                row = row + 1;
             end
+
+            % Statistical tests
+            sheet_data{row, 1} = '';
+            row = row + 1;
+
+            if ~isempty(kw_results) && numel(kw_results) >= (br + (c-1)*2)
+                p_friedman = kw_results(br, c).p_friedman;
+                p_values = kw_results(br, c).p_values;
+
+                sheet_data{row, 1} = 'Friedman test p-value:';
+                sheet_data{row, 2} = p_friedman;
+                sheet_data{row, 3} = format_significance(p_friedman);
+                row = row + 1;
+
+                if p_friedman < 0.05
+                    sheet_data{row, 1} = 'Post-hoc (Wilcoxon signed-rank):';
+                    row = row + 1;
+
+                    sheet_data{row, 1} = '  CS vs US:';
+                    sheet_data{row, 2} = p_values(1);
+                    sheet_data{row, 3} = format_significance(p_values(1));
+                    row = row + 1;
+
+                    sheet_data{row, 1} = '  CS vs CS+US:';
+                    sheet_data{row, 2} = p_values(2);
+                    sheet_data{row, 3} = format_significance(p_values(2));
+                    row = row + 1;
+
+                    sheet_data{row, 1} = '  US vs CS+US:';
+                    sheet_data{row, 2} = p_values(3);
+                    sheet_data{row, 3} = format_significance(p_values(3));
+                    row = row + 1;
+                else
+                    sheet_data{row, 1} = '  (Post-hoc not performed - Friedman test n.s.)';
+                    row = row + 1;
+                end
+            end
+            row = row + 1;
         end
-        fprintf(fid, '\n');
+        row = row + 1;
     end
 
-    %% Cluster-specific latencies
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'MAIN FIGURE - PANEL G: ONSET LATENCY COMPARISON\n');
-    fprintf(fid, 'SUPPLEMENTARY FIGURE - PANEL A: LATENCY BOXPLOTS\n');
-    fprintf(fid, '========================================\n\n');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelsBD_DeltaFR');
 
-    fprintf(fid, '### CLUSTER-SPECIFIC MONOSYNAPTIC LATENCIES ###\n\n');
+    %% PANEL E: Pie Charts
+    sheet_data = {};
+    sheet_data{1, 1} = 'PANEL E: Pie Charts - Cluster Proportions (Monosynaptic)';
+    sheet_data{2, 1} = '';
+    sheet_data{3, 1} = 'Region';
+    sheet_data{3, 2} = 'CS-sel (n)';
+    sheet_data{3, 3} = 'CS-sel (%)';
+    sheet_data{3, 4} = 'US-sel (n)';
+    sheet_data{3, 5} = 'US-sel (%)';
+    sheet_data{3, 6} = 'Multi (n)';
+    sheet_data{3, 7} = 'Multi (%)';
+    sheet_data{3, 8} = 'Total';
 
+    row = 4;
     for br = 1:2
-        if isempty(results_all{br})
-            continue;
-        end
-
         if strcmp(brain_regions{br}, 'Astria')
             region_name = 'AStria';
         else
             region_name = brain_regions{br};
         end
 
-        fprintf(fid, '--- %s ---\n', region_name);
-        res = results_all{br};
-
-        for c = 1:3
-            clust_idx = res.Clusters_all == c;
-            n_cluster = sum(clust_idx);
-
-            if n_cluster == 0
-                continue;
-            end
-
-            fprintf(fid, '\n%s (n = %d):\n', cluster_names{c}, n_cluster);
-
-            % Monosynaptic onset latencies
-            if c == 1 || c == 3  % CS-sel or Multi
-                cs_onsets = res.CS_onset_lat_all(clust_idx);
-                cs_onsets = cs_onsets(~isnan(cs_onsets));
-                if ~isempty(cs_onsets)
-                    fprintf(fid, '  CS onset (monosynaptic): %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
-                        mean(cs_onsets)*1000, std(cs_onsets)*1000, median(cs_onsets)*1000, length(cs_onsets));
-                end
-            end
-
-            if c == 2 || c == 3  % US-sel or Multi
-                us_onsets = res.US_onset_lat_all(clust_idx);
-                us_onsets = us_onsets(~isnan(us_onsets));
-                if ~isempty(us_onsets)
-                    fprintf(fid, '  US onset (monosynaptic): %.3f ± %.3f ms (mean ± SD), median = %.3f ms, n = %d\n', ...
-                        mean(us_onsets)*1000, std(us_onsets)*1000, median(us_onsets)*1000, length(us_onsets));
-                end
-            end
-        end
-        fprintf(fid, '\n');
+        total = sum(contingency_table(br, :));
+        sheet_data{row, 1} = region_name;
+        sheet_data{row, 2} = contingency_table(br, 1);
+        sheet_data{row, 3} = 100 * contingency_table(br, 1) / total;
+        sheet_data{row, 4} = contingency_table(br, 2);
+        sheet_data{row, 5} = 100 * contingency_table(br, 2) / total;
+        sheet_data{row, 6} = contingency_table(br, 3);
+        sheet_data{row, 7} = 100 * contingency_table(br, 3) / total;
+        sheet_data{row, 8} = total;
+        row = row + 1;
     end
 
-    %% Across-region comparison (Panel F)
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'MAIN FIGURE - PANEL F: ACROSS-REGION COMPARISON\n');
-    fprintf(fid, '========================================\n\n');
+    % Chi-square test results
+    sheet_data{row, 1} = '';
+    row = row + 1;
+    sheet_data{row, 1} = '=== Chi-square Test (LA vs AStria) ===';
+    row = row + 1;
+    sheet_data{row, 1} = 'Chi-square statistic:';
+    sheet_data{row, 2} = chi2_obs;
+    row = row + 1;
+    sheet_data{row, 1} = 'Permutation p-value:';
+    sheet_data{row, 2} = p_perm;
+    sheet_data{row, 3} = format_significance(p_perm);
+    row = row + 1;
+    sheet_data{row, 1} = 'Cramer''s V (effect size):';
+    sheet_data{row, 2} = cramers_v;
+    row = row + 1;
 
-    fprintf(fid, '### ACROSS-REGION COMPARISON (ALL RESPONSIVE NEURONS) ###\n\n');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelE_PieCharts');
 
-    baseline_bins = round(g.pre_time / g.bin_time);
-    stim_names_full = {'CS', 'US', 'CS+US'};
+    %% PANEL F: Across-region comparison bars
+    sheet_data = {};
+    sheet_data{1, 1} = 'PANEL F: LA vs AStria Comparison (Monosynaptic 12-25ms)';
+    sheet_data{2, 1} = '';
+    row = 3;
 
     for stim = 1:3
-        fprintf(fid, '--- %s ---\n', stim_names_full{stim});
+        sheet_data{row, 1} = sprintf('=== %s trials ===', stim_names{stim});
+        row = row + 1;
 
+        sheet_data{row, 1} = 'Region';
+        sheet_data{row, 2} = 'Mean (Hz)';
+        sheet_data{row, 3} = 'SEM (Hz)';
+        sheet_data{row, 4} = 'Median (Hz)';
+        sheet_data{row, 5} = 'n neurons';
+        row = row + 1;
+
+        % Collect data for both regions
         for br = 1:2
             if isempty(results_all{br})
                 continue;
@@ -1782,11 +1455,11 @@ function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, 
             res = results_all{br};
 
             % Select appropriate PSTH
-            if stim == 1  % CS
+            if stim == 1
                 psth_Hz = res.psth_CS_Hz_all;
-            elseif stim == 2  % US
+            elseif stim == 2
                 psth_Hz = res.psth_US_Hz_all;
-            else  % CS+US
+            else
                 psth_Hz = res.psth_Both_Hz_all;
             end
 
@@ -1802,14 +1475,8 @@ function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, 
 
                 for n = 1:length(responsive_idx)
                     idx_n = responsive_idx(n);
-
-                    % Calculate baseline firing rate
                     baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-
-                    % Calculate peak firing rate in monosyn window
                     peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
-
-                    % Delta Peak FR
                     delta_peak_fr(n) = peak_fr - baseline_fr;
                 end
 
@@ -1819,164 +1486,307 @@ function export_figure4_stats(results_all, contingency_table, chi2_obs, p_perm, 
                     region_name = brain_regions{br};
                 end
 
-                fprintf(fid, '%s (n = %d responsive neurons): %.2f ± %.2f Hz (mean ± SEM), median = %.2f Hz, SD = %.2f Hz\n', ...
-                    region_name, length(responsive_idx), ...
-                    mean(delta_peak_fr), std(delta_peak_fr)/sqrt(length(delta_peak_fr)), ...
-                    median(delta_peak_fr), std(delta_peak_fr));
+                sheet_data{row, 1} = region_name;
+                sheet_data{row, 2} = mean(delta_peak_fr);
+                sheet_data{row, 3} = std(delta_peak_fr)/sqrt(length(delta_peak_fr));
+                sheet_data{row, 4} = median(delta_peak_fr);
+                sheet_data{row, 5} = length(delta_peak_fr);
+                row = row + 1;
             end
         end
 
-        % Perform Wilcoxon rank-sum test between LA and AStria
-        if ~isempty(results_all{1}) && ~isempty(results_all{2})
-            % Recalculate for both regions for the test
-            LA_data = [];
-            AStria_data = [];
+        % Statistical test
+        sheet_data{row, 1} = '';
+        row = row + 1;
+        sheet_data{row, 1} = 'Statistical Test:';
+        row = row + 1;
 
-            for br = 1:2
-                res = results_all{br};
-
-                if stim == 1
-                    psth_Hz = res.psth_CS_Hz_all;
-                elseif stim == 2
-                    psth_Hz = res.psth_US_Hz_all;
+        % Collect LA and AStria data for this stimulus
+        LA_data = [];
+        Astria_data = [];
+        for br = 1:2
+            if isempty(results_all{br})
+                continue;
+            end
+            res = results_all{br};
+            if stim == 1
+                psth_Hz = res.psth_CS_Hz_all;
+            elseif stim == 2
+                psth_Hz = res.psth_US_Hz_all;
+            else
+                psth_Hz = res.psth_Both_Hz_all;
+            end
+            responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
+            if ~isempty(responsive_idx)
+                delta_peak_fr = zeros(length(responsive_idx), 1);
+                baseline_idx = 1:baseline_bins;
+                response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
+                response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+                for n = 1:length(responsive_idx)
+                    idx_n = responsive_idx(n);
+                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
+                    peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
+                    delta_peak_fr(n) = peak_fr - baseline_fr;
+                end
+                if br == 1
+                    LA_data = delta_peak_fr;
                 else
-                    psth_Hz = res.psth_Both_Hz_all;
+                    Astria_data = delta_peak_fr;
                 end
-
-                responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
-
-                if ~isempty(responsive_idx)
-                    delta_peak_fr = zeros(length(responsive_idx), 1);
-                    baseline_idx = 1:baseline_bins;
-                    response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                    response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
-
-                    for n = 1:length(responsive_idx)
-                        idx_n = responsive_idx(n);
-                        baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                        peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
-                        delta_peak_fr(n) = peak_fr - baseline_fr;
-                    end
-
-                    if br == 1
-                        LA_data = delta_peak_fr;
-                    else
-                        AStria_data = delta_peak_fr;
-                    end
-                end
-            end
-
-            if ~isempty(LA_data) && ~isempty(AStria_data)
-                [p_val, ~] = ranksum(LA_data, AStria_data);
-                fprintf(fid, 'Wilcoxon rank-sum test (LA vs AStria): p = %.4f\n', p_val);
             end
         end
 
-        fprintf(fid, '\n');
+        if ~isempty(LA_data) && ~isempty(Astria_data)
+            [p_val, ~] = ranksum(LA_data, Astria_data);
+            sheet_data{row, 1} = 'Wilcoxon rank-sum (LA vs AStria):';
+            sheet_data{row, 2} = p_val;
+            sheet_data{row, 3} = format_significance(p_val);
+            row = row + 1;
+        end
+
+        row = row + 1;
     end
 
-    %% Latency comparison statistics (Panel G)
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'MAIN FIGURE - PANEL G: LATENCY COMPARISON STATISTICS\n');
-    fprintf(fid, '========================================\n\n');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelF_RegionComparison');
 
-    fprintf(fid, '### LA vs ASTRIA ONSET LATENCY COMPARISONS ###\n\n');
-    fprintf(fid, 'Statistical test: Wilcoxon rank-sum test (unpaired, two-tailed)\n\n');
-
-    stim_names_full = {'CS', 'US', 'CS+US'};
+    %% PANEL G: Onset latency comparison
+    sheet_data = {};
+    sheet_data{1, 1} = 'PANEL G: LA vs AStria Latency Comparison (Monosynaptic 0-25ms)';
+    sheet_data{2, 1} = '';
+    row = 3;
 
     for stim = 1:3
-        fprintf(fid, '--- %s trials ---\n', stim_names_full{stim});
+        sheet_data{row, 1} = sprintf('=== %s trials ===', stim_names{stim});
+        row = row + 1;
+
+        sheet_data{row, 1} = 'Region';
+        sheet_data{row, 2} = 'Mean (ms)';
+        sheet_data{row, 3} = 'SEM (ms)';
+        sheet_data{row, 4} = 'Median (ms)';
+        sheet_data{row, 5} = 'SD (ms)';
+        sheet_data{row, 6} = 'Range (ms)';
+        sheet_data{row, 7} = 'n neurons';
+        row = row + 1;
 
         % Collect latency data for LA
+        onset_lat_LA = [];
         if ~isempty(results_all{1})
             res_LA = results_all{1};
-
-            if stim == 1  % CS - from CS-selective and Multisensory
+            if stim == 1
                 responsive_idx_LA = find(ismember(res_LA.Clusters_all, [1 3]));
                 onset_lat_LA = res_LA.CS_onset_lat_all(responsive_idx_LA);
-            elseif stim == 2  % US - from US-selective and Multisensory
+            elseif stim == 2
                 responsive_idx_LA = find(ismember(res_LA.Clusters_all, [2 3]));
                 onset_lat_LA = res_LA.US_onset_lat_all(responsive_idx_LA);
-            else  % CS+US - from all responsive neurons
+            else
                 responsive_idx_LA = find(ismember(res_LA.Clusters_all, [1 2 3]));
                 onset_lat_LA = res_LA.Both_onset_lat_all(responsive_idx_LA);
             end
-
-            % Remove NaN values and convert to ms
             onset_lat_LA = onset_lat_LA(~isnan(onset_lat_LA)) * 1000;
-        else
-            onset_lat_LA = [];
         end
 
         % Collect latency data for AStria
+        onset_lat_Astria = [];
         if ~isempty(results_all{2})
-            res_AStria = results_all{2};
-
-            if stim == 1  % CS - from CS-selective and Multisensory
-                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [1 3]));
-                onset_lat_AStria = res_AStria.CS_onset_lat_all(responsive_idx_AStria);
-            elseif stim == 2  % US - from US-selective and Multisensory
-                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [2 3]));
-                onset_lat_AStria = res_AStria.US_onset_lat_all(responsive_idx_AStria);
-            else  % CS+US - from all responsive neurons
-                responsive_idx_AStria = find(ismember(res_AStria.Clusters_all, [1 2 3]));
-                onset_lat_AStria = res_AStria.Both_onset_lat_all(responsive_idx_AStria);
-            end
-
-            % Remove NaN values and convert to ms
-            onset_lat_AStria = onset_lat_AStria(~isnan(onset_lat_AStria)) * 1000;
-        else
-            onset_lat_AStria = [];
-        end
-
-        % Report descriptive statistics
-        if ~isempty(onset_lat_LA)
-            fprintf(fid, 'LA (n = %d neurons):\n', length(onset_lat_LA));
-            fprintf(fid, '  Mean ± SEM: %.2f ± %.2f ms\n', mean(onset_lat_LA), std(onset_lat_LA)/sqrt(length(onset_lat_LA)));
-            fprintf(fid, '  Median: %.2f ms\n', median(onset_lat_LA));
-            fprintf(fid, '  SD: %.2f ms\n', std(onset_lat_LA));
-            fprintf(fid, '  Range: [%.2f, %.2f] ms\n\n', min(onset_lat_LA), max(onset_lat_LA));
-        else
-            fprintf(fid, 'LA: No data\n\n');
-        end
-
-        if ~isempty(onset_lat_AStria)
-            fprintf(fid, 'AStria (n = %d neurons):\n', length(onset_lat_AStria));
-            fprintf(fid, '  Mean ± SEM: %.2f ± %.2f ms\n', mean(onset_lat_AStria), std(onset_lat_AStria)/sqrt(length(onset_lat_AStria)));
-            fprintf(fid, '  Median: %.2f ms\n', median(onset_lat_AStria));
-            fprintf(fid, '  SD: %.2f ms\n', std(onset_lat_AStria));
-            fprintf(fid, '  Range: [%.2f, %.2f] ms\n\n', min(onset_lat_AStria), max(onset_lat_AStria));
-        else
-            fprintf(fid, 'AStria: No data\n\n');
-        end
-
-        % Perform statistical test
-        if ~isempty(onset_lat_LA) && ~isempty(onset_lat_AStria)
-            [p_val, ~] = ranksum(onset_lat_LA, onset_lat_AStria);
-            fprintf(fid, 'LA vs AStria comparison:\n');
-            fprintf(fid, '  Wilcoxon rank-sum test p-value: %.4f', p_val);
-
-            if p_val < 0.001
-                fprintf(fid, ' ***\n');
-            elseif p_val < 0.01
-                fprintf(fid, ' **\n');
-            elseif p_val < 0.05
-                fprintf(fid, ' *\n');
+            res_Astria = results_all{2};
+            if stim == 1
+                responsive_idx_Astria = find(ismember(res_Astria.Clusters_all, [1 3]));
+                onset_lat_Astria = res_Astria.CS_onset_lat_all(responsive_idx_Astria);
+            elseif stim == 2
+                responsive_idx_Astria = find(ismember(res_Astria.Clusters_all, [2 3]));
+                onset_lat_Astria = res_Astria.US_onset_lat_all(responsive_idx_Astria);
             else
-                fprintf(fid, ' (n.s.)\n');
+                responsive_idx_Astria = find(ismember(res_Astria.Clusters_all, [1 2 3]));
+                onset_lat_Astria = res_Astria.Both_onset_lat_all(responsive_idx_Astria);
             end
-        else
-            fprintf(fid, 'LA vs AStria comparison: Insufficient data\n');
+            onset_lat_Astria = onset_lat_Astria(~isnan(onset_lat_Astria)) * 1000;
         end
 
-        fprintf(fid, '\n');
+        % Report LA data
+        if ~isempty(onset_lat_LA)
+            sheet_data{row, 1} = 'LA';
+            sheet_data{row, 2} = mean(onset_lat_LA);
+            sheet_data{row, 3} = std(onset_lat_LA)/sqrt(length(onset_lat_LA));
+            sheet_data{row, 4} = median(onset_lat_LA);
+            sheet_data{row, 5} = std(onset_lat_LA);
+            sheet_data{row, 6} = sprintf('[%.2f, %.2f]', min(onset_lat_LA), max(onset_lat_LA));
+            sheet_data{row, 7} = length(onset_lat_LA);
+            row = row + 1;
+        end
+
+        % Report AStria data
+        if ~isempty(onset_lat_Astria)
+            sheet_data{row, 1} = 'AStria';
+            sheet_data{row, 2} = mean(onset_lat_Astria);
+            sheet_data{row, 3} = std(onset_lat_Astria)/sqrt(length(onset_lat_Astria));
+            sheet_data{row, 4} = median(onset_lat_Astria);
+            sheet_data{row, 5} = std(onset_lat_Astria);
+            sheet_data{row, 6} = sprintf('[%.2f, %.2f]', min(onset_lat_Astria), max(onset_lat_Astria));
+            sheet_data{row, 7} = length(onset_lat_Astria);
+            row = row + 1;
+        end
+
+        % Statistical test
+        sheet_data{row, 1} = '';
+        row = row + 1;
+        if ~isempty(onset_lat_LA) && ~isempty(onset_lat_Astria)
+            [p_val, ~] = ranksum(onset_lat_LA, onset_lat_Astria);
+            sheet_data{row, 1} = 'Wilcoxon rank-sum (LA vs AStria):';
+            sheet_data{row, 2} = p_val;
+            sheet_data{row, 3} = format_significance(p_val);
+            row = row + 1;
+        else
+            sheet_data{row, 1} = 'Insufficient data for comparison';
+            row = row + 1;
+        end
+
+        row = row + 1;
     end
 
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'END OF FIGURE 4 STATISTICS\n');
-    fprintf(fid, '========================================\n');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelG_LatencyComparison');
 
-    fclose(fid);
-    fprintf('Statistics exported to: figure_4_stats.txt\n');
+    %% RAW DATA: Delta Peak FR and Onset Latency values
+    sheet_data = {};
+    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Delta Peak FR and Onset Latency Values';
+    sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels B, D & G';
+    sheet_data{3, 1} = '';
+    row = 4;
+
+    for br = 1:2
+        if strcmp(brain_regions{br}, 'Astria')
+            region_name = 'AStria';
+        else
+            region_name = brain_regions{br};
+        end
+
+        sheet_data{row, 1} = sprintf('========== %s ==========', region_name);
+        row = row + 1;
+        row = row + 1;
+
+        % Get global indices for this region (from cell_metrics)
+        idx_neurons = strcmp(cell_metrics.brainRegion, brain_regions{br});
+        global_indices = find(idx_neurons);
+
+        res = results_all{br};
+
+        for c = 1:3
+            if isempty(kw_data_storage{br, c, 1})
+                continue;
+            end
+
+            sheet_data{row, 1} = sprintf('%s (n = %d neurons)', cluster_names{c}, length(kw_data_storage{br, c, 1}));
+            row = row + 1;
+
+            % Get neurons in this cluster (these are indices into results_all{br})
+            clust_idx = find(res.Clusters_all == c);
+            n_neurons = length(clust_idx);
+
+            % Calculate onset latencies for each neuron
+            CS_onset_lat = zeros(n_neurons, 1);
+            US_onset_lat = zeros(n_neurons, 1);
+            Both_onset_lat = zeros(n_neurons, 1);
+
+            for n = 1:n_neurons
+                local_idx = clust_idx(n);
+
+                % CS onset latency (convert to ms, NaN if not responsive)
+                if ~isnan(res.CS_onset_lat_all(local_idx))
+                    CS_onset_lat(n) = res.CS_onset_lat_all(local_idx) * 1000;
+                else
+                    CS_onset_lat(n) = NaN;
+                end
+
+                % US onset latency
+                if ~isnan(res.US_onset_lat_all(local_idx))
+                    US_onset_lat(n) = res.US_onset_lat_all(local_idx) * 1000;
+                else
+                    US_onset_lat(n) = NaN;
+                end
+
+                % CS+US onset latency
+                if ~isnan(res.Both_onset_lat_all(local_idx))
+                    Both_onset_lat(n) = res.Both_onset_lat_all(local_idx) * 1000;
+                else
+                    Both_onset_lat(n) = NaN;
+                end
+            end
+
+            % Header
+            sheet_data{row, 1} = 'Local #';
+            sheet_data{row, 2} = 'Global Index';
+            sheet_data{row, 3} = 'Animal ID';
+            sheet_data{row, 4} = 'ΔPeak FR CS (Hz)';
+            sheet_data{row, 5} = 'ΔPeak FR US (Hz)';
+            sheet_data{row, 6} = 'ΔPeak FR CS+US (Hz)';
+            sheet_data{row, 7} = '';  % Empty separator
+            sheet_data{row, 8} = 'Onset Lat CS (ms)';
+            sheet_data{row, 9} = 'Onset Lat US (ms)';
+            sheet_data{row, 10} = 'Onset Lat CS+US (ms)';
+            row = row + 1;
+
+            for n = 1:n_neurons
+                local_idx = clust_idx(n);
+                global_idx = global_indices(local_idx);
+                animal_id = cell_metrics.animal{global_idx};
+
+                sheet_data{row, 1} = n;
+                sheet_data{row, 2} = global_idx;
+                sheet_data{row, 3} = animal_id;
+                sheet_data{row, 4} = kw_data_storage{br, c, 1}(n);  % CS ΔFR
+                sheet_data{row, 5} = kw_data_storage{br, c, 2}(n);  % US ΔFR
+                sheet_data{row, 6} = kw_data_storage{br, c, 3}(n);  % CS+US ΔFR
+                sheet_data{row, 7} = '';  % Empty separator
+                sheet_data{row, 8} = CS_onset_lat(n);
+                sheet_data{row, 9} = US_onset_lat(n);
+                sheet_data{row, 10} = Both_onset_lat(n);
+                row = row + 1;
+            end
+
+            % Add summary stats
+            sheet_data{row, 1} = '';
+            row = row + 1;
+            sheet_data{row, 1} = 'Mean:';
+            sheet_data{row, 2} = '';
+            sheet_data{row, 3} = '';
+            sheet_data{row, 4} = mean(kw_data_storage{br, c, 1});
+            sheet_data{row, 5} = mean(kw_data_storage{br, c, 2});
+            sheet_data{row, 6} = mean(kw_data_storage{br, c, 3});
+            sheet_data{row, 7} = '';  % Empty separator
+            sheet_data{row, 8} = mean(CS_onset_lat, 'omitnan');
+            sheet_data{row, 9} = mean(US_onset_lat, 'omitnan');
+            sheet_data{row, 10} = mean(Both_onset_lat, 'omitnan');
+            row = row + 1;
+
+            sheet_data{row, 1} = 'SEM:';
+            sheet_data{row, 2} = '';
+            sheet_data{row, 3} = '';
+            sheet_data{row, 4} = std(kw_data_storage{br, c, 1})/sqrt(n_neurons);
+            sheet_data{row, 5} = std(kw_data_storage{br, c, 2})/sqrt(n_neurons);
+            sheet_data{row, 6} = std(kw_data_storage{br, c, 3})/sqrt(n_neurons);
+            sheet_data{row, 7} = '';  % Empty separator
+            CS_valid = CS_onset_lat(~isnan(CS_onset_lat));
+            US_valid = US_onset_lat(~isnan(US_onset_lat));
+            Both_valid = Both_onset_lat(~isnan(Both_onset_lat));
+            sheet_data{row, 8} = std(CS_valid)/sqrt(length(CS_valid));
+            sheet_data{row, 9} = std(US_valid)/sqrt(length(US_valid));
+            sheet_data{row, 10} = std(Both_valid)/sqrt(length(Both_valid));
+            row = row + 1;
+            row = row + 1;
+        end
+        row = row + 1;
+    end
+
+    writecell(sheet_data, output_filename, 'Sheet', 'RawData_DeltaFR_OnsetLat');
+end
+
+function sig_str = format_significance(p_val)
+    if p_val < 0.001
+        sig_str = '***';
+    elseif p_val < 0.01
+        sig_str = '**';
+    elseif p_val < 0.05
+        sig_str = '*';
+    else
+        sig_str = 'n.s.';
+    end
 end

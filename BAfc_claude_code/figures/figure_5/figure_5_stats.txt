@@ -1,6 +1,6 @@
 ========================================
 FIGURE 5 STATISTICS (Optogenetic Modulation)
-Generated: 26-Nov-2025 20:20:57
+Generated: 29-Nov-2025 11:23:31
 ========================================
 
 This file contains statistics for:
@@ -30,21 +30,19 @@ MAIN FIGURE - PANEL F: SPAGHETTI PLOTS
 --- LA CS ---
 
 Sample sizes:
-  Total monosynaptic responsive neurons: 31
-  Neurons with light modulation tested: 31
+  Total monosynaptic responsive neurons: 33
+  Neurons with light modulation tested: 33
 
 Light modulation effects:
-  Increased (p < 0.05): 6 (19.4%)
-  Decreased (p < 0.05): 11 (35.5%)
-  Unchanged (p >= 0.05): 14 (45.2%)
+  Increased (p < 0.05): 4 (12.1%)
+  Decreased (p < 0.05): 11 (33.3%)
+  Unchanged (p >= 0.05): 18 (54.5%)
 
 Neurons with INCREASED response:
-  Cell #11 (animal MD307_001): p = 0.0277 (window: 12-50ms)
   Cell #23 (animal MD307_001): p = 0.0080 (window: 12-50ms)
   Cell #9 (animal MD309_001): p = 0.0015 (window: 12-50ms)
   Cell #20 (animal MD309_001): p = 0.0000 (window: 12-50ms)
   Cell #66 (animal MD316_002): p = 0.0121 (window: 12-50ms)
-  Cell #35 (animal MD319_003): p = 0.0455 (window: 12-50ms)
 
 Neurons with DECREASED response:
   Cell #12 (animal MD307_001): p = 0.0396 (window: 12-50ms)
@@ -62,16 +60,15 @@ Neurons with DECREASED response:
 --- LA US ---
 
 Sample sizes:
-  Total monosynaptic responsive neurons: 39
-  Neurons with light modulation tested: 39
+  Total monosynaptic responsive neurons: 38
+  Neurons with light modulation tested: 38
 
 Light modulation effects:
-  Increased (p < 0.05): 5 (12.8%)
-  Decreased (p < 0.05): 12 (30.8%)
-  Unchanged (p >= 0.05): 22 (56.4%)
+  Increased (p < 0.05): 4 (10.5%)
+  Decreased (p < 0.05): 12 (31.6%)
+  Unchanged (p >= 0.05): 22 (57.9%)
 
 Neurons with INCREASED response:
-  Cell #2 (animal MD300_001): p = 0.0029 (window: 12-50ms)
   Cell #1 (animal MD307_001): p = 0.0047 (window: 12-50ms)
   Cell #13 (animal MD307_001): p = 0.0171 (window: 12-50ms)
   Cell #20 (animal MD309_001): p = 0.0006 (window: 12-50ms)
@@ -94,13 +91,13 @@ Neurons with DECREASED response:
 --- Astria CS ---
 
 Sample sizes:
-  Total monosynaptic responsive neurons: 35
-  Neurons with light modulation tested: 35
+  Total monosynaptic responsive neurons: 33
+  Neurons with light modulation tested: 33
 
 Light modulation effects:
-  Increased (p < 0.05): 5 (14.3%)
-  Decreased (p < 0.05): 5 (14.3%)
-  Unchanged (p >= 0.05): 25 (71.4%)
+  Increased (p < 0.05): 5 (15.2%)
+  Decreased (p < 0.05): 4 (12.1%)
+  Unchanged (p >= 0.05): 24 (72.7%)
 
 Neurons with INCREASED response:
   Cell #25 (animal MD315_001): p = 0.0225 (window: 12-50ms)
@@ -114,18 +111,17 @@ Neurons with DECREASED response:
   Cell #8 (animal MD299_001): p = 0.0026 (window: 12-50ms)
   Cell #15 (animal MD315_001): p = 0.0001 (window: 12-50ms)
   Cell #22 (animal MD315_001): p = 0.0004 (window: 12-50ms)
-  Cell #23 (animal MD317_001): p = 0.0003 (window: 12-50ms)
 
 --- Astria US ---
 
 Sample sizes:
-  Total monosynaptic responsive neurons: 37
-  Neurons with light modulation tested: 37
+  Total monosynaptic responsive neurons: 34
+  Neurons with light modulation tested: 34
 
 Light modulation effects:
-  Increased (p < 0.05): 4 (10.8%)
-  Decreased (p < 0.05): 5 (13.5%)
-  Unchanged (p >= 0.05): 28 (75.7%)
+  Increased (p < 0.05): 4 (11.8%)
+  Decreased (p < 0.05): 5 (14.7%)
+  Unchanged (p >= 0.05): 25 (73.5%)
 
 Neurons with INCREASED response:
   Cell #4 (animal MD298_001): p = 0.0247 (window: 12-50ms)
@@ -142,15 +138,15 @@ Neurons with DECREASED response:
 
 ### DESCRIPTIVE STATISTICS FOR PANEL F (SPAGHETTI PLOTS) ###
 
---- LA CS (Enhanced neurons: n = 6) ---
-Mean spike count (no light): 0.32 ± 0.18 (mean ± SEM), median = 0.15, SD = 0.43
-Mean spike count (with light): 0.58 ± 0.20 (mean ± SEM), median = 0.49, SD = 0.49
-Mean change: 0.26 ± 0.05 (mean ± SEM)
+--- LA CS (Enhanced neurons: n = 4) ---
+Mean spike count (no light): 0.44 ± 0.25 (mean ± SEM), median = 0.28, SD = 0.50
+Mean spike count (with light): 0.77 ± 0.25 (mean ± SEM), median = 0.59, SD = 0.50
+Mean change: 0.33 ± 0.03 (mean ± SEM)
 
---- LA US (Enhanced neurons: n = 5) ---
-Mean spike count (no light): 0.30 ± 0.23 (mean ± SEM), median = 0.06, SD = 0.52
-Mean spike count (with light): 0.51 ± 0.25 (mean ± SEM), median = 0.29, SD = 0.55
-Mean change: 0.21 ± 0.02 (mean ± SEM)
+--- LA US (Enhanced neurons: n = 4) ---
+Mean spike count (no light): 0.36 ± 0.29 (mean ± SEM), median = 0.09, SD = 0.58
+Mean spike count (with light): 0.55 ± 0.31 (mean ± SEM), median = 0.26, SD = 0.62
+Mean change: 0.20 ± 0.02 (mean ± SEM)
 
 --- Astria CS (Enhanced neurons: n = 5) ---
 Mean spike count (no light): 0.32 ± 0.14 (mean ± SEM), median = 0.20, SD = 0.31
@@ -169,34 +165,34 @@ SUMMARY STATISTICS (ALL PANELS)
 ### SUMMARY STATISTICS ###
 
 Overall (all regions and stimuli):
-  Total neurons tested: 142
-  Increased: 20 (14.1%)
-  Decreased: 33 (23.2%)
-  Unchanged: 89 (62.7%)
+  Total neurons tested: 138
+  Increased: 17 (12.3%)
+  Decreased: 32 (23.2%)
+  Unchanged: 89 (64.5%)
 
 By region:
   LA:
-    Total: 70
-    Increased: 11 (15.7%)
-    Decreased: 23 (32.9%)
-    Unchanged: 36 (51.4%)
+    Total: 71
+    Increased: 8 (11.3%)
+    Decreased: 23 (32.4%)
+    Unchanged: 40 (56.3%)
   Astria:
-    Total: 72
-    Increased: 9 (12.5%)
-    Decreased: 10 (13.9%)
-    Unchanged: 53 (73.6%)
+    Total: 67
+    Increased: 9 (13.4%)
+    Decreased: 9 (13.4%)
+    Unchanged: 49 (73.1%)
 
 By stimulus:
   CS:
     Total: 66
-    Increased: 11 (16.7%)
-    Decreased: 16 (24.2%)
-    Unchanged: 39 (59.1%)
+    Increased: 9 (13.6%)
+    Decreased: 15 (22.7%)
+    Unchanged: 42 (63.6%)
   US:
-    Total: 76
-    Increased: 9 (11.8%)
-    Decreased: 17 (22.4%)
-    Unchanged: 50 (65.8%)
+    Total: 72
+    Increased: 8 (11.1%)
+    Decreased: 17 (23.6%)
+    Unchanged: 47 (65.3%)
 
 ========================================
 END OF FIGURE 5 STATISTICS

@@ -1,0 +1,14 @@
+========================================
+FIGURE 3 CALCULATION VALIDATION
+Generated: 01-Dec-2025 15:11:51
+========================================
+
+This file validates all calculations in BAfc_figure_3.m
+by showing step-by-step computations with example neurons
+
+
+========================================
+STEP 1: DATA LOADING
+========================================
+
+Loading region: LA

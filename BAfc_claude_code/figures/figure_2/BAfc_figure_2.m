@@ -1083,7 +1083,7 @@ for metric = 1:3
         fprintf('\n%s:\n', metric_names_kw{metric});
         fprintf('  Kruskal-Wallis p = %.4f\n', p_kw);
 
-        % Post-hoc pairwise Mann-Whitney U tests (only if K-W is significant for DeltaFR)
+        % Post-hoc Dunn test (only if K-W is significant for DeltaFR)
         region_pairs = {[1 2], [1 3], [2 3]};
         pair_names = {'LA vs BA', 'LA vs AStria', 'BA vs AStria'};
         p_values = zeros(3, 1);
@@ -1093,13 +1093,22 @@ for metric = 1:3
             fprintf('  K-W non-significant, skipping post-hoc comparisons\n');
             p_values = NaN(3, 1);
         else
+            % Perform Dunn test using multcompare with 'dunn-sidak' method
+            comparison_results = multcompare(stats, 'CType', 'dunn-sidak', 'Display', 'off');
+
+            % Extract p-values for our specific comparisons
+            % comparison_results format: [group1, group2, lower_ci, estimate, upper_ci, p_value]
             for pair = 1:3
                 br1 = region_pairs{pair}(1);
                 br2 = region_pairs{pair}(2);
 
-                if ~isempty(all_metric_data{metric, br1}) && ~isempty(all_metric_data{metric, br2})
-                    p_values(pair) = ranksum(all_metric_data{metric, br1}, all_metric_data{metric, br2});
-                    fprintf('    %s: p = %.4f\n', pair_names{pair}, p_values(pair));
+                % Find the row in comparison_results that matches this pair
+                match_idx = find((comparison_results(:,1) == br1 & comparison_results(:,2) == br2) | ...
+                                 (comparison_results(:,1) == br2 & comparison_results(:,2) == br1));
+
+                if ~isempty(match_idx)
+                    p_values(pair) = comparison_results(match_idx, 6);
+                    fprintf('    %s: p = %.4f (Dunn test)\n', pair_names{pair}, p_values(pair));
                 else
                     p_values(pair) = NaN;
                 end
@@ -1486,7 +1495,7 @@ function export_figure2_stats(results_all, contingency_table, chi2_obs, p_perm, 
             fprintf(fid, '  p-value: %.4f\n', kw_data.p_kw);
             fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(kw_data.p_kw < 0.05)));
 
-            fprintf(fid, '\nPost-hoc Pairwise Comparisons (Mann-Whitney U test):\n');
+            fprintf(fid, '\nPost-hoc Pairwise Comparisons (Dunn test with Dunn-Šidák correction):\n');
             for pair = 1:3
                 if ~isnan(kw_data.p_posthoc(pair))
                     fprintf(fid, '  %s: p = %.4f', kw_data.pair_names{pair}, kw_data.p_posthoc(pair));

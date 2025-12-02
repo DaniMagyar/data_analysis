@@ -1,6 +1,6 @@
 ========================================
 FIGURE 2 STATISTICS
-Generated: 27-Nov-2025 10:06:26
+Generated: 29-Nov-2025 11:34:14
 ========================================
 
 ### SAMPLE SIZES BY REGION ###
@@ -109,10 +109,10 @@ Statistical Test: Kruskal-Wallis test
   p-value: 0.3905
   Significant (p < 0.05): false
 
-Post-hoc Pairwise Comparisons (Mann-Whitney U test):
-  LA vs BA: p = 0.2754 (n.s.)
-  LA vs AStria: p = 0.6687 (n.s.)
-  BA vs AStria: p = 0.1613 (n.s.)
+Post-hoc Pairwise Comparisons (Dunn test with Dunn-Šidák correction):
+  LA vs BA: p = 0.5920 (n.s.)
+  LA vs AStria: p = 0.9559 (n.s.)
+  BA vs AStria: p = 0.4502 (n.s.)
 
 --- Delta Peak FR (Hz) ---
 Sample sizes (US-responsive neurons: US-sel + Multi):
@@ -129,7 +129,7 @@ Statistical Test: Kruskal-Wallis test
   p-value: 0.7340
   Significant (p < 0.05): false
 
-Post-hoc Pairwise Comparisons (Mann-Whitney U test):
+Post-hoc Pairwise Comparisons (Dunn test with Dunn-Šidák correction):
 
 --- Response Length (ms) ---
 Sample sizes (US-responsive neurons: US-sel + Multi):
@@ -146,10 +146,10 @@ Statistical Test: Kruskal-Wallis test
   p-value: 0.0092
   Significant (p < 0.05): true
 
-Post-hoc Pairwise Comparisons (Mann-Whitney U test):
-  LA vs BA: p = 0.0036 **
-  LA vs AStria: p = 0.8596 (n.s.)
-  BA vs AStria: p = 0.0079 **
+Post-hoc Pairwise Comparisons (Dunn test with Dunn-Šidák correction):
+  LA vs BA: p = 0.0108 *
+  LA vs AStria: p = 0.9973 (n.s.)
+  BA vs AStria: p = 0.0217 *
 
 ### CLUSTER-SPECIFIC STATISTICS ###
 

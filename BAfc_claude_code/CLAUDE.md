@@ -78,8 +78,14 @@ Col 4: ΔPeak FR bars (6×1 nested, 3 clusters each region)
 Cols 5-6: Pie charts (row 1, FontSize 14), Region comparison (row 2, grey circles with jitter, y-axis to 95th percentile), **G**: Latency comparison (row 3, Wilcoxon rank-sum LA vs AStria)
 α=0.0 for rank score sorting, `g.monosyn_window=0.025`
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
-**Supp figure** (3×1, 1000×900px): Selective vs multisensory latency (row 1), Chi-square test (row 2, 1×3), KW tests (row 3, 2×3 nested, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
-**Stats export** (2025-11-27): Panel G latency statistics added (mean±SEM, median, SD, range, Wilcoxon rank-sum tests)
+**Supp figure removed** (2025-12-01): All supplementary data now in Excel export only
+**Excel export** (2025-12-01): `figure_4_data.xlsx` with sheets:
+  - `PanelsBD_DeltaFR`: Bar chart data (monosynaptic 12-25ms window) with Friedman tests
+  - `PanelE_PieCharts`: Cluster proportions with Chi-square tests
+  - `PanelF_RegionComparison`: LA vs AStria comparison (monosynaptic 12-25ms)
+  - `PanelG_LatencyComparison`: Onset latency statistics with Wilcoxon rank-sum tests
+  - `RawData_DeltaFR_OnsetLat`: Individual neuron values (Local #, Global Index, Animal ID, ΔPeak FR CS/US/CS+US, Onset Lat CS/US/CS+US)
+**NOTE**: Low smoothvalue (5) with 1ms bins can cause extremely high ΔPeak FR values (800+ Hz) in 12-25ms window. Consider increasing smoothvalue to 15-25 for monosynaptic analysis.
 
 ### BAfc_figure_5.m (1000×500px, 2×4 grid) - Updated 2025-11-14
 **A**: Example rasters (rows 1-2), **B**: FR lineplots (row 3), **C**: Pie charts (row 1 right), **D**: Spaghetti plots (row 2 right)
@@ -116,16 +122,77 @@ Response stability across 10 trial blocks. ΔFR = response FR (0-1s) - baseline 
 - Default: Single pre-defined window (12-50ms), statistically sound, reviewer-safe
 - Alternative: Multi-window exploratory testing (requires justification, high false positive rate)
 
-## Statistics Export (2025-11-26, updated 2025-11-27)
-All figure scripts export comprehensive statistics to `figure_X_stats.txt`:
-- **Clear panel labels**: Indicate which figure (main/supplementary) and panel each section describes
-- **Descriptive statistics**: Mean ± SEM, median, SD for all bar graph data
-- **Exact plotted data**: Use stored data (e.g., `kw_data_storage`) to ensure stats match visualizations
-- **Structured sections**: Separator lines, subsection headers for easy navigation
-- **Statistical tests**: All comparisons with exact p-values and significance markers
-- Figures 2-5 updated 2025-11-26 with improved readability
-- Figure 4 Panel G latency comparisons added 2025-11-27
-- Figure 5 supp stats created 2025-11-27 (PV silencing effect, baseline -0.5-0s, response 0-0.5s)
+## Data Export to Excel (2025-12-01)
+All figures export data to `figure_X_data.xlsx` for verification and supplementary tables:
+
+### Implementation Pattern (see BAfc_figure_3.m as reference)
+At end of figure script, call: `export_figureX_to_excel_simple(...)`
+
+### Export Function Structure
+```matlab
+function export_figureX_to_excel_simple(results_all, kw_data_storage, kw_results, ...)
+    if exist(output_filename, 'file')
+        delete(output_filename);
+    end
+
+    % Create sheets with writecell()
+    % ...
+
+    writecell(sheet_data, output_filename, 'Sheet', 'SheetName');
+end
+```
+
+### Required Sheets (Figure 3 example)
+1. **Summary sheets** (3-4 sheets):
+   - `PanelsCF_DeltaFR_RespLen`: Bar chart data with ΔPeak FR and Response Length side-by-side
+     - Columns 1-5: ΔPeak FR (Mean, SEM, Median, SD in Hz)
+     - Column 6: Empty separator
+     - Columns 7-10: Response Length (Mean, SEM, Median, SD in ms)
+     - Statistical tests displayed horizontally (Friedman + post-hoc for both metrics side-by-side)
+   - `PanelG_PieCharts`: Cluster proportions with Chi-square tests
+   - `PanelH_RegionComparison`: LA vs AStria comparison with Wilcoxon rank-sum tests
+   - All sheets: descriptive stats + p-values with significance markers (*, **, ***, n.s.)
+
+2. **Raw data sheets** (2-3 sheets):
+   - `RawData_DeltaFR_RespLen`: Individual neuron values for both ΔPeak FR and Response Length
+     - Columns 1-6: `Local #`, `Global Index`, `Animal ID`, ΔPeak FR CS/US/CS+US (Hz)
+     - Column 7: Empty separator
+     - Columns 8-10: Response Length CS/US/CS+US (ms)
+     - Include Mean and SEM at bottom of each section for verification
+   - `RawData_RegionComparison`: Individual neuron values for Panel H
+   - `Lineplots_NeuronIndices`: Global indices + animal IDs only (NOT full time-series data)
+   - Columns: `Local #`, `Global Index`, `Animal ID`, data values
+
+### Figure 4 Excel Export Pattern
+Similar to Figure 3 but for monosynaptic responses:
+- `PanelsBD_DeltaFR`: ΔPeak FR only (no response length - monosynaptic)
+- `PanelG_LatencyComparison`: Onset latency with Mean, SEM, Median, SD, Range
+- `RawData_DeltaFR_OnsetLat`: Combined ΔFR + Onset Latency columns with Global Index and Animal ID
+
+### Helper Function
+```matlab
+function sig_str = format_significance(p_val)
+    if p_val < 0.001
+        sig_str = '***';
+    elseif p_val < 0.01
+        sig_str = '**';
+    elseif p_val < 0.05
+        sig_str = '*';
+    else
+        sig_str = 'n.s.';
+    end
+end
+```
+
+### File Size Guidelines
+- Keep file small (~40-100 KB) by exporting summaries + raw neuron values
+- DO NOT export full time-series data (creates 30+ MB files)
+- For lineplots: export only neuron indices, not 4000 time points per neuron
+
+### Console Output
+- Minimal messages only
+- Remove verbose fprintf statements
+- No "Exported..." or "EXPORTING..." messages
 
 ## Figure Legends
 All figures have accompanying `.docx` legends created via Python scripts:

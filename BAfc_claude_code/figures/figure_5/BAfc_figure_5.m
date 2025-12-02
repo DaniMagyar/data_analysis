@@ -67,9 +67,9 @@ g.alpha = 0.0;
 g.use_two_rule = true;
 
 % Two-rule responsiveness parameters
-g.zscore_threshold_rule1 = 3;
-g.prob_threshold_rule1 = 0.25;
-g.zscore_threshold_rule2 = 10;
+g.zscore_threshold_rule1 = 5;
+g.prob_threshold_rule1 = 0.1;
+g.zscore_threshold_rule2 = 5;
 g.prob_threshold_rule2 = 0.1;
 
 % One-rule responsiveness parameter
@@ -150,8 +150,8 @@ for br = 1:2
         ttl_light_idx = stim*2;        % 2 for CS, 4 for US
 
         % Get number of trials
-        num_trials_nolight = size(cell_metrics.general.(ttl{ttl_nolight_idx}){1}, 1);
-        num_trials_light = size(cell_metrics.general.(ttl{ttl_light_idx}){1}, 1);
+        
+        
 
         % Extract PSTHs for PNs
         psth_nolight_PN = psthZ_full{ttl_nolight_idx}(idx_PN, :);
@@ -192,6 +192,7 @@ for br = 1:2
                         responsive_trials = responsive_trials + 1;
                     end
                 end
+                num_trials_nolight = size(cell_metrics.general.(ttl{ttl_nolight_idx}){global_idx}, 1);
                 prob_nolight_PN(n) = responsive_trials / num_trials_nolight;
             end
 
@@ -204,6 +205,7 @@ for br = 1:2
                         responsive_trials = responsive_trials + 1;
                     end
                 end
+                num_trials_light = size(cell_metrics.general.(ttl{ttl_light_idx}){global_idx}, 1);
                 prob_light_PN(n) = responsive_trials / num_trials_light;
             end
         end
@@ -245,6 +247,7 @@ for br = 1:2
                         responsive_trials = responsive_trials + 1;
                     end
                 end
+                num_trials_nolight = size(cell_metrics.general.(ttl{ttl_nolight_idx}){global_idx}, 1);
                 prob_nolight_IN(n) = responsive_trials / num_trials_nolight;
             end
 
@@ -257,6 +260,7 @@ for br = 1:2
                         responsive_trials = responsive_trials + 1;
                     end
                 end
+                num_trials_light = size(cell_metrics.general.(ttl{ttl_light_idx}){global_idx}, 1);
                 prob_light_IN(n) = responsive_trials / num_trials_light;
             end
         end
