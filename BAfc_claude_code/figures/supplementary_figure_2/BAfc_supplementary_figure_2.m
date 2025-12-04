@@ -1,8 +1,6 @@
-% BAfc_figure_3_supp_PN_IN
-% Supplementary figure for BAfc_figure_3
-% Compare CS-selective, US-selective, and Multisensory neurons identified from CS and US
-% Show their responses to CS+US (both) stimulus
-% LA only, separated by cell type (PN vs IN)
+% BAfc_supplementary_figure_2_v2
+% Visualize stability of neuronal responses across trial blocks
+% Uses cluster assignments from figure_2_data.xlsx
 
 clear all; close all
 
@@ -33,8 +31,8 @@ recordings = {...
     'MD318_002_kilosort',...
     'MD319_003_kilosort'};
 
-ttl = {'triptest_sound_only','triptest_shocks_only','triptest_both'};
-hmptitles = {'CS', 'US', 'CS+US'};
+ttl = {'triptest_sound_only','triptest_shocks_only'};
+stim_names = {'CS', 'US'};
 
 g.cell_metrics = BAfc_load_neurons('recordings', recordings, 'ttl', ttl);
 g.cell_metrics = BAfc_match_celltypes('cell_metrics', g.cell_metrics);
@@ -46,793 +44,484 @@ g.xlinewidth = 2;
 g.pre_time = 5;
 g.post_time = 4;
 g.test_time = 1;
-
-% Clustering Parameters
-g.alpha = 0.5;
-g.excitation_threshold = 2;
-g.inhibition_fr_drop = 0.50;
-g.use_percentile = true;
-g.clim_percentile = 99;
-g.onset_threshold = g.excitation_threshold;
 g.bin_time = 0.001;
-g.min_consec_bins = max(1, round(0.020 / g.bin_time));
-g.smoothvalue = 201;
-g.plotwin = [2 2];
-g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
-g.roi = g.pre_time/g.bin_time+1:(g.pre_time+g.test_time)/g.bin_time;
 
-% LA only, separated by cell type
-cell_types = {'PN', 'IN'};
+% Brain regions to analyze
+brain_regions = {'LA', 'BA', 'Astria'};
 
-cluster_colors = [
-    0.8 0.2 0.2;    % CS-selective
-    0.2 0.4 0.8;    % US-selective
-    0.6 0.2 0.6;    % Multisensory
-];
+% Region colors
+region_colors = struct();
+region_colors.LA = [0.7 0.2 0.2];
+region_colors.BA = [0.2 0.7 0.2];
+region_colors.Astria = [0.2 0.4 0.7];
 
-cluster_names = {'CS-sel', 'US-sel', 'Multi'};
+%% Load cluster assignments from figure_2_data.xlsx
+fprintf('Loading cluster assignments from figure_2_data.xlsx...\n');
+figure_2_file = '..\figure_2\figure_2_data.xlsx';
 
-%% Calculate PSTHs once
-fprintf('Calculating PSTHs...\n');
-psthZ_full = cell(1, numel(ttl));
-psthHz_full = cell(1, numel(ttl));
+% Read the raw data sheet
+raw_data = readcell(figure_2_file, 'Sheet', 'RawData_AllNeurons');
 
-% Calculate Savitzky-Golay filter delay correction
-filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
-fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
-    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
+% Find header row - search for it
+header_row = [];
+for r = 1:min(10, size(raw_data, 1))
+    if any(strcmp(raw_data(r, :), 'Global Index'))
+        header_row = r;
+        break;
+    end
+end
+
+if isempty(header_row)
+    error('Could not find header row with Global Index in figure_2_data.xlsx');
+end
+
+global_idx_col = find(strcmp(raw_data(header_row, :), 'Global Index'));
+cluster_col = find(strcmp(raw_data(header_row, :), 'Cluster'));
+
+if isempty(global_idx_col) || isempty(cluster_col)
+    error('Could not find Global Index or Cluster columns in figure_2_data.xlsx');
+end
+
+% Extract data
+neuron_clusters = struct();
+n_loaded = 0;
+for row = (header_row+1):size(raw_data, 1)
+    % Check if we have data in this row
+    if row <= size(raw_data, 1) && global_idx_col <= size(raw_data, 2)
+        global_idx_val = raw_data{row, global_idx_col};
+
+        if ~isempty(global_idx_val) && isnumeric(global_idx_val)
+            global_idx = global_idx_val;
+            cluster_name = raw_data{row, cluster_col};
+
+            % Store cluster assignment
+            field_name = sprintf('n%d', global_idx);
+            neuron_clusters.(field_name).cluster = cluster_name;
+            neuron_clusters.(field_name).global_idx = global_idx;
+            n_loaded = n_loaded + 1;
+        end
+    end
+end
+
+fprintf('  Loaded %d neuron cluster assignments\n', length(fieldnames(neuron_clusters)));
+
+%% Get trial-by-trial spike data
+fprintf('Extracting trial-by-trial spike data...\n');
+preAP_norm_all = cell(1, numel(ttl));
+postAP_norm_all = cell(1, numel(ttl));
 
 for hmp = 1:numel(ttl)
-    psth_spx_og = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{hmp}, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
-
-    % Convert to Hz
-    num_trials = size(g.cell_metrics.general.(ttl{hmp}){1}, 1);
-    psth_hz = psth_spx_og / (num_trials * g.bin_time);
-    psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
-
-    % Correct for filter delay by shifting forward (move data earlier in time)
-    psth_hz_corrected = zeros(size(psth_hz_smooth));
-    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
-    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
-    psthHz_full{hmp} = psth_hz_corrected;
-
-    % Z-score
-    baseline_idx = 1:(g.pre_time / g.bin_time);
-    baseline_mean = mean(psth_spx_og(:, baseline_idx), 2);
-    baseline_std = std(psth_spx_og(:, baseline_idx), 0, 2);
-    psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
-    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-
-    % Correct for filter delay by shifting forward (move data earlier in time)
-    psth_spx_corrected = zeros(size(psth_spx_smooth));
-    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
-    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
-    psthZ_full{hmp} = psth_spx_corrected;
+    [~, preAP_norm_all{hmp}, postAP_norm_all{hmp}] = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{hmp}, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 end
 
-%% Process each cell type (PN and IN)
-results_all = cell(1, 2);
+%% Organize neurons by region and cluster
+fprintf('\nOrganizing neurons by region and cluster...\n');
 
-for ct = 1:2
-    fprintf('\nProcessing LA %s...\n', cell_types{ct});
+% Fixed block size: 5 trials per block
+trials_per_block = 5;
+max_trials = 50;  % Only use first 50 trials for all neurons
 
-    % Get neuron indices for LA and specific cell type
-    idx_neurons = strcmp(g.cell_metrics.brainRegion, 'LA') & strcmp(g.cell_metrics.putativeCellType, cell_types{ct});
+% Storage: brain_regions × stimuli
+results_all = cell(3, 3);
 
-    n_neurons = sum(idx_neurons);
-    fprintf('  %d neurons\n', n_neurons);
+for br = 1:3
+    fprintf('  Processing %s...\n', brain_regions{br});
 
-    if n_neurons == 0
-        continue;
-    end
+    % Get all neurons in this region
+    idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br});
+    neuron_indices = find(idx_neurons);
 
-    % Extract PSTHs for CS, US, and CS+US
-    psth_CS = psthZ_full{1}(idx_neurons, :);
-    psth_US = psthZ_full{2}(idx_neurons, :);
-    psth_Both = psthZ_full{3}(idx_neurons, :);
-    psth_CS_Hz = psthHz_full{1}(idx_neurons, :);
-    psth_US_Hz = psthHz_full{2}(idx_neurons, :);
-    psth_Both_Hz = psthHz_full{3}(idx_neurons, :);
-
-    % Calculate responses based on CS and US only (not Both)
-    CS_peak = max(psth_CS(:, g.roi), [], 2);
-    US_peak = max(psth_US(:, g.roi), [], 2);
-
-    baseline_idx = 1:(g.pre_time / g.bin_time);
-    CS_baseline_fr = mean(psth_CS_Hz(:, baseline_idx), 2);
-    US_baseline_fr = mean(psth_US_Hz(:, baseline_idx), 2);
-    CS_test_fr = mean(psth_CS_Hz(:, g.roi), 2);
-    US_test_fr = mean(psth_US_Hz(:, g.roi), 2);
-    CS_fr_drop = (CS_baseline_fr - CS_test_fr) ./ (CS_baseline_fr + eps);
-    US_fr_drop = (US_baseline_fr - US_test_fr) ./ (US_baseline_fr + eps);
-
-    % Classify neurons based on CS and US responses only (same as figure 2)
-    CS_excited = CS_peak >= g.excitation_threshold;
-    US_excited = US_peak >= g.excitation_threshold;
-    CS_inhibited = CS_fr_drop >= g.inhibition_fr_drop;
-    US_inhibited = US_fr_drop >= g.inhibition_fr_drop;
-
-    Clusters = zeros(n_neurons, 1);
-    Clusters(CS_excited & ~US_excited) = 1;  % CS-selective
-    Clusters(US_excited & ~CS_excited) = 2;  % US-selective
-    Clusters(CS_excited & US_excited) = 3;   % Multisensory
-    Clusters(~CS_excited & ~US_excited & (CS_inhibited | US_inhibited)) = 5;  % Inhibited
-    Clusters(~CS_excited & ~US_excited & ~CS_inhibited & ~US_inhibited) = 4;  % Non-responsive
-
-    % Compute latencies for sorting (using CS and US) - for ALL neurons
-    CS_onset_lat = nan(n_neurons, 1);
-    CS_offset_lat = nan(n_neurons, 1);
-    US_onset_lat = nan(n_neurons, 1);
-    US_offset_lat = nan(n_neurons, 1);
-    Both_onset_lat = nan(n_neurons, 1);
-    Both_offset_lat = nan(n_neurons, 1);
-
-    for n = 1:n_neurons
-        [CS_onset_lat(n), CS_offset_lat(n)] = compute_onset_offset_latency(psth_CS(n, :), g.roi, g.onset_threshold, g.min_consec_bins, g.bin_time);
-        [US_onset_lat(n), US_offset_lat(n)] = compute_onset_offset_latency(psth_US(n, :), g.roi, g.onset_threshold, g.min_consec_bins, g.bin_time);
-        [Both_onset_lat(n), Both_offset_lat(n)] = compute_onset_offset_latency(psth_Both(n, :), g.roi, g.onset_threshold, g.min_consec_bins, g.bin_time);
-    end
-
-    % Sort neurons (same as figure 2)
-    leafOrder = [];
-    cluster_order = [1, 2, 3, 4, 5];
-
-    for c = cluster_order
-        clust_idx = find(Clusters == c);
-        if isempty(clust_idx)
+    % Filter neurons by stimulus type based on cluster
+    for stim = 1:2  % Only CS and US
+        % Skip CS for BA
+        if br == 2 && stim == 1
             continue;
         end
 
-        if c == 1  % CS-selective
-            onset_c = CS_onset_lat(clust_idx);
-            offset_c = CS_offset_lat(clust_idx);
-        elseif c == 2  % US-selective
-            onset_c = US_onset_lat(clust_idx);
-            offset_c = US_offset_lat(clust_idx);
-        elseif c == 3  % Multisensory
-            CS_duration = CS_offset_lat(clust_idx) - CS_onset_lat(clust_idx);
-            US_duration = US_offset_lat(clust_idx) - US_onset_lat(clust_idx);
-            CS_rank_score = CS_onset_lat(clust_idx) + g.alpha * CS_duration;
-            US_rank_score = US_onset_lat(clust_idx) + g.alpha * US_duration;
-            rank_score = mean([CS_rank_score, US_rank_score], 2, 'omitnan');
-            sort_matrix = [isnan(rank_score), rank_score];
-            [~, sort_idx] = sortrows(sort_matrix, [1 2]);
-            leafOrder = [leafOrder; clust_idx(sort_idx)];
-            continue;
-        elseif c == 4  % Non-responsive
-            mean_zscore = mean([mean(psth_CS(clust_idx, g.roi), 2), mean(psth_US(clust_idx, g.roi), 2)], 2);
-            [~, sort_idx] = sort(mean_zscore, 'descend');
-            leafOrder = [leafOrder; clust_idx(sort_idx)];
-            continue;
-        else  % Inhibited
-            mean_zscore = mean([mean(psth_CS(clust_idx, g.roi), 2), mean(psth_US(clust_idx, g.roi), 2)], 2);
-            [~, sort_idx] = sort(mean_zscore, 'descend');
-            leafOrder = [leafOrder; clust_idx(sort_idx)];
-            continue;
-        end
+        responsive_indices = [];
 
-        duration_c = offset_c - onset_c;
-        rank_score = onset_c + g.alpha * duration_c;
-        sort_matrix = [isnan(rank_score), rank_score];
-        [~, sort_idx] = sortrows(sort_matrix, [1 2]);
-        leafOrder = [leafOrder; clust_idx(sort_idx)];
-    end
+        for n = 1:length(neuron_indices)
+            global_idx = neuron_indices(n);
+            field_name = sprintf('n%d', global_idx);
+            if isfield(neuron_clusters, field_name)
+                cluster_name = neuron_clusters.(field_name).cluster;
 
-    % Store results
-    results_all{ct}.Clusters = Clusters;
-    results_all{ct}.leafOrder = leafOrder;
-    results_all{ct}.psth_CS = psth_CS;
-    results_all{ct}.psth_US = psth_US;
-    results_all{ct}.psth_Both = psth_Both;
-    results_all{ct}.psth_CS_Hz = psth_CS_Hz;
-    results_all{ct}.psth_US_Hz = psth_US_Hz;
-    results_all{ct}.psth_Both_Hz = psth_Both_Hz;
-    results_all{ct}.CS_onset_lat = CS_onset_lat;
-    results_all{ct}.CS_offset_lat = CS_offset_lat;
-    results_all{ct}.US_onset_lat = US_onset_lat;
-    results_all{ct}.US_offset_lat = US_offset_lat;
-    results_all{ct}.Both_onset_lat = Both_onset_lat;
-    results_all{ct}.Both_offset_lat = Both_offset_lat;
-    results_all{ct}.n_neurons = n_neurons;
-end
+                % Assign neurons to appropriate stimuli based on cluster
+                include_neuron = false;
+                if stim == 1  % CS
+                    % CS-sel and Multi respond to CS
+                    if ismember(cluster_name, {'CS-sel', 'Multi'})
+                        include_neuron = true;
+                    end
+                elseif stim == 2  % US
+                    % US-sel and Multi respond to US
+                    if ismember(cluster_name, {'US-sel', 'Multi'})
+                        include_neuron = true;
+                    end
+                end
 
-%% Create figure (2×2 grid: heatmaps and lineplots only)
-fig = figure('Units', 'pixels', 'Position', [100, 100, 1000, 600], 'Visible', 'on');
-t = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
-
-% Add panel labels
-% A: PN heatmaps (row 1, col 1)
-annotation(fig, 'textbox', [0.01 0.95 0.05 0.05], 'String', 'A', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% B: PN lineplots (row 1, col 2)
-annotation(fig, 'textbox', [0.50 0.95 0.05 0.05], 'String', 'B', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% C: IN heatmaps (row 2, col 1)
-annotation(fig, 'textbox', [0.01 0.48 0.05 0.05], 'String', 'C', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% D: IN lineplots (row 2, col 2)
-annotation(fig, 'textbox', [0.50 0.48 0.05 0.05], 'String', 'D', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
-
-% Determine global color limits across all heatmaps (CS, US, and CS+US)
-all_values = [];
-for ct = 1:2
-    if ~isempty(results_all{ct})
-        for stim = 1:3
-            if stim == 1
-                psth_sorted = results_all{ct}.psth_CS(results_all{ct}.leafOrder, :);
-            elseif stim == 2
-                psth_sorted = results_all{ct}.psth_US(results_all{ct}.leafOrder, :);
-            else
-                psth_sorted = results_all{ct}.psth_Both(results_all{ct}.leafOrder, :);
-            end
-            matrix = psth_sorted(:, (g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
-            all_values = [all_values; matrix(:)];
-        end
-    end
-end
-
-clim_min = prctile(all_values, (100 - g.clim_percentile) / 2);
-clim_max = prctile(all_values, 100 - (100 - g.clim_percentile) / 2);
-
-%% Create single 2×6 tiledlayout for all heatmaps and lineplots
-t_plots = tiledlayout(t, 2, 6, 'TileSpacing', 'compact', 'Padding', 'tight');
-t_plots.Layout.Tile = 1;  % Start at row 1, col 1
-t_plots.Layout.TileSpan = [2 2];  % Span all rows, all cols
-
-% Column arrangement: CS_hmp, US_hmp, Both_hmp, CS_line, US_line, Both_line
-% Row 1: PN
-% Row 2: IN
-
-%% Plot each cell type (rows) × heatmaps+lineplots (columns)
-for ct = 1:2
-    if isempty(results_all{ct})
-        continue;
-    end
-
-    res = results_all{ct};
-
-    % Get cluster boundaries for responsive clusters only (1, 2, 3)
-    Clusters_sorted = res.Clusters(res.leafOrder);
-
-    % Filter to only plot clusters 1, 2, 3
-    responsive_mask = ismember(Clusters_sorted, [1, 2, 3]);
-    responsive_leafOrder = res.leafOrder(responsive_mask);
-    Clusters_sorted_responsive = Clusters_sorted(responsive_mask);
-    n_clu = find(diff(Clusters_sorted_responsive) ~= 0);
-
-    % Plot heatmaps (columns 1-3)
-    for stim = 1:3  % CS, US, CS+US
-        % Select appropriate PSTH and filter to responsive neurons only
-        if stim == 1
-            psth_sorted = res.psth_CS(responsive_leafOrder, :);
-            stim_title = 'CS';
-        elseif stim == 2
-            psth_sorted = res.psth_US(responsive_leafOrder, :);
-            stim_title = 'US';
-        else
-            psth_sorted = res.psth_Both(responsive_leafOrder, :);
-            stim_title = 'CS+US';
-        end
-
-        % Heatmap - tile position: ct=row, stim=column
-        tile_idx = (ct-1)*6 + stim;
-        ax = nexttile(t_plots, tile_idx);
-        matrix = psth_sorted(:, (g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
-        imagesc(g.timeaxis_hmp, 1:size(matrix, 1), matrix);
-        clim([clim_min clim_max]);
-        colormap(ax, g.colors.Heatmap);
-        xline(0, '--k', 'LineWidth', g.xlinewidth);
-
-        % Labels
-        if ct == 1
-            title(stim_title, 'FontSize', 10);
-        end
-
-        % Y-label only on first column with cell type
-        if stim == 1
-            ylabel(sprintf('%s (neuron #)', cell_types{ct}), 'FontSize', 10);
-        end
-
-        % Set yticks to first and last
-        n_neurons_plot = size(matrix, 1);
-        yticks([1, n_neurons_plot]);
-
-        % Remove yticklabels from all but first column
-        if stim ~= 1
-            set(gca, 'YTickLabel', []);
-        end
-
-        if ct == 2
-            xlabel('Time (s)', 'FontSize', 10);
-            xticks([-1 0 1]);
-        else
-            set(gca, 'XTickLabel', []);
-        end
-
-        % Set axis font size
-        set(gca, 'FontSize', 10);
-
-        % Add cluster lines (black)
-        hold on;
-        for i = 1:length(n_clu)
-            yline(n_clu(i) + 0.5, 'Color', 'k', 'LineWidth', 1);
-        end
-
-        % Add onset and offset markers for each neuron
-        for n = 1:length(responsive_leafOrder)
-            idx_n = responsive_leafOrder(n);
-
-            % Get appropriate onset/offset latencies based on stimulus
-            if stim == 1  % CS
-                onset_lat = res.CS_onset_lat(idx_n);
-                offset_lat = res.CS_offset_lat(idx_n);
-            elseif stim == 2  % US
-                onset_lat = res.US_onset_lat(idx_n);
-                offset_lat = res.US_offset_lat(idx_n);
-            else  % CS+US
-                onset_lat = res.Both_onset_lat(idx_n);
-                offset_lat = res.Both_offset_lat(idx_n);
-            end
-
-            % Plot onset marker (black dot)
-            if ~isnan(onset_lat)
-                plot(onset_lat, n, 'k.', 'MarkerSize', 4);
-            end
-
-            % Plot offset marker (black dot)
-            if ~isnan(offset_lat)
-                plot(offset_lat, n, 'k.', 'MarkerSize', 4);
-            end
-        end
-
-        hold off;
-    end
-
-    % Plot lineplots (columns 4-6) - stacked by cluster within each stimulus
-    plot_idx = round((g.pre_time-g.plotwin(1))/g.bin_time+1:(g.pre_time+g.plotwin(2))/g.bin_time);
-    time_vec = g.timeaxis_hmp;
-
-    % Ensure consistent lengths
-    if length(time_vec) ~= length(plot_idx)
-        time_vec = linspace(-g.plotwin(1), g.plotwin(2), length(plot_idx));
-    end
-
-    % Calculate global y-limits for this cell type (only clusters 1-3)
-    y_max = 0;
-    y_min = 0;
-    for c = [1 2 3]
-        clust_idx = find(res.Clusters == c);
-        if ~isempty(clust_idx)
-            psth_CS_mean = mean(res.psth_CS_Hz(clust_idx, plot_idx), 1);
-            psth_US_mean = mean(res.psth_US_Hz(clust_idx, plot_idx), 1);
-            psth_Both_mean = mean(res.psth_Both_Hz(clust_idx, plot_idx), 1);
-            y_max = max([y_max, max(psth_CS_mean), max(psth_US_mean), max(psth_Both_mean)]);
-            y_min = min([y_min, min(psth_CS_mean), min(psth_US_mean), min(psth_Both_mean)]);
-        end
-    end
-
-    fprintf('  %s lineplots: y_min = %.2f, y_max = %.2f\n', cell_types{ct}, y_min*1.1, y_max*1.1);
-
-    % Create nested tiledlayouts for each stimulus column (4, 5, 6)
-    for stim = 1:3  % CS, US, CS+US
-        % Create nested 3×1 layout for this stimulus
-        tile_idx = (ct-1)*6 + stim + 3;
-        t_nested = tiledlayout(t_plots, 3, 1, 'TileSpacing', 'none', 'Padding', 'tight');
-        t_nested.Layout.Tile = tile_idx;
-
-        % Plot each cluster in separate row
-        for c = [1 2 3]
-            clust_idx = find(res.Clusters == c);
-
-            ax_line = nexttile(t_nested, c);
-
-            % Add title on first cluster of top row
-            if ct == 1 && c == 1
-                if stim == 1
-                    title('CS', 'FontSize', 10, 'FontWeight', 'bold');
-                elseif stim == 2
-                    title('US', 'FontSize', 10, 'FontWeight', 'bold');
-                else
-                    title('CS+US', 'FontSize', 10, 'FontWeight', 'bold');
+                if include_neuron
+                    responsive_indices = [responsive_indices; global_idx];
                 end
             end
-
-            hold on;
-            xline(0, '--k', 'LineWidth', g.xlinewidth);
-
-            if ~isempty(clust_idx)
-                if stim == 1
-                    psth_mean = mean(res.psth_CS_Hz(clust_idx, plot_idx), 1);
-                elseif stim == 2
-                    psth_mean = mean(res.psth_US_Hz(clust_idx, plot_idx), 1);
-                else
-                    psth_mean = mean(res.psth_Both_Hz(clust_idx, plot_idx), 1);
-                end
-                plot(time_vec, psth_mean, '-', 'Color', cluster_colors(c, :), 'LineWidth', 2.5);
-            end
-
-            hold off;
-            xlim([time_vec(1) time_vec(end)]);
-            ylim([y_min*1.1 y_max*1.1]);
-
-            if ct == 2 && c == 3
-                xlabel('Time (s)', 'FontSize', 10);
-                set(gca, 'XColor', 'k');
-                xticks([-1 0 1]);
-            else
-                set(gca, 'XTickLabel', []);
-                set(gca, 'XColor', 'none');
-            end
-
-            set(gca, 'YTickLabel', []);
-            set(gca, 'YColor', 'none');
-            set(gca, 'FontSize', 10);
-
-            % Add scalebar on bottom cluster (c=3) of CS+US panel
-            if c == 3 && stim == 3
-                curr_ylim = ylim;
-                y_range = curr_ylim(2) - curr_ylim(1);
-                scalebar_size = 20;
-                x_pos = time_vec(end) - 0.3;
-                y_pos = curr_ylim(2) - scalebar_size - 0.05*y_range;
-
-                hold on;
-                plot([x_pos x_pos], [y_pos y_pos+scalebar_size], 'k-', 'LineWidth', 3);
-                text(x_pos+0.2, y_pos+scalebar_size/2, sprintf('%d Hz', scalebar_size), ...
-                    'FontSize', 10, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'FontWeight', 'bold');
-                hold off;
-            end
         end
+
+        results_all{br, stim}.responsive_idx = responsive_indices;
+        results_all{br, stim}.n_responsive = length(responsive_indices);
+
+        fprintf('    %s: %d neurons\n', stim_names{stim}, length(responsive_indices));
     end
 end
 
-% Add colorbar - manually create with full control, positioned at bottom heatmap (IN)
-drawnow;  % Ensure all positions are updated
-cb_width = 0.008;
-cb_left = 0.50;
-cb_bottom = 0.15;  % Aligned with IN heatmap (row 2 in 2-row layout)
-cb_height = 0.15;
-cb_ax = axes('Position', [cb_left, cb_bottom, cb_width, cb_height]);
-imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
-colormap(cb_ax, g.colors.Heatmap);
-set(cb_ax, 'YDir', 'normal');
-set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
-cb_ax.FontSize = 10;
+%% Calculate maximum blocks
+fprintf('\nDetermining maximum number of blocks...\n');
+max_blocks = floor(max_trials / trials_per_block);
+fprintf('  Using first %d trials for all neurons (%d blocks)\n', max_trials, max_blocks);
 
-%% Export data to Excel
-export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_names);
+%% Calculate block-averaged firing rates
+fprintf('\nCalculating block-averaged firing rates...\n');
+
+block_data = cell(3, 2);  % brain_regions × stimuli (CS, US only)
+
+for br = 1:3
+    for stim = 1:2  % Only CS and US
+        % Skip CS for BA
+        if br == 2 && stim == 1
+            continue;
+        end
+
+        if isempty(results_all{br, stim})
+            continue;
+        end
+
+        fprintf('  %s, %s...\n', brain_regions{br}, stim_names{stim});
+
+        responsive_idx = results_all{br, stim}.responsive_idx;
+        n_responsive = results_all{br, stim}.n_responsive;
+
+        % Storage for this region-stimulus combination
+        all_block_means = nan(n_responsive, max_blocks);
+        neuron_global_idx = zeros(n_responsive, 1);
+
+        for n = 1:n_responsive
+            neuron_idx = responsive_idx(n);
+            neuron_global_idx(n) = neuron_idx;
+
+            % Get trial-by-trial spike times
+            preAP = preAP_norm_all{stim}{neuron_idx};
+            postAP = postAP_norm_all{stim}{neuron_idx};
+
+            % Number of trials (limit to max_trials)
+            n_trials_total = length(preAP);
+            n_trials = min(n_trials_total, max_trials);
+
+            % Skip if neuron has fewer than 5 trials
+            if n_trials < trials_per_block
+                continue;
+            end
+
+            % Calculate how many blocks this neuron can contribute (capped at max_blocks)
+            n_blocks_this_neuron = floor(n_trials / trials_per_block);
+
+            % Calculate firing rate for each block (5 trials per block)
+            for block = 1:n_blocks_this_neuron
+                trial_start = (block - 1) * trials_per_block + 1;
+                trial_end = block * trials_per_block;
+
+                % Count spikes in response window for these trials
+                total_spikes = 0;
+                for trial = trial_start:trial_end
+                    % Spikes in response window (0 to 1s)
+                    spikes_in_window = postAP{trial}(postAP{trial} >= 0 & postAP{trial} < g.test_time);
+                    total_spikes = total_spikes + length(spikes_in_window);
+                end
+
+                % Calculate mean firing rate (Hz)
+                block_fr = total_spikes / (trials_per_block * g.test_time);
+                all_block_means(n, block) = block_fr;  % Simple FR, not delta
+            end
+        end
+
+        % Calculate mean and SEM across neurons, ignoring NaN values
+        block_data{br, stim}.mean = nanmean(all_block_means, 1);
+        block_data{br, stim}.sem = nanstd(all_block_means, 0, 1) ./ sqrt(sum(~isnan(all_block_means), 1));
+        block_data{br, stim}.n_neurons_per_block = sum(~isnan(all_block_means), 1);
+        block_data{br, stim}.n_neurons = sum(any(~isnan(all_block_means), 2));
+
+        % Store which neurons contributed to each block
+        block_data{br, stim}.neurons_per_block = cell(1, max_blocks);
+        for block = 1:max_blocks
+            contributing_neurons = neuron_global_idx(~isnan(all_block_means(:, block)));
+            block_data{br, stim}.neurons_per_block{block} = contributing_neurons;
+        end
+
+        fprintf('    %d neurons included\n', block_data{br, stim}.n_neurons);
+    end
+end
+
+%% Create figure
+fig = figure('Position', [100, 100, 1000, 500], 'Units', 'pixels');
+t = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Add main title
+title(t, 'Response stability across trial blocks', 'FontSize', 12, 'FontWeight', 'bold');
+
+% X-axis (block numbers)
+x_blocks = 1:max_blocks;
+
+for stim = 1:2  % Only CS and US
+    % Create nested tiledlayout for each stimulus
+    t_nest = tiledlayout(t, 1, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+    t_nest.Layout.Tile = stim;
+
+    % Add stimulus-specific title
+    if stim == 1
+        title(t_nest, 'CS responses', 'FontSize', 12, 'FontWeight', 'bold');
+    else
+        title(t_nest, 'US responses', 'FontSize', 12, 'FontWeight', 'bold');
+    end
+
+    ax = nexttile(t_nest, 1);
+    hold on;
+
+    % Plot each brain region - first shaded areas, then lines
+    legend_handles = [];
+    legend_labels = {};
+
+    % First pass: plot shaded SEM areas
+    for br = 1:3
+        % Skip CS for BA
+        if br == 2 && stim == 1
+            continue;
+        end
+        if isempty(block_data{br, stim})
+            continue;
+        end
+
+        data = block_data{br, stim};
+        color = region_colors.(brain_regions{br});
+
+        % Add shaded SEM
+        fill([x_blocks, fliplr(x_blocks)], ...
+             [data.mean + data.sem, fliplr(data.mean - data.sem)], ...
+             color, 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    end
+
+    % Second pass: plot mean lines (for legend)
+    for br = 1:3
+        % Skip CS for BA
+        if br == 2 && stim == 1
+            continue;
+        end
+        if isempty(block_data{br, stim})
+            continue;
+        end
+
+        data = block_data{br, stim};
+        color = region_colors.(brain_regions{br});
+
+        % Plot line
+        h = plot(x_blocks, data.mean, '-', 'Color', color, 'LineWidth', 2);
+        legend_handles = [legend_handles; h];
+        legend_labels{end+1} = sprintf('%s (n=%d)', brain_regions{br}, block_data{br, stim}.n_neurons);
+    end
+
+    hold off;
+
+    % Formatting
+    xlabel('Block #', 'FontSize', 10);
+
+    if stim == 1
+        ylabel('Firing Rate (Hz)', 'FontSize', 10);
+    end
+
+    xlim([0.5 max_blocks+0.5]);
+    ylim([0 30]);
+    xticks(1:max_blocks);
+
+    set(gca, 'FontSize', 10);
+    box off;
+
+    % Add legend only on US panel
+    if stim == 2 && ~isempty(legend_handles)
+        lg = legend(legend_handles, legend_labels, 'Location', 'best');
+        lg.FontSize = 10;
+    end
+end
+
+%% Export to Excel
+export_supplementary_figure_2_to_excel(block_data, results_all, brain_regions, stim_names, max_blocks, trials_per_block, max_trials, g);
 exportgraphics(gcf, 'supplementary_figure_2.png', 'Resolution', 300);
 fprintf('\nDone.\n');
 
-%% Helper functions
-function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
-    seg = z_trace(event_inds);
-    if any(isnan(seg))
-        onset_lat = NaN;
-        offset_lat = NaN;
-        return
-    end
-
-    isAbove = seg >= threshold;
-    winsum = conv(double(isAbove), ones(1, min_consec), 'same');
-    onset_idx = find(winsum >= min_consec, 1, 'first');
-
-    if isempty(onset_idx)
-        onset_lat = NaN;
-        offset_lat = NaN;
-    else
-        onset_lat = (onset_idx - 1) * bin_time;
-
-        seg_after_onset = seg(onset_idx:end);
-        isBelow = seg_after_onset < threshold;
-        winsum_below = conv(double(isBelow), ones(1, min_consec), 'same');
-        offset_idx_relative = find(winsum_below >= min_consec, 1, 'first');
-
-        if isempty(offset_idx_relative)
-            offset_lat = NaN;
-        else
-            offset_idx = onset_idx + offset_idx_relative - 1;
-            offset_lat = (offset_idx - 1) * bin_time;
-        end
-    end
-end
-
-function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_names)
+%% Export function
+function export_supplementary_figure_2_to_excel(block_data, results_all, brain_regions, stim_names, max_blocks, trials_per_block, max_trials, g)
     output_filename = 'supplementary_figure_2_data.xlsx';
 
     if exist(output_filename, 'file')
         delete(output_filename);
     end
 
-    stim_names = {'CS', 'US', 'CS+US'};
-    all_cluster_names = {'CS-sel', 'US-sel', 'Multi', 'Non-resp', 'Inhibited'};
+    %% Sheet 1: Summary
+    summary_data = {};
+    summary_data{1,1} = 'Supplementary Figure 2: Response Stability Across Trial Blocks';
+    summary_data{2,1} = '';
+    summary_data{3,1} = 'Cluster assignments loaded from figure_2_data.xlsx';
+    summary_data{4,1} = '';
+    summary_data{5,1} = 'Analysis Parameters';
+    summary_data{6,1} = 'Trials per block';
+    summary_data{6,2} = trials_per_block;
+    summary_data{7,1} = 'Max trials used';
+    summary_data{7,2} = max_trials;
+    summary_data{8,1} = 'Number of blocks';
+    summary_data{8,2} = max_blocks;
+    summary_data{9,1} = 'Response window';
+    summary_data{9,2} = '0-1s';
+    summary_data{10,1} = 'Baseline window';
+    summary_data{10,2} = '-5-0s';
+    summary_data{11,1} = '';
+    summary_data{12,1} = 'Neuron Counts by Region';
+    summary_data{13,1} = 'Region';
+    summary_data{13,2} = 'CS';
+    summary_data{13,3} = 'US';
 
-    %% Sheet 1: Delta FR and Response Length
-    sheet_data = {};
-    sheet_data{1, 1} = 'LA PN vs IN: Delta Peak FR and Response Length';
-    sheet_data{2, 1} = '';
-    row = 3;
-
-    % Process each cluster (1=CS-sel, 2=US-sel, 3=Multi)
-    for c = 1:3
-        sheet_data{row, 1} = sprintf('--- %s ---', cluster_names{c});
-        row = row + 1;
-
-        % Process each cell type (PN and IN)
-        for ct = 1:2
-            if isempty(results_all{ct})
-                continue;
+    row = 14;
+    for br = 1:3
+        summary_data{row,1} = brain_regions{br};
+        for stim = 1:2  % Only CS and US
+            if br == 2 && stim == 1
+                summary_data{row, stim+1} = 'N/A';
+            elseif ~isempty(block_data{br, stim})
+                summary_data{row, stim+1} = block_data{br, stim}.n_neurons;
+            else
+                summary_data{row, stim+1} = 0;
             end
-
-            res = results_all{ct};
-            clust_idx = find(res.Clusters == c);
-
-            if isempty(clust_idx)
-                sheet_data{row, 1} = sprintf('%s: No neurons', cell_types{ct});
-                row = row + 1;
-                continue;
-            end
-
-            % Calculate metrics for all neurons in this cluster
-            CS_fr = zeros(length(clust_idx), 1);
-            US_fr = zeros(length(clust_idx), 1);
-            Both_fr = zeros(length(clust_idx), 1);
-            CS_resplen = zeros(length(clust_idx), 1);
-            US_resplen = zeros(length(clust_idx), 1);
-            Both_resplen = zeros(length(clust_idx), 1);
-
-            baseline_idx = 1:(g.pre_time / g.bin_time);
-
-            for n = 1:length(clust_idx)
-                idx_n = clust_idx(n);
-                baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
-
-                % CS metrics
-                if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                    onset_bin = round(res.CS_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.CS_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_CS_Hz(idx_n, onset_bin:offset_bin));
-                    CS_fr(n) = peak_fr - baseline_fr;
-                    CS_resplen(n) = (res.CS_offset_lat(idx_n) - res.CS_onset_lat(idx_n)) * 1000;
-                end
-
-                % US metrics
-                if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                    onset_bin = round(res.US_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.US_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_US_Hz(idx_n, onset_bin:offset_bin));
-                    US_fr(n) = peak_fr - baseline_fr;
-                    US_resplen(n) = (res.US_offset_lat(idx_n) - res.US_onset_lat(idx_n)) * 1000;
-                end
-
-                % CS+US metrics
-                if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                    onset_bin = round(res.Both_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.Both_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_Both_Hz(idx_n, onset_bin:offset_bin));
-                    Both_fr(n) = peak_fr - baseline_fr;
-                    Both_resplen(n) = (res.Both_offset_lat(idx_n) - res.Both_onset_lat(idx_n)) * 1000;
-                end
-            end
-
-            % Statistical tests
-            data_fr = [CS_fr, US_fr, Both_fr];
-            data_resplen = [CS_resplen, US_resplen, Both_resplen];
-
-            % Wilcoxon signed-rank tests
-            p_CS_US_fr = signrank(CS_fr, US_fr);
-            p_CS_Both_fr = signrank(CS_fr, Both_fr);
-            p_US_Both_fr = signrank(US_fr, Both_fr);
-
-            p_CS_US_resplen = signrank(CS_resplen, US_resplen);
-            p_CS_Both_resplen = signrank(CS_resplen, Both_resplen);
-            p_US_Both_resplen = signrank(US_resplen, Both_resplen);
-
-            % Write summary statistics - Delta FR
-            sheet_data{row, 1} = sprintf('%s (n=%d)', cell_types{ct}, length(clust_idx));
-            sheet_data{row, 2} = 'Delta Peak FR (Hz)';
-            row = row + 1;
-
-            % Header row
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Mean';
-            sheet_data{row, 3} = 'SEM';
-            sheet_data{row, 4} = 'Median';
-            sheet_data{row, 5} = 'SD';
-            row = row + 1;
-
-            % CS, US, CS+US rows
-            for s = 1:3
-                sheet_data{row, 1} = stim_names{s};
-                sheet_data{row, 2} = mean(data_fr(:,s), 'omitnan');
-                sheet_data{row, 3} = std(data_fr(:,s), 'omitnan') / sqrt(sum(~isnan(data_fr(:,s))));
-                sheet_data{row, 4} = median(data_fr(:,s), 'omitnan');
-                sheet_data{row, 5} = std(data_fr(:,s), 'omitnan');
-                row = row + 1;
-            end
-
-            % Statistical tests for Delta FR
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Statistical Tests (Wilcoxon signed-rank)';
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_US_fr, format_significance(p_CS_US_fr));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_Both_fr, format_significance(p_CS_Both_fr));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'US vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_US_Both_fr, format_significance(p_US_Both_fr));
-            row = row + 1;
-
-            % Response Length
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Response Length (ms)';
-            row = row + 1;
-
-            % Header row
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Mean';
-            sheet_data{row, 3} = 'SEM';
-            sheet_data{row, 4} = 'Median';
-            sheet_data{row, 5} = 'SD';
-            row = row + 1;
-
-            % CS, US, CS+US rows
-            for s = 1:3
-                sheet_data{row, 1} = stim_names{s};
-                sheet_data{row, 2} = mean(data_resplen(:,s), 'omitnan');
-                sheet_data{row, 3} = std(data_resplen(:,s), 'omitnan') / sqrt(sum(~isnan(data_resplen(:,s))));
-                sheet_data{row, 4} = median(data_resplen(:,s), 'omitnan');
-                sheet_data{row, 5} = std(data_resplen(:,s), 'omitnan');
-                row = row + 1;
-            end
-
-            % Statistical tests for Response Length
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Statistical Tests (Wilcoxon signed-rank)';
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_US_resplen, format_significance(p_CS_US_resplen));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_Both_resplen, format_significance(p_CS_Both_resplen));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'US vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_US_Both_resplen, format_significance(p_US_Both_resplen));
-            row = row + 1;
-
-            sheet_data{row, 1} = '';
-            row = row + 1;
         end
-
-        sheet_data{row, 1} = '';
         row = row + 1;
     end
 
-    writecell(sheet_data, output_filename, 'Sheet', 'Summary_Stats');
+    writecell(summary_data, output_filename, 'Sheet', 'Summary');
 
-    %% Sheet 2: Raw Data - Individual Neuron Values
-    raw_data = {};
-    raw_data{1, 1} = 'LA PN vs IN: Individual Neuron Values';
-    raw_data{2, 1} = '';
-    raw_data{3, 1} = 'Local #';
-    raw_data{3, 2} = 'Global Index';
-    raw_data{3, 3} = 'Animal ID';
-    raw_data{3, 4} = 'Cell Type';
-    raw_data{3, 5} = 'Cluster';
-    raw_data{3, 6} = '';
-    raw_data{3, 7} = 'Delta FR CS (Hz)';
-    raw_data{3, 8} = 'Delta FR US (Hz)';
-    raw_data{3, 9} = 'Delta FR CS+US (Hz)';
-    raw_data{3, 10} = '';
-    raw_data{3, 11} = 'Response Length CS (ms)';
-    raw_data{3, 12} = 'Response Length US (ms)';
-    raw_data{3, 13} = 'Response Length CS+US (ms)';
+    %% Sheet 2: Block Statistics
+    stats_data = {};
+    stats_data{1,1} = 'Block-averaged Firing Rate Statistics';
+    stats_data{2,1} = '';
+    stats_data{3,1} = 'Mean ± SEM (Hz) for each block (response window 0-1s)';
+    stats_data{4,1} = '';
+
+    row = 5;
+    for br = 1:3
+        for stim = 1:2  % Only CS and US
+            if br == 2 && stim == 1
+                continue;
+            end
+            if isempty(block_data{br, stim})
+                continue;
+            end
+
+            stats_data{row,1} = sprintf('%s %s', brain_regions{br}, stim_names{stim});
+            stats_data{row+1,1} = 'Block';
+            stats_data{row+2,1} = 'Mean (Hz)';
+            stats_data{row+3,1} = 'SEM (Hz)';
+            stats_data{row+4,1} = 'N neurons';
+
+            for block = 1:max_blocks
+                stats_data{row+1, block+1} = block;
+                if block <= length(block_data{br, stim}.mean)
+                    stats_data{row+2, block+1} = block_data{br, stim}.mean(block);
+                    stats_data{row+3, block+1} = block_data{br, stim}.sem(block);
+                    stats_data{row+4, block+1} = block_data{br, stim}.n_neurons_per_block(block);
+                else
+                    stats_data{row+2, block+1} = NaN;
+                    stats_data{row+3, block+1} = NaN;
+                    stats_data{row+4, block+1} = 0;
+                end
+            end
+
+            row = row + 6;
+        end
+    end
+
+    writecell(stats_data, output_filename, 'Sheet', 'Block_Statistics');
+
+    %% Sheet 3: Neurons Per Block (Global IDs)
+    neurons_per_block_data = {};
+    neurons_per_block_data{1,1} = 'Neurons Contributing to Each Block';
+    neurons_per_block_data{2,1} = '';
+    neurons_per_block_data{3,1} = 'Region-Stimulus';
+    neurons_per_block_data{3,2} = 'Block';
+    neurons_per_block_data{3,3} = 'Global Index';
 
     row = 4;
-
-    % Get cell_metrics for animal IDs
-    cell_metrics = g.cell_metrics;
-
-    % Process each cell type
-    for ct = 1:2
-        if isempty(results_all{ct})
-            continue;
-        end
-
-        res = results_all{ct};
-
-        % Get indices for this cell type in the full cell_metrics
-        idx_neurons = strcmp(cell_metrics.brainRegion, 'LA') & strcmp(cell_metrics.putativeCellType, cell_types{ct});
-        global_indices = find(idx_neurons);
-
-        baseline_idx = 1:(g.pre_time / g.bin_time);
-
-        % Process each neuron in sorted order (using leafOrder)
-        for i = 1:length(res.leafOrder)
-            n = res.leafOrder(i);  % Get neuron index in sorted order
-            global_idx = global_indices(n);
-            animal_id = cell_metrics.animal{global_idx};
-
-            % Calculate metrics
-            baseline_fr = mean(res.psth_CS_Hz(n, baseline_idx));
-
-            % Delta FR
-            CS_fr = 0;
-            US_fr = 0;
-            Both_fr = 0;
-            CS_resplen = 0;
-            US_resplen = 0;
-            Both_resplen = 0;
-
-            if ~isnan(res.CS_onset_lat(n)) && ~isnan(res.CS_offset_lat(n))
-                onset_bin = round(res.CS_onset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                offset_bin = round(res.CS_offset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                peak_fr = max(res.psth_CS_Hz(n, onset_bin:offset_bin));
-                CS_fr = peak_fr - baseline_fr;
-                CS_resplen = (res.CS_offset_lat(n) - res.CS_onset_lat(n)) * 1000;
+    for br = 1:3
+        for stim = 1:2  % Only CS and US
+            if br == 2 && stim == 1
+                continue;
+            end
+            if isempty(block_data{br, stim})
+                continue;
             end
 
-            if ~isnan(res.US_onset_lat(n)) && ~isnan(res.US_offset_lat(n))
-                onset_bin = round(res.US_onset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                offset_bin = round(res.US_offset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                peak_fr = max(res.psth_US_Hz(n, onset_bin:offset_bin));
-                US_fr = peak_fr - baseline_fr;
-                US_resplen = (res.US_offset_lat(n) - res.US_onset_lat(n)) * 1000;
+            for block = 1:max_blocks
+                neuron_ids = block_data{br, stim}.neurons_per_block{block};
+                if ~isempty(neuron_ids)
+                    for idx = 1:length(neuron_ids)
+                        neurons_per_block_data{row, 1} = sprintf('%s %s', brain_regions{br}, stim_names{stim});
+                        neurons_per_block_data{row, 2} = block;
+                        neurons_per_block_data{row, 3} = neuron_ids(idx);
+                        row = row + 1;
+                    end
+                end
             end
-
-            if ~isnan(res.Both_onset_lat(n)) && ~isnan(res.Both_offset_lat(n))
-                onset_bin = round(res.Both_onset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                offset_bin = round(res.Both_offset_lat(n) / g.bin_time) + 1 + g.roi(1) - 1;
-                peak_fr = max(res.psth_Both_Hz(n, onset_bin:offset_bin));
-                Both_fr = peak_fr - baseline_fr;
-                Both_resplen = (res.Both_offset_lat(n) - res.Both_onset_lat(n)) * 1000;
-            end
-
-            raw_data{row, 1} = i;  % Sorted order (1, 2, 3, ...)
-            raw_data{row, 2} = global_idx;
-            raw_data{row, 3} = animal_id;
-            raw_data{row, 4} = cell_types{ct};
-            raw_data{row, 5} = all_cluster_names{res.Clusters(n)};
-            raw_data{row, 6} = '';
-            raw_data{row, 7} = CS_fr;
-            raw_data{row, 8} = US_fr;
-            raw_data{row, 9} = Both_fr;
-            raw_data{row, 10} = '';
-            raw_data{row, 11} = CS_resplen;
-            raw_data{row, 12} = US_resplen;
-            raw_data{row, 13} = Both_resplen;
-
-            row = row + 1;
         end
     end
 
-    writecell(raw_data, output_filename, 'Sheet', 'RawData_Individual_Neurons');
-end
+    writecell(neurons_per_block_data, output_filename, 'Sheet', 'Neurons_Per_Block');
 
-function sig_str = format_significance(p_val)
-    if p_val < 0.001
-        sig_str = '***';
-    elseif p_val < 0.01
-        sig_str = '**';
-    elseif p_val < 0.05
-        sig_str = '*';
-    else
-        sig_str = 'n.s.';
+    %% Sheet 4: Neuron List
+    neuron_data = {};
+    neuron_data{1,1} = 'Neurons Included in Analysis';
+    neuron_data{2,1} = '';
+    neuron_data{3,1} = 'Global Index';
+    neuron_data{3,2} = 'Animal ID';
+    neuron_data{3,3} = 'Cell ID';
+    neuron_data{3,4} = 'Region';
+    neuron_data{3,5} = 'Cell Type';
+
+    row = 4;
+    for br = 1:3
+        for stim = 1:2  % Only CS and US
+            if isempty(results_all{br, stim})
+                continue;
+            end
+
+            responsive_idx = results_all{br, stim}.responsive_idx;
+
+            for n = 1:length(responsive_idx)
+                neuron_idx = responsive_idx(n);
+
+                % Check if already added
+                already_added = false;
+                for check_row = 4:(row-1)
+                    if ~isempty(neuron_data{check_row, 1}) && neuron_data{check_row, 1} == neuron_idx
+                        already_added = true;
+                        break;
+                    end
+                end
+
+                if ~already_added
+                    neuron_data{row, 1} = neuron_idx;
+                    neuron_data{row, 2} = g.cell_metrics.animal{neuron_idx};
+                    neuron_data{row, 3} = g.cell_metrics.cellID(neuron_idx);
+                    neuron_data{row, 4} = brain_regions{br};
+                    neuron_data{row, 5} = g.cell_metrics.putativeCellType{neuron_idx};
+
+                    row = row + 1;
+                end
+            end
+        end
     end
+
+    writecell(neuron_data, output_filename, 'Sheet', 'Neuron_List');
+
 end

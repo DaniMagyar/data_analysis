@@ -22,12 +22,23 @@ I am a specialized local agent dedicated exclusively to the research project loc
 ## Operational Guidelines
 1.  **Local Focus:** I rely strictly on the files provided within this specific project directory (MATLAB scripts, text drafts, figure data).
 2.  **Consistency:** All generated text (Results, Discussion, etc.) must align with the core hypothesis that LA and AStria are the functional unit.
-*   Precise terminology: differentiating "AStria" from "Striatum".
-*   **Decimal Standard:** 2 decimal places for percentages, firing rates, latencies, and p-values (except p < 0.001). 3 decimal places for spike width.
+    *   Precise terminology: differentiating "AStria" from "Striatum".
+*   **Decimal Standard:** 2 decimal places for percentages, firing rates, and latencies. 3 decimal places for spike width. For p-values: use "p < 0.001" if the value is less than 0.001; otherwise, report the exact p-value with 3 decimal places (e.g., p = 0.041). **It is critical to ensure these p-values are precisely extracted from the statistical sources and accurately reflected in the text.**
+4.  **DOCX Formatting:** When generating or modifying DOCX files, always use "Times New Roman" font and 12pt font size for body text.
 
 ## Manuscript Figures & Statistical Sources
 
 This section details the visual data structure and where to find the corresponding statistical outputs.
+
+### Data Source Map (Excel Files)
+*   **Figure 1:** `figures/figure_1/figure_1_data.xlsx`
+*   **Figure 2:** `figures/figure_2/figure_2_data.xlsx`
+*   **Figure 3:** `figures/figure_3/figure_3_data.xlsx`
+*   **Figure 4:** `figures/figure_4/figure_4_data.xlsx`
+*   **Figure 5:** `figures/figure_5/figure_5_data.xlsx`
+*   **Figure S2:** `figures/supplementary_figure_2/supplementary_figure_2_data.xlsx`
+*   **Figure S3:** `figures/supplementary_figure_3/supplementary_figure_3_data.xlsx`
+*   **Figure S4:** `figures/supplementary_figure_4/supplementary_figure_4_data.xlsx`
 
 ### Main Figures
 
@@ -38,14 +49,14 @@ This section details the visual data structure and where to find the correspondi
 *   **D:** Spike feature classification (Waveform width vs Firing Rate).
 *   **E:** Firing rate distributions (PN/IN/Region).
 *   **F:** Burst index distributions.
-*   **Source Stats:** `figures/figure_1/figure_1_stats.txt` (PN vs IN waveform/FR stats, Burst Index).
+*   **Source Stats:** `figures/figure_1/figure_1_data.xlsx` (PN vs IN waveform/FR stats, Burst Index).
 
 **Figure 2: Regional differences in neuronal response profiles**
 *   **A:** Example rasters (CS-sel, US-sel, Multi, Inhibited).
 *   **B:** Population heatmaps (LA, BA, AStria, CeA) & Bar charts (Cluster proportions).
 *   **C:** Chi-square significance matrix (Region vs Region comparisons).
 *   **D:** US-evoked metrics (Delta FR magnitude, Response Length).
-*   **Source Stats:** `figures/figure_2/figure_2_stats.txt` (Chi-square tests, Cramér's V, Kruskal-Wallis for metrics).
+*   **Source Stats:** `figures/figure_2/figure_2_data.xlsx` (Chi-square tests, Cramér's V, Kruskal-Wallis for metrics).
 
 **Figure 3: Similar integration in LA and AStria**
 *   **A:** LA Heatmaps (CS, US, CS+US responses).
@@ -56,7 +67,7 @@ This section details the visual data structure and where to find the correspondi
 *   **F:** AStria Delta FR bar charts.
 *   **G:** Pie charts (Responsive proportions LA vs AStria).
 *   **H:** Signal gain comparison (Delta FR across regions for all stimuli).
-*   **Source Stats:** `figures/figure_3/figure_3_stats.txt` (Wilcoxon signed-rank for integration, Wilcoxon rank-sum for gain).
+*   **Source Stats:** `figures/figure_3/figure_3_data.xlsx` (Wilcoxon signed-rank for integration, Wilcoxon rank-sum for gain).
 
 **Figure 4: Monosynaptic responses**
 *   **A:** LA Heatmaps (Monosynaptic window 0-25ms).
@@ -66,7 +77,7 @@ This section details the visual data structure and where to find the correspondi
 *   **E:** Pie charts (Monosynaptic proportions).
 *   **F:** Region comparison (Delta FR magnitude).
 *   **G:** Onset latency comparison.
-*   **Source Stats:** `figures/figure_4/figure_4_stats.txt` (Latencies, Magnitudes, Chi-square).
+*   **Source Stats:** `figures/figure_4/figure_4_data.xlsx` (Latencies, Magnitudes, Chi-square).
 
 **Figure 5: Optogenetic modulation (PV silencing)**
 *   **A:** Viral strategy schematic.
@@ -75,7 +86,7 @@ This section details the visual data structure and where to find the correspondi
 *   **D:** Example lineplots (Single neurons + Light).
 *   **E:** Pie charts (Proportion of enhanced neurons).
 *   **F:** Population gain (Spaghetti plots showing FR change with light).
-*   **Source Stats:** `figures/figure_5/figure_5_stats.txt` (Enhancement proportions, gain stats).
+*   **Source Stats:** `figures/figure_5/figure_5_data.xlsx` (Enhancement proportions, gain stats).
 
 ### Supplementary Figures
 
@@ -88,7 +99,7 @@ This section details the visual data structure and where to find the correspondi
 *   **B:** Contingency table (Observed counts).
 *   **C:** Cramér's V effect size matrix.
 *   **D:** Kruskal-Wallis results for metrics.
-*   **Source Stats:** `figures/figure_2/figure_2_stats.txt`.
+*   **Source Stats:** `figures/supplementary_figure_2/supplementary_figure_2_data.xlsx`.
 
 **Figure S3: Statistical analysis of regional cluster distributions (Related to Fig 3)**
 *   **A:** Permutation test (LA vs AStria).
@@ -96,11 +107,11 @@ This section details the visual data structure and where to find the correspondi
 *   **C:** Stats summary.
 *   **D:** Response metrics (Delta Spikes, Delta FR, Length).
 *   **E:** Detailed Kruskal-Wallis tests.
-*   **Source Stats:** `figures/figure_3/figure_3_stats.txt`.
+*   **Source Stats:** `figures/supplementary_figure_3/supplementary_figure_3_data.xlsx`.
 
 **Figure S4: PN vs IN comparison in LA**
 *   **A-E:** Heatmaps and metrics comparing Principal Neurons vs Interneurons.
-*   **Source Stats:** Derived from `figures/figure_3/BAfc_figure_3_supp_PN_IN.m`.
+*   **Source Stats:** `figures/supplementary_figure_4/supplementary_figure_4_data.xlsx`.
 
 **Figure S5: Monosynaptic latency analysis (Related to Fig 4)**
 *   **A:** Boxplots (Latency comparison across subtypes).
@@ -108,7 +119,7 @@ This section details the visual data structure and where to find the correspondi
 *   **C:** Contingency table.
 *   **D:** Chi-square stats.
 *   **E:** Kruskal-Wallis for monosynaptic magnitude.
-*   **Source Stats:** `figures/figure_4/figure_4_stats.txt` (Latency section).
+*   **Source Stats:** `figures/figure_4/figure_4_data.xlsx` (Latency section).
 
 **Figure S6: Light-inhibited PV interneurons (Related to Fig 5)**
 *   **A:** Example rasters (PV inhibition).
@@ -116,4 +127,4 @@ This section details the visual data structure and where to find the correspondi
 *   **C:** Lineplots (LA PV firing drops).
 *   **D:** Heatmaps (AStria PVs).
 *   **E:** Lineplots (AStria PV firing drops).
-*   **Source Stats:** `figures/figure_5/figure_5_supp_stats.txt` (Manipulation check stats: baseline FR drops).
+*   **Source Stats:** `figures/figure_5/figure_5_data.xlsx` (Manipulation check stats: baseline FR drops).

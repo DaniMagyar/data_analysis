@@ -88,6 +88,7 @@ Rows 3-4 use nested tiledlayouts with tight spacing, ylabel 'Count' on left only
 Rows 1-4: LA/AStria heatmaps (cols 1-3: CS/US/CS+US, "LA neurons", "AStria neurons"), lineplots (cols 4-6: 3 clusters stacked), Peak FR bars (col 7)
 Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: CS/US/CS+US, grey circles with jitter, y-axis to 95th percentile)
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
+**Panel H (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
 **Peak FR calculation** (2025-12-03): Uses maximum firing rate in 0-1s response window (`max(psth_Hz(:, g.roi))`). No baseline subtraction - absolute peak values. Applied to CS, US, and CS+US responses.
 **Response length**: For statistical tests, uses 0 if no onset/offset detected (KW can't handle NaN). For raw data export, retains NaN.
 **Excel export** (2025-12-03): `figure_3_data.xlsx` with sheets:
@@ -99,15 +100,13 @@ Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: 
   - `RawData_RegionComparison`: Individual neuron values for Panel H
 **Supp figure** (6×3, 1000×1200px): Chi-square (row 1, 1×3), Metrics bars (rows 2-4, 3 clusters × 2 metrics - Peak FR and Response length), KW tests (rows 5-6, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
 
-### Supplementary Figure 2 (supplementary_figure_2/)
-LA PN vs IN comparison (6×2 grid: rows 1-3 heatmaps/lineplots, rows 4-6 bar charts)
-
 ### BAfc_figure_4.m (1200×800px, 4×6 grid)
 Cols 1-3: Monosynaptic heatmaps (LA rows 1-2, AStria rows 3-4, CS/US/CS+US, "LA neurons", "AStria neurons")
 Col 4: ΔFR bars (6×1 nested, 3 clusters each region)
 Cols 5-6: Pie charts (row 1, FontSize 14), Region comparison (row 2, grey circles with jitter, y-axis to 95th percentile), **G**: Latency comparison (row 3, Wilcoxon rank-sum LA vs AStria)
 α=0.0 for rank score sorting, `g.monosyn_window=0.025`
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
+**Panel F (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
 **ΔFR calculation** (2025-12-02): `ΔFR = (nSpikes/trial) / window_duration`, where window_duration = 13ms (0.013s). This avoids smoothing artifacts from high-frequency binning while maintaining consistent Hz units. CS+US uses actual `triptest_both` trials, NOT pooled CS+US data.
 **Supp figure removed** (2025-12-01): All supplementary data now in Excel export only
 **Excel export** (2025-12-01, updated 2025-12-02): `figure_4_data.xlsx` with sheets:
@@ -133,16 +132,25 @@ Example neurons: MD309_001 cell 20 (LA US ↑), MD317_001 cell 43 (AStria US ↑
   - `RawData_Classifications`: Individual neuron classifications with p-values and FR values
   - `ChiSquare_RegionComparisons`: LA vs AStria chi-square tests for CS and US
 
+### Supplementary Figure 2 (supplementary_figure_2/)
+Response stability across trial blocks (1000×500px, 1×2 grid: CS/US only). Uses first 50 trials (10 blocks, 5 trials/block). Shows simple FR (Hz) in 0-1s response window, not ΔFR. Cluster assignments loaded from `figure_2_data.xlsx` (RawData_AllNeurons sheet). CS panel: CS-sel + Multi neurons. US panel: US-sel + Multi neurons. LA/BA/Astria, mean±SEM.
+**Script**: `BAfc_supplementary_figure_2_v2.m`
+**Excel export**: `supplementary_figure_2_data.xlsx` with sheets:
+  - `Summary`: Parameters (5 trials/block, 50 max trials, 10 blocks), neuron counts by region
+  - `Block_Statistics`: Mean ± SEM FR for each block
+  - `Neurons_Per_Block`: Region-Stimulus | Block | Global Index (column format)
+  - `Neuron_List`: All neurons with Global Index, Animal ID, Cell ID, Region, Cell Type
+
 ### Supplementary Figure 3 (supplementary_figure_3/)
+LA PN vs IN comparison (6×2 grid: rows 1-3 heatmaps/lineplots, rows 4-6 bar charts)
+
+### Supplementary Figure 4 (supplementary_figure_4/)
 Light-inhibited neurons (5×4 grid, 1000×1000px): **A**: Example rasters (row 1), **B**: LA heatmaps (row 2), **C**: LA lineplots (row 3), **D**: AStria heatmaps (row 4), **E**: AStria lineplots (row 5)
-**Excel export**: `supplementary_figure_3_data.xlsx` with sheets:
+**Excel export**: `supplementary_figure_4_data.xlsx` with sheets:
   - `Summary`: Sample sizes, detection criteria, cluster distributions
   - `PV_Silencing_Effect`: Pooled CS+US, -0.5-0s baseline comparison (Mean, SEM, Median) with Wilcoxon signed-rank test
   - `Firing_Rate_Analysis`: Mean±SEM±Median±SD FR in three time windows (-1 to -0.5s baseline, -0.5 to 0s illumination, 0 to 0.5s response) for CS/US ± light (4 conditions × 3 windows). Statistical comparisons: (1) Baseline vs illumination effect (no-light trials pooled), (2) CS response no-light vs light, (3) US response no-light vs light
   - `Complete_Neuron_Lists`: Individual neuron details (position, animal, cell ID, region, cell type, cluster, p-value, FR drop) + all calculated FR values for 4 conditions × 3 time windows (12 columns). Includes Mean and SEM rows at bottom for verification
-
-### BAfc_supp_stability.m (1500×500px, 1×3 grid)
-Response stability across 10 trial blocks. ΔFR = response FR (0-1s) - baseline FR (−5-0s). LA/BA/Astria, mean±SEM.
 
 ## Key Parameters
 - `g.bin_time = 0.001` (1ms bins)

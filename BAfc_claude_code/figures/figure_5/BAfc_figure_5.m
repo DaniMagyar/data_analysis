@@ -83,7 +83,7 @@ baseline_bins = round(g.pre_time / g.bin_time);
 filter_delay = floor(g.smoothvalue / 2);
 
 for hmp = 1:4
-    psth_spx_og = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{hmp}, ...
+    [psth_spx_og, preAP_norm_all{hmp}, postAP_norm_all{hmp}] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{hmp}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 
     % Convert to Hz
@@ -159,11 +159,9 @@ for br = 1:2
         psth_nolight_Hz_IN = psthHz_full{ttl_nolight_idx}(idx_IN, :);
         psth_light_Hz_IN = psthHz_full{ttl_light_idx}(idx_IN, :);
 
-        % Get trial-by-trial spike data
-        [~, ~, postAP_norm_nolight] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{ttl_nolight_idx}, ...
-            'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
-        [~, ~, postAP_norm_light] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{ttl_light_idx}, ...
-            'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
+        % Get trial-by-trial spike data (from stored data)
+        postAP_norm_nolight = postAP_norm_all{ttl_nolight_idx};
+        postAP_norm_light = postAP_norm_all{ttl_light_idx};
 
         % Process PNs
         peak_nolight_PN = max(psth_nolight_PN(:, monosyn_window_bins), [], 2);
@@ -923,9 +921,10 @@ for ex = 1:4
     neuron_idx = find(animal_match & cellID_match);
 
     if ~isempty(neuron_idx)
-        % Get spike times using BAfc_psth_spx
-        [~, preAP_norm, postAP_norm] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl_type, ...
-            'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
+        % Get spike times from stored data
+        ttl_idx = find(strcmp(ttl, ttl_type));
+        preAP_norm = preAP_norm_all{ttl_idx};
+        postAP_norm = postAP_norm_all{ttl_idx};
 
         preAP_spikes = preAP_norm{neuron_idx};
         postAP_spikes = postAP_norm{neuron_idx};
@@ -984,9 +983,10 @@ for ex = 1:4
     ttl_type_light = examples{ex, 4};
 
     if ~isempty(neuron_idx)
-        % Get spike times using BAfc_psth_spx for light condition
-        [~, preAP_norm_light, postAP_norm_light] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl_type_light, ...
-            'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
+        % Get spike times from stored data for light condition
+        ttl_idx_light = find(strcmp(ttl, ttl_type_light));
+        preAP_norm_light = preAP_norm_all{ttl_idx_light};
+        postAP_norm_light = postAP_norm_all{ttl_idx_light};
 
         preAP_spikes_light = preAP_norm_light{neuron_idx};
         postAP_spikes_light = postAP_norm_light{neuron_idx};

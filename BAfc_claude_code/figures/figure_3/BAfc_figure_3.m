@@ -751,16 +751,19 @@ for stim = 1:3  % CS, US, CS+US
 
         res = results_all{br};
 
+        % Filter for responsive neurons only (Clusters 1, 2, 3)
+        responsive_idx = ismember(res.Clusters, [1 2 3]);
+
         % Select appropriate PSTH and latencies
         if stim == 1  % CS
-            peak_fr_data = res.CS_peak_Hz;
+            peak_fr_data = res.CS_peak_Hz(responsive_idx);
         elseif stim == 2  % US
-            peak_fr_data = res.US_peak_Hz;
+            peak_fr_data = res.US_peak_Hz(responsive_idx);
         else  % CS+US
-            peak_fr_data = res.Both_peak_Hz;
+            peak_fr_data = res.Both_peak_Hz(responsive_idx);
         end
 
-        % Use all neurons (not just responsive)
+        % Use responsive neurons only
         data_regions = [data_regions; peak_fr_data];
 
         if br == 1
