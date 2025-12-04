@@ -79,8 +79,8 @@ panel_burst_index_distribution(t_bi, g, 3, 'Astria', false);
 panel_burst_index_distribution(t_bi, g, 4, 'CeA', false);
 
 %% Export statistics
-export_figure1_stats(g);
-
+export_figure1_to_excel(g);
+exportgraphics(gcf, 'figure_1.png', 'Resolution', 300);
 %% ========================================================================
 %% PANEL FUNCTIONS
 %% ========================================================================
@@ -417,107 +417,172 @@ function ax = panel_burst_index_distribution(t, g, tile_num, brain_region, show_
 end
 
 %% Statistics Export Function
-function export_figure1_stats(g)
-    fid = fopen('figure_1_stats.txt', 'w');
+function export_figure1_to_excel(g)
+    output_filename = 'figure_1_data.xlsx';
 
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'FIGURE 1 STATISTICS\n');
-    fprintf(fid, 'Generated: %s\n', datestr(now));
-    fprintf(fid, '========================================\n\n');
+    if exist(output_filename, 'file')
+        delete(output_filename);
+    end
 
-    %% Overall Sample Sizes
-    fprintf(fid, '### OVERALL SAMPLE SIZES ###\n\n');
-
-    unique_animals = unique(g.cell_metrics.animal);
-    n_animals = length(unique_animals);
-    fprintf(fid, 'Number of animals (N): %d\n', n_animals);
-    fprintf(fid, 'Animal IDs: %s\n', strjoin(unique_animals, ', '));
-
-    n_total = length(g.cell_metrics.cluID);
-    fprintf(fid, '\nTotal neurons recorded: %d\n', n_total);
-
+    % Get indices for all analyses
     idx_PN_all = strcmp(g.cell_metrics.putativeCellType, 'PN');
     idx_IN_all = strcmp(g.cell_metrics.putativeCellType, 'IN');
     idx_unknown_all = strcmp(g.cell_metrics.putativeCellType, 'unknown');
-
-    fprintf(fid, '  Putative pyramidal neurons (PNs): %d (%.1f%%)\n', sum(idx_PN_all), 100*sum(idx_PN_all)/n_total);
-    fprintf(fid, '  Putative interneurons (INs): %d (%.1f%%)\n', sum(idx_IN_all), 100*sum(idx_IN_all)/n_total);
-    fprintf(fid, '  Unknown cell type: %d (%.1f%%)\n', sum(idx_unknown_all), 100*sum(idx_unknown_all)/n_total);
+    idx_LABA = strcmp(g.cell_metrics.brainRegion, 'LA') | strcmp(g.cell_metrics.brainRegion, 'BA');
 
     regions = {'LA', 'BA', 'Astria', 'CeA'};
-    fprintf(fid, '\nBy brain region:\n');
+
+    %% Sheet 1: Summary - Sample sizes
+    sheet1 = {};
+    sheet1{1,1} = 'FIGURE 1: SAMPLE SIZES';
+    sheet1{2,1} = ['Generated: ' datestr(now)];
+    sheet1{3,1} = '';
+
+    unique_animals = unique(g.cell_metrics.animal);
+    n_animals = length(unique_animals);
+    n_total = length(g.cell_metrics.cluID);
+
+    sheet1{4,1} = 'Number of animals (N)';
+    sheet1{4,2} = n_animals;
+    sheet1{5,1} = 'Animal IDs';
+    sheet1{5,2} = strjoin(unique_animals, ', ');
+    sheet1{6,1} = '';
+
+    sheet1{7,1} = 'Total neurons';
+    sheet1{7,2} = n_total;
+    sheet1{8,1} = 'Putative pyramidal neurons (PNs)';
+    sheet1{8,2} = sum(idx_PN_all);
+    sheet1{8,3} = sprintf('%.1f%%', 100*sum(idx_PN_all)/n_total);
+    sheet1{9,1} = 'Putative interneurons (INs)';
+    sheet1{9,2} = sum(idx_IN_all);
+    sheet1{9,3} = sprintf('%.1f%%', 100*sum(idx_IN_all)/n_total);
+    sheet1{10,1} = 'Unknown cell type';
+    sheet1{10,2} = sum(idx_unknown_all);
+    sheet1{10,3} = sprintf('%.1f%%', 100*sum(idx_unknown_all)/n_total);
+    sheet1{11,1} = '';
+
+    row_idx = 12;
+    sheet1{row_idx,1} = 'By brain region:';
+    row_idx = row_idx + 1;
     for r = 1:length(regions)
         idx_region = strcmp(g.cell_metrics.brainRegion, regions{r});
         n_region = sum(idx_region);
-        fprintf(fid, '  %s: %d neurons (%.1f%%)\n', regions{r}, n_region, 100*n_region/n_total);
+        sheet1{row_idx,1} = regions{r};
+        sheet1{row_idx,2} = n_region;
+        sheet1{row_idx,3} = sprintf('%.1f%%', 100*n_region/n_total);
+        row_idx = row_idx + 1;
 
         if strcmp(regions{r}, 'LA') || strcmp(regions{r}, 'BA')
             idx_PN = idx_region & idx_PN_all;
             idx_IN = idx_region & idx_IN_all;
             idx_unk = idx_region & idx_unknown_all;
-            fprintf(fid, '    PNs: %d (%.1f%% of %s)\n', sum(idx_PN), 100*sum(idx_PN)/n_region, regions{r});
-            fprintf(fid, '    INs: %d (%.1f%% of %s)\n', sum(idx_IN), 100*sum(idx_IN)/n_region, regions{r});
-            fprintf(fid, '    Unknown: %d (%.1f%% of %s)\n', sum(idx_unk), 100*sum(idx_unk)/n_region, regions{r});
+            sheet1{row_idx,1} = '  PNs';
+            sheet1{row_idx,2} = sum(idx_PN);
+            sheet1{row_idx,3} = sprintf('%.1f%% of %s', 100*sum(idx_PN)/n_region, regions{r});
+            row_idx = row_idx + 1;
+            sheet1{row_idx,1} = '  INs';
+            sheet1{row_idx,2} = sum(idx_IN);
+            sheet1{row_idx,3} = sprintf('%.1f%% of %s', 100*sum(idx_IN)/n_region, regions{r});
+            row_idx = row_idx + 1;
+            sheet1{row_idx,1} = '  Unknown';
+            sheet1{row_idx,2} = sum(idx_unk);
+            sheet1{row_idx,3} = sprintf('%.1f%% of %s', 100*sum(idx_unk)/n_region, regions{r});
+            row_idx = row_idx + 1;
         end
     end
-    fprintf(fid, '\n');
 
-    %% Panel D: Spike Features
-    fprintf(fid, '### PANEL D: SPIKE FEATURES (LA + BA NEURONS) ###\n\n');
+    writecell(sheet1, output_filename, 'Sheet', 'Summary_SampleSizes');
 
-    idx_LABA = strcmp(g.cell_metrics.brainRegion, 'LA') | strcmp(g.cell_metrics.brainRegion, 'BA');
+    %% Sheet 2: Panel D - Spike Features (LA+BA)
     idx_PN_LABA = idx_PN_all & idx_LABA;
     idx_IN_LABA = idx_IN_all & idx_LABA;
     idx_unk_LABA = idx_unknown_all & idx_LABA;
 
-    fprintf(fid, 'Sample sizes (LA + BA only):\n');
-    fprintf(fid, '  Total neurons: %d\n', sum(idx_LABA));
-    fprintf(fid, '  PNs: %d\n', sum(idx_PN_LABA));
-    fprintf(fid, '  INs: %d\n', sum(idx_IN_LABA));
-    fprintf(fid, '  Unknown: %d\n', sum(idx_unk_LABA));
-
     ttp_PN = g.cell_metrics.spikes.ttp(idx_PN_LABA);
     ttp_IN = g.cell_metrics.spikes.ttp(idx_IN_LABA);
-    ttp_unk = g.cell_metrics.spikes.ttp(idx_unk_LABA);
-
-    fprintf(fid, '\nTrough-to-peak (TTP) duration (ms):\n');
-    fprintf(fid, '  PNs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(ttp_PN), std(ttp_PN), median(ttp_PN), prctile(ttp_PN, 25), prctile(ttp_PN, 75), sum(idx_PN_LABA));
-    fprintf(fid, '  INs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(ttp_IN), std(ttp_IN), median(ttp_IN), prctile(ttp_IN, 25), prctile(ttp_IN, 75), sum(idx_IN_LABA));
-    fprintf(fid, '  Unknown: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(ttp_unk), std(ttp_unk), median(ttp_unk), prctile(ttp_unk, 25), prctile(ttp_unk, 75), sum(idx_unk_LABA));
-
-    [p_ttp, h_ttp, stats_ttp] = ranksum(ttp_PN, ttp_IN);
-    fprintf(fid, '\nStatistical Test: Wilcoxon rank-sum test (PN vs IN TTP)\n');
-    fprintf(fid, '  Test statistic (Z): %.4f\n', stats_ttp.zval);
-    fprintf(fid, '  p-value: %.6e\n', p_ttp);
-    fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(h_ttp)));
-
     fr_PN = g.cell_metrics.firingRate(idx_PN_LABA);
     fr_IN = g.cell_metrics.firingRate(idx_IN_LABA);
-    fr_unk = g.cell_metrics.firingRate(idx_unk_LABA);
 
-    fprintf(fid, '\nFiring rate (Hz):\n');
-    fprintf(fid, '  PNs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(fr_PN), std(fr_PN), median(fr_PN), prctile(fr_PN, 25), prctile(fr_PN, 75), sum(idx_PN_LABA));
-    fprintf(fid, '  INs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(fr_IN), std(fr_IN), median(fr_IN), prctile(fr_IN, 25), prctile(fr_IN, 75), sum(idx_IN_LABA));
-    fprintf(fid, '  Unknown: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f], n = %d\n', ...
-        mean(fr_unk), std(fr_unk), median(fr_unk), prctile(fr_unk, 25), prctile(fr_unk, 75), sum(idx_unk_LABA));
+    [p_ttp, ~, stats_ttp] = ranksum(ttp_PN, ttp_IN);
+    [p_fr, ~, stats_fr] = ranksum(fr_PN, fr_IN);
 
-    [p_fr, h_fr, stats_fr] = ranksum(fr_PN, fr_IN);
-    fprintf(fid, '\nStatistical Test: Wilcoxon rank-sum test (PN vs IN firing rate)\n');
-    fprintf(fid, '  Test statistic (Z): %.4f\n', stats_fr.zval);
-    fprintf(fid, '  p-value: %.6e\n', p_fr);
-    fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(h_fr)));
-    fprintf(fid, '\n');
+    sheet2 = {};
+    sheet2{1,1} = 'PANEL D: SPIKE FEATURES (LA + BA)';
+    sheet2{2,1} = '';
+    sheet2{3,1} = 'Sample sizes';
+    sheet2{3,2} = 'n';
+    sheet2{4,1} = 'PNs';
+    sheet2{4,2} = sum(idx_PN_LABA);
+    sheet2{5,1} = 'INs';
+    sheet2{5,2} = sum(idx_IN_LABA);
+    sheet2{6,1} = 'Unknown';
+    sheet2{6,2} = sum(idx_unk_LABA);
+    sheet2{7,1} = '';
 
-    %% Panel E: Firing Rate Distributions
-    fprintf(fid, '### PANEL E: FIRING RATE DISTRIBUTIONS BY REGION ###\n\n');
+    sheet2{8,1} = 'Trough-to-peak (TTP) duration (ms)';
+    sheet2{8,2} = '';
+    sheet2{8,3} = 'Mean';
+    sheet2{8,4} = 'SEM';
+    sheet2{8,5} = 'Median';
+    sheet2{8,6} = 'SD';
+    sheet2{9,1} = 'PNs';
+    sheet2{9,2} = sum(idx_PN_LABA);
+    sheet2{9,3} = mean(ttp_PN);
+    sheet2{9,4} = std(ttp_PN)/sqrt(length(ttp_PN));
+    sheet2{9,5} = median(ttp_PN);
+    sheet2{9,6} = std(ttp_PN);
+    sheet2{10,1} = 'INs';
+    sheet2{10,2} = sum(idx_IN_LABA);
+    sheet2{10,3} = mean(ttp_IN);
+    sheet2{10,4} = std(ttp_IN)/sqrt(length(ttp_IN));
+    sheet2{10,5} = median(ttp_IN);
+    sheet2{10,6} = std(ttp_IN);
+    sheet2{11,1} = '';
+    sheet2{12,1} = 'Wilcoxon rank-sum test (PN vs IN TTP)';
+    sheet2{13,1} = 'Z-statistic';
+    sheet2{13,2} = stats_ttp.zval;
+    sheet2{14,1} = 'p-value';
+    sheet2{14,2} = p_ttp;
+    sheet2{14,3} = format_significance(p_ttp);
+    sheet2{15,1} = '';
 
+    sheet2{16,1} = 'Firing rate (Hz)';
+    sheet2{16,2} = '';
+    sheet2{16,3} = 'Mean';
+    sheet2{16,4} = 'SEM';
+    sheet2{16,5} = 'Median';
+    sheet2{16,6} = 'SD';
+    sheet2{17,1} = 'PNs';
+    sheet2{17,2} = sum(idx_PN_LABA);
+    sheet2{17,3} = mean(fr_PN);
+    sheet2{17,4} = std(fr_PN)/sqrt(length(fr_PN));
+    sheet2{17,5} = median(fr_PN);
+    sheet2{17,6} = std(fr_PN);
+    sheet2{18,1} = 'INs';
+    sheet2{18,2} = sum(idx_IN_LABA);
+    sheet2{18,3} = mean(fr_IN);
+    sheet2{18,4} = std(fr_IN)/sqrt(length(fr_IN));
+    sheet2{18,5} = median(fr_IN);
+    sheet2{18,6} = std(fr_IN);
+    sheet2{19,1} = '';
+    sheet2{20,1} = 'Wilcoxon rank-sum test (PN vs IN firing rate)';
+    sheet2{21,1} = 'Z-statistic';
+    sheet2{21,2} = stats_fr.zval;
+    sheet2{22,1} = 'p-value';
+    sheet2{22,2} = p_fr;
+    sheet2{22,3} = format_significance(p_fr);
+
+    writecell(sheet2, output_filename, 'Sheet', 'PanelD_SpikeFeatures');
+
+    %% Sheet 3: Panel E - Firing Rate by Region
+    sheet3 = {};
+    sheet3{1,1} = 'PANEL E: FIRING RATE DISTRIBUTIONS BY REGION';
+    sheet3{2,1} = '';
+
+    row_idx = 3;
     for r = 1:length(regions)
-        fprintf(fid, '--- %s ---\n', regions{r});
+        sheet3{row_idx,1} = ['--- ' regions{r} ' ---'];
+        row_idx = row_idx + 1;
         idx_region = strcmp(g.cell_metrics.brainRegion, regions{r});
 
         if strcmp(regions{r}, 'LA') || strcmp(regions{r}, 'BA')
@@ -527,40 +592,75 @@ function export_figure1_stats(g)
             fr_PN_region = g.cell_metrics.firingRate(idx_PN);
             fr_IN_region = g.cell_metrics.firingRate(idx_IN);
 
-            fprintf(fid, 'Sample sizes:\n');
-            fprintf(fid, '  PNs: n = %d\n', sum(idx_PN));
-            fprintf(fid, '  INs: n = %d\n', sum(idx_IN));
+            sheet3{row_idx,1} = 'Cell Type';
+            sheet3{row_idx,2} = 'n';
+            sheet3{row_idx,3} = 'Mean (Hz)';
+            sheet3{row_idx,4} = 'SEM';
+            sheet3{row_idx,5} = 'Median';
+            sheet3{row_idx,6} = 'SD';
+            row_idx = row_idx + 1;
 
-            fprintf(fid, '\nFiring rate (Hz):\n');
-            fprintf(fid, '  PNs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(fr_PN_region), std(fr_PN_region), median(fr_PN_region), ...
-                prctile(fr_PN_region, 25), prctile(fr_PN_region, 75));
-            fprintf(fid, '  INs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(fr_IN_region), std(fr_IN_region), median(fr_IN_region), ...
-                prctile(fr_IN_region, 25), prctile(fr_IN_region, 75));
+            sheet3{row_idx,1} = 'PNs';
+            sheet3{row_idx,2} = sum(idx_PN);
+            sheet3{row_idx,3} = mean(fr_PN_region);
+            sheet3{row_idx,4} = std(fr_PN_region)/sqrt(length(fr_PN_region));
+            sheet3{row_idx,5} = median(fr_PN_region);
+            sheet3{row_idx,6} = std(fr_PN_region);
+            row_idx = row_idx + 1;
 
-            [p_region, h_region, stats_region] = ranksum(fr_PN_region, fr_IN_region);
-            fprintf(fid, '\nStatistical Test: Wilcoxon rank-sum test (PN vs IN)\n');
-            fprintf(fid, '  Test statistic (Z): %.4f\n', stats_region.zval);
-            fprintf(fid, '  p-value: %.6e\n', p_region);
-            fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(h_region)));
+            sheet3{row_idx,1} = 'INs';
+            sheet3{row_idx,2} = sum(idx_IN);
+            sheet3{row_idx,3} = mean(fr_IN_region);
+            sheet3{row_idx,4} = std(fr_IN_region)/sqrt(length(fr_IN_region));
+            sheet3{row_idx,5} = median(fr_IN_region);
+            sheet3{row_idx,6} = std(fr_IN_region);
+            row_idx = row_idx + 1;
+
+            [p_region, ~, stats_region] = ranksum(fr_PN_region, fr_IN_region);
+            sheet3{row_idx,1} = 'Wilcoxon rank-sum (PN vs IN)';
+            row_idx = row_idx + 1;
+            sheet3{row_idx,1} = 'Z-statistic';
+            sheet3{row_idx,2} = stats_region.zval;
+            row_idx = row_idx + 1;
+            sheet3{row_idx,1} = 'p-value';
+            sheet3{row_idx,2} = p_region;
+            sheet3{row_idx,3} = format_significance(p_region);
+            row_idx = row_idx + 1;
         else
             fr_region = g.cell_metrics.firingRate(idx_region);
 
-            fprintf(fid, 'Sample size: n = %d\n', sum(idx_region));
-            fprintf(fid, '\nFiring rate (Hz):\n');
-            fprintf(fid, '  All neurons: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(fr_region), std(fr_region), median(fr_region), ...
-                prctile(fr_region, 25), prctile(fr_region, 75));
+            sheet3{row_idx,1} = 'All neurons';
+            sheet3{row_idx,2} = 'n';
+            sheet3{row_idx,3} = 'Mean (Hz)';
+            sheet3{row_idx,4} = 'SEM';
+            sheet3{row_idx,5} = 'Median';
+            sheet3{row_idx,6} = 'SD';
+            row_idx = row_idx + 1;
+
+            sheet3{row_idx,1} = regions{r};
+            sheet3{row_idx,2} = sum(idx_region);
+            sheet3{row_idx,3} = mean(fr_region);
+            sheet3{row_idx,4} = std(fr_region)/sqrt(length(fr_region));
+            sheet3{row_idx,5} = median(fr_region);
+            sheet3{row_idx,6} = std(fr_region);
+            row_idx = row_idx + 1;
         end
-        fprintf(fid, '\n');
+
+        sheet3{row_idx,1} = '';
+        row_idx = row_idx + 1;
     end
 
-    %% Panel F: Burst Index Distributions
-    fprintf(fid, '### PANEL F: BURST INDEX DISTRIBUTIONS BY REGION ###\n\n');
+    writecell(sheet3, output_filename, 'Sheet', 'PanelE_FiringRate');
 
+    %% Sheet 4: Panel F - Burst Index by Region
+    sheet4 = {};
+    sheet4{1,1} = 'PANEL F: BURST INDEX DISTRIBUTIONS BY REGION';
+    sheet4{2,1} = '';
+
+    row_idx = 3;
     for r = 1:length(regions)
-        fprintf(fid, '--- %s ---\n', regions{r});
+        sheet4{row_idx,1} = ['--- ' regions{r} ' ---'];
+        row_idx = row_idx + 1;
         idx_region = strcmp(g.cell_metrics.brainRegion, regions{r});
 
         if strcmp(regions{r}, 'LA') || strcmp(regions{r}, 'BA')
@@ -570,39 +670,67 @@ function export_figure1_stats(g)
             bi_PN_region = g.cell_metrics.burstIndex_Royer2012(idx_PN);
             bi_IN_region = g.cell_metrics.burstIndex_Royer2012(idx_IN);
 
-            fprintf(fid, 'Sample sizes:\n');
-            fprintf(fid, '  PNs: n = %d\n', sum(idx_PN));
-            fprintf(fid, '  INs: n = %d\n', sum(idx_IN));
+            sheet4{row_idx,1} = 'Cell Type';
+            sheet4{row_idx,2} = 'n';
+            sheet4{row_idx,3} = 'Mean';
+            sheet4{row_idx,4} = 'SEM';
+            sheet4{row_idx,5} = 'Median';
+            sheet4{row_idx,6} = 'SD';
+            row_idx = row_idx + 1;
 
-            fprintf(fid, '\nBurst Index (Royer 2012):\n');
-            fprintf(fid, '  PNs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(bi_PN_region), std(bi_PN_region), median(bi_PN_region), ...
-                prctile(bi_PN_region, 25), prctile(bi_PN_region, 75));
-            fprintf(fid, '  INs: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(bi_IN_region), std(bi_IN_region), median(bi_IN_region), ...
-                prctile(bi_IN_region, 25), prctile(bi_IN_region, 75));
+            sheet4{row_idx,1} = 'PNs';
+            sheet4{row_idx,2} = sum(idx_PN);
+            sheet4{row_idx,3} = mean(bi_PN_region, 'omitnan');
+            sheet4{row_idx,4} = std(bi_PN_region, 'omitnan')/sqrt(sum(~isnan(bi_PN_region)));
+            sheet4{row_idx,5} = median(bi_PN_region, 'omitnan');
+            sheet4{row_idx,6} = std(bi_PN_region, 'omitnan');
+            row_idx = row_idx + 1;
 
-            [p_region, h_region, stats_region] = ranksum(bi_PN_region, bi_IN_region);
-            fprintf(fid, '\nStatistical Test: Wilcoxon rank-sum test (PN vs IN)\n');
-            fprintf(fid, '  Test statistic (Z): %.4f\n', stats_region.zval);
-            fprintf(fid, '  p-value: %.6e\n', p_region);
-            fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(h_region)));
+            sheet4{row_idx,1} = 'INs';
+            sheet4{row_idx,2} = sum(idx_IN);
+            sheet4{row_idx,3} = mean(bi_IN_region, 'omitnan');
+            sheet4{row_idx,4} = std(bi_IN_region, 'omitnan')/sqrt(sum(~isnan(bi_IN_region)));
+            sheet4{row_idx,5} = median(bi_IN_region, 'omitnan');
+            sheet4{row_idx,6} = std(bi_IN_region, 'omitnan');
+            row_idx = row_idx + 1;
+
+            [p_region, ~, stats_region] = ranksum(bi_PN_region(~isnan(bi_PN_region)), bi_IN_region(~isnan(bi_IN_region)));
+            sheet4{row_idx,1} = 'Wilcoxon rank-sum (PN vs IN)';
+            row_idx = row_idx + 1;
+            sheet4{row_idx,1} = 'Z-statistic';
+            sheet4{row_idx,2} = stats_region.zval;
+            row_idx = row_idx + 1;
+            sheet4{row_idx,1} = 'p-value';
+            sheet4{row_idx,2} = p_region;
+            sheet4{row_idx,3} = format_significance(p_region);
+            row_idx = row_idx + 1;
         else
             bi_region = g.cell_metrics.burstIndex_Royer2012(idx_region);
 
-            fprintf(fid, 'Sample size: n = %d\n', sum(idx_region));
-            fprintf(fid, '\nBurst Index (Royer 2012):\n');
-            fprintf(fid, '  All neurons: %.3f ± %.3f (mean ± SD), median = %.3f, IQR = [%.3f, %.3f]\n', ...
-                mean(bi_region), std(bi_region), median(bi_region), ...
-                prctile(bi_region, 25), prctile(bi_region, 75));
+            sheet4{row_idx,1} = 'All neurons';
+            sheet4{row_idx,2} = 'n';
+            sheet4{row_idx,3} = 'Mean';
+            sheet4{row_idx,4} = 'SEM';
+            sheet4{row_idx,5} = 'Median';
+            sheet4{row_idx,6} = 'SD';
+            row_idx = row_idx + 1;
+
+            sheet4{row_idx,1} = regions{r};
+            sheet4{row_idx,2} = sum(idx_region);
+            sheet4{row_idx,3} = mean(bi_region, 'omitnan');
+            sheet4{row_idx,4} = std(bi_region, 'omitnan')/sqrt(sum(~isnan(bi_region)));
+            sheet4{row_idx,5} = median(bi_region, 'omitnan');
+            sheet4{row_idx,6} = std(bi_region, 'omitnan');
+            row_idx = row_idx + 1;
         end
-        fprintf(fid, '\n');
+
+        sheet4{row_idx,1} = '';
+        row_idx = row_idx + 1;
     end
 
-    %% Cross-region comparisons
-    fprintf(fid, '### CROSS-REGION COMPARISONS ###\n\n');
+    writecell(sheet4, output_filename, 'Sheet', 'PanelF_BurstIndex');
 
-    fprintf(fid, '--- Pyramidal Neurons (PN) Firing Rate Comparison ---\n');
+    %% Sheet 5: Cross-Region Comparisons
     idx_LA_PN = strcmp(g.cell_metrics.brainRegion, 'LA') & idx_PN_all;
     idx_BA_PN = strcmp(g.cell_metrics.brainRegion, 'BA') & idx_PN_all;
     idx_Astria = strcmp(g.cell_metrics.brainRegion, 'Astria');
@@ -613,13 +741,7 @@ function export_figure1_stats(g)
     fr_Astria = g.cell_metrics.firingRate(idx_Astria);
     fr_CeA = g.cell_metrics.firingRate(idx_CeA);
 
-    fprintf(fid, 'Sample sizes:\n');
-    fprintf(fid, '  LA PNs: n = %d\n', sum(idx_LA_PN));
-    fprintf(fid, '  BA PNs: n = %d\n', sum(idx_BA_PN));
-    fprintf(fid, '  AStria: n = %d\n', sum(idx_Astria));
-    fprintf(fid, '  CeA: n = %d\n', sum(idx_CeA));
-
-    % Ensure column vectors for concatenation
+    % Ensure column vectors
     fr_LA_PN = fr_LA_PN(:);
     fr_BA_PN = fr_BA_PN(:);
     fr_Astria = fr_Astria(:);
@@ -630,48 +752,64 @@ function export_figure1_stats(g)
     fr_combined = [fr_LA_PN; fr_BA_PN; fr_Astria; fr_CeA];
 
     [p_kw, tbl_kw, stats_kw] = kruskalwallis(fr_combined, group_labels, 'off');
-    fprintf(fid, '\nKruskal-Wallis Test: Firing rate across regions\n');
-    fprintf(fid, '  Chi-square statistic: %.4f\n', tbl_kw{2,5});
-    fprintf(fid, '  Degrees of freedom: %d\n', tbl_kw{2,3});
-    fprintf(fid, '  p-value: %.6e\n', p_kw);
-    fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(p_kw < 0.05)));
 
+    sheet5 = {};
+    sheet5{1,1} = 'CROSS-REGION COMPARISONS: FIRING RATE';
+    sheet5{2,1} = '';
+    sheet5{3,1} = 'Sample sizes';
+    sheet5{3,2} = 'n';
+    sheet5{4,1} = 'LA PNs';
+    sheet5{4,2} = sum(idx_LA_PN);
+    sheet5{5,1} = 'BA PNs';
+    sheet5{5,2} = sum(idx_BA_PN);
+    sheet5{6,1} = 'AStria';
+    sheet5{6,2} = sum(idx_Astria);
+    sheet5{7,1} = 'CeA';
+    sheet5{7,2} = sum(idx_CeA);
+    sheet5{8,1} = '';
+
+    sheet5{9,1} = 'Kruskal-Wallis Test: Firing rate across regions';
+    sheet5{10,1} = 'Chi-square statistic';
+    sheet5{10,2} = tbl_kw{2,5};
+    sheet5{11,1} = 'Degrees of freedom';
+    sheet5{11,2} = tbl_kw{2,3};
+    sheet5{12,1} = 'p-value';
+    sheet5{12,2} = p_kw;
+    sheet5{12,3} = format_significance(p_kw);
+    sheet5{13,1} = '';
+
+    row_idx = 14;
     if p_kw < 0.05
-        fprintf(fid, '\nPost-hoc pairwise comparisons (Dunn-Sidak correction):\n');
+        sheet5{row_idx,1} = 'Post-hoc pairwise comparisons (Dunn-Sidak)';
+        row_idx = row_idx + 1;
+        sheet5{row_idx,1} = 'Comparison';
+        sheet5{row_idx,2} = 'p-value';
+        sheet5{row_idx,3} = 'Significance';
+        row_idx = row_idx + 1;
+
         c = multcompare(stats_kw, 'Display', 'off', 'CType', 'dunn-sidak');
         region_names = {'LA_PN', 'BA_PN', 'AStria', 'CeA'};
         for i = 1:size(c, 1)
-            fprintf(fid, '  %s vs %s: p = %.6e\n', region_names{c(i,1)}, region_names{c(i,2)}, c(i,6));
+            sheet5{row_idx,1} = [region_names{c(i,1)} ' vs ' region_names{c(i,2)}];
+            sheet5{row_idx,2} = c(i,6);
+            sheet5{row_idx,3} = format_significance(c(i,6));
+            row_idx = row_idx + 1;
         end
+    else
+        sheet5{row_idx,1} = 'No post-hoc tests (K-W p >= 0.05)';
     end
-    fprintf(fid, '\n');
 
-    fprintf(fid, '--- Interneurons (IN) Firing Rate Comparison ---\n');
-    idx_LA_IN = strcmp(g.cell_metrics.brainRegion, 'LA') & idx_IN_all;
-    idx_BA_IN = strcmp(g.cell_metrics.brainRegion, 'BA') & idx_IN_all;
+    writecell(sheet5, output_filename, 'Sheet', 'CrossRegion_FiringRate');
+end
 
-    fr_LA_IN = g.cell_metrics.firingRate(idx_LA_IN);
-    fr_BA_IN = g.cell_metrics.firingRate(idx_BA_IN);
-
-    fprintf(fid, 'Sample sizes:\n');
-    fprintf(fid, '  LA INs: n = %d\n', sum(idx_LA_IN));
-    fprintf(fid, '  BA INs: n = %d\n', sum(idx_BA_IN));
-
-    fprintf(fid, '\nFiring rate (Hz):\n');
-    fprintf(fid, '  LA INs: %.3f ± %.3f (mean ± SD), median = %.3f\n', mean(fr_LA_IN), std(fr_LA_IN), median(fr_LA_IN));
-    fprintf(fid, '  BA INs: %.3f ± %.3f (mean ± SD), median = %.3f\n', mean(fr_BA_IN), std(fr_BA_IN), median(fr_BA_IN));
-
-    [p_IN, h_IN, stats_IN] = ranksum(fr_LA_IN, fr_BA_IN);
-    fprintf(fid, '\nStatistical Test: Wilcoxon rank-sum test (LA IN vs BA IN)\n');
-    fprintf(fid, '  Test statistic (Z): %.4f\n', stats_IN.zval);
-    fprintf(fid, '  p-value: %.6e\n', p_IN);
-    fprintf(fid, '  Significant (p < 0.05): %s\n', char(string(h_IN)));
-    fprintf(fid, '\n');
-
-    fprintf(fid, '========================================\n');
-    fprintf(fid, 'END OF FIGURE 1 STATISTICS\n');
-    fprintf(fid, '========================================\n');
-
-    fclose(fid);
-    fprintf('Statistics exported to: figure_1_stats.txt\n');
+function sig_str = format_significance(p_val)
+    if p_val < 0.001
+        sig_str = '***';
+    elseif p_val < 0.01
+        sig_str = '**';
+    elseif p_val < 0.05
+        sig_str = '*';
+    else
+        sig_str = 'n.s.';
+    end
 end

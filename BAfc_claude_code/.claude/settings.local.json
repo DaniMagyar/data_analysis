@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git checkout:*)",
-      "Bash(matlab -batch:*)"
+      "Bash(matlab -batch:*)",
+      "WebSearch",
+      "WebFetch(domain:www.mathworks.com)"
     ],
     "deny": [],
     "ask": []

@@ -48,7 +48,7 @@ g.test_time = 1;
 
 % Clustering Parameters
 g.alpha = 0.5;
-g.excitation_threshold = 2;
+g.excitation_threshold = 1.5;
 g.inhibition_fr_drop = 0.50;
 g.use_percentile = true;
 g.clim_percentile = 99;
@@ -128,6 +128,11 @@ for br = 1:2
     % Calculate responses based on CS and US only (not Both)
     CS_peak = max(psth_CS(:, g.roi), [], 2);
     US_peak = max(psth_US(:, g.roi), [], 2);
+    Both_peak = max(psth_Both(:, g.roi), [], 2);
+
+    CS_peak_Hz = max(psth_CS_Hz(:, g.roi), [], 2);
+    US_peak_Hz = max(psth_US_Hz(:, g.roi), [], 2);
+    Both_peak_Hz = max(psth_Both_Hz(:, g.roi), [], 2);
 
     baseline_idx = 1:(g.pre_time / g.bin_time);
     CS_baseline_fr =    mean(psth_CS_Hz(:, baseline_idx), 2);
@@ -218,6 +223,9 @@ for br = 1:2
     results_all{br}.psth_CS_Hz = psth_CS_Hz;
     results_all{br}.psth_US_Hz = psth_US_Hz;
     results_all{br}.psth_Both_Hz = psth_Both_Hz;
+    results_all{br}.CS_peak_Hz = CS_peak_Hz;
+    results_all{br}.US_peak_Hz = US_peak_Hz;
+    results_all{br}.Both_peak_Hz = Both_peak_Hz;
     results_all{br}.CS_onset_lat = CS_onset_lat;
     results_all{br}.CS_offset_lat = CS_offset_lat;
     results_all{br}.US_onset_lat = US_onset_lat;
@@ -499,33 +507,10 @@ for br = 1:2
         clust_idx = find(res.Clusters == c);
 
         if ~isempty(clust_idx)
-            % Calculate Delta Peak FR (metric == 2 code from bar chart section)
-            CS_metric = zeros(length(clust_idx), 1);
-            US_metric = zeros(length(clust_idx), 1);
-            Both_metric = zeros(length(clust_idx), 1);
-
-            baseline_idx = 1:(g.pre_time / g.bin_time);
-            response_start_bin = g.roi(1);
-            response_end_bin = g.roi(1) + round(1.0 / g.bin_time) - 1;
-
-            for n = 1:length(clust_idx)
-                idx_n = clust_idx(n);
-
-                % Calculate baseline firing rate for this neuron
-                baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
-
-                % CS peak firing rate change (using fixed 0-1s window for all neurons)
-                peak_fr_CS = max(res.psth_CS_Hz(idx_n, response_start_bin:response_end_bin));
-                CS_metric(n) = peak_fr_CS - baseline_fr;
-
-                % US peak firing rate change (using fixed 0-1s window for all neurons)
-                peak_fr_US = max(res.psth_US_Hz(idx_n, response_start_bin:response_end_bin));
-                US_metric(n) = peak_fr_US - baseline_fr;
-
-                % CS+US peak firing rate change (using fixed 0-1s window for all neurons)
-                peak_fr_Both = max(res.psth_Both_Hz(idx_n, response_start_bin:response_end_bin));
-                Both_metric(n) = peak_fr_Both - baseline_fr;
-            end
+            % Use already-calculated peak FR values
+            CS_metric = res.CS_peak_Hz(clust_idx);
+            US_metric = res.US_peak_Hz(clust_idx);
+            Both_metric = res.Both_peak_Hz(clust_idx);
 
             % Store data for Kruskal-Wallis test (region, cluster, stimulus)
             kw_data_storage{br, c, 1} = CS_metric;
@@ -633,12 +618,12 @@ for br = 1:2
         % Formatting
         xlim([0.5 3.5]);
         xticks([1 2 3]);
-        ylim([0 100]);
-        yticks([0 50 100]);
+        ylim([0 120]);
+        yticks([0 60 120]);
 
         % Add title on top cluster of LA
         if br == 1 && c == 1
-            title('ΔFR (Hz)', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
+            title('FR (Hz)', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
         end
 
         % X-tick labels only on bottom cluster of Astria (br==2)
@@ -768,49 +753,20 @@ for stim = 1:3  % CS, US, CS+US
 
         % Select appropriate PSTH and latencies
         if stim == 1  % CS
-            psth_Hz = res.psth_CS_Hz;
-            onset_lat = res.CS_onset_lat;
-            offset_lat = res.CS_offset_lat;
+            peak_fr_data = res.CS_peak_Hz;
         elseif stim == 2  % US
-            psth_Hz = res.psth_US_Hz;
-            onset_lat = res.US_onset_lat;
-            offset_lat = res.US_offset_lat;
+            peak_fr_data = res.US_peak_Hz;
         else  % CS+US
-            psth_Hz = res.psth_Both_Hz;
-            onset_lat = res.Both_onset_lat;
-            offset_lat = res.Both_offset_lat;
+            peak_fr_data = res.Both_peak_Hz;
         end
 
-        % Find responsive neurons (have onset and offset detected)
-        responsive_idx = find(~isnan(onset_lat) & ~isnan(offset_lat));
+        % Use all neurons (not just responsive)
+        data_regions = [data_regions; peak_fr_data];
 
-        if ~isempty(responsive_idx)
-            % Calculate Delta Peak FR for each responsive neuron
-            delta_peak_fr = zeros(length(responsive_idx), 1);
-            baseline_idx = 1:(g.pre_time / g.bin_time);
-
-            for n = 1:length(responsive_idx)
-                idx_n = responsive_idx(n);
-
-                % Calculate baseline firing rate
-                baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-
-                % Calculate peak firing rate in response window
-                onset_bin = round(onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                offset_bin = round(offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                peak_fr = max(psth_Hz(idx_n, onset_bin:offset_bin));
-
-                % Delta Peak FR
-                delta_peak_fr(n) = peak_fr - baseline_fr;
-            end
-
-            data_regions = [data_regions; delta_peak_fr];
-
-            if br == 1
-                region_labels = [region_labels; repmat({'LA'}, length(responsive_idx), 1)];
-            else
-                region_labels = [region_labels; repmat({'AStria'}, length(responsive_idx), 1)];
-            end
+        if br == 1
+            region_labels = [region_labels; repmat({'LA'}, length(peak_fr_data), 1)];
+        else
+            region_labels = [region_labels; repmat({'AStria'}, length(peak_fr_data), 1)];
         end
     end
 
@@ -876,7 +832,7 @@ for stim = 1:3  % CS, US, CS+US
 
         % Y-label and Y-tick labels only on first panel
         if stim == 1
-            ylabel('ΔFR (Hz)', 'FontSize', 10, 'Interpreter', 'tex');
+            ylabel('FR (Hz)', 'FontSize', 10, 'Interpreter', 'tex');
         else
             set(gca, 'YTickLabel', []);
         end
@@ -1006,7 +962,7 @@ else
     fprintf('Significance (p < 0.05): NO\n');
 end
 %% Prepare data for table export (Supplementary Panel D data)
-metric_names = {'ΔnSpikes', 'ΔFR (Hz)', 'Response length (ms)'};
+metric_names = {'ΔnSpikes', 'FR (Hz)', 'Response length (ms)'};
 
 % Store data for table export
 table_data = struct();
@@ -1245,7 +1201,7 @@ end
 %% Export data to Excel
 export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
     chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, g, 'figure_3_data.xlsx');
-
+exportgraphics(gcf, 'figure_3.png', 'Resolution', 300);
 %% Helper functions
 function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
     seg = z_trace(event_inds);
@@ -1288,9 +1244,9 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
     stim_names = {'CS', 'US', 'CS+US'};
 
-    %% PANEL C & F: Delta FR and Response Length Bar Charts (main figure)
+    %% PANEL C & F: Peak FR and Response Length Bar Charts (main figure)
     sheet_data = {};
-    sheet_data{1, 1} = 'PANELS C & F: Delta Peak FR and Response Length Bar Charts';
+    sheet_data{1, 1} = 'PANELS C & F: Peak FR and Response Length Bar Charts';
     sheet_data{2, 1} = '';
     row = 3;
 
@@ -1497,7 +1453,7 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         row = row + 1;
     end
 
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelsCF_DeltaFR_RespLen');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelsCF_PeakFR_RespLen');
 
     %% PANEL G: Pie Charts
     sheet_data = {};
@@ -1738,7 +1694,7 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
     %% RAW DATA: Individual neuron values for bar charts
     sheet_data = {};
-    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Delta Peak FR and Response Length Values';
+    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Peak FR and Response Length Values';
     sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels C & F';
     sheet_data{3, 1} = '';
     row = 4;
@@ -1860,12 +1816,12 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         row = row + 1;
     end
 
-    writecell(sheet_data, output_filename, 'Sheet', 'RawData_DeltaFR_RespLen');
+    writecell(sheet_data, output_filename, 'Sheet', 'RawData_PeakFR_RespLen');
 
     %% RAW DATA: Individual neuron values for Panel H (region comparison)
     sheet_data = {};
     sheet_data{1, 1} = 'RAW DATA: Individual Neuron Values for Panel H';
-    sheet_data{2, 1} = 'Delta Peak FR for all responsive neurons (used for LA vs AStria comparison)';
+    sheet_data{2, 1} = 'Peak FR for all neurons (used for LA vs AStria comparison)';
     sheet_data{3, 1} = '';
     row = 4;
 
@@ -1893,44 +1849,25 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
             global_indices = find(idx_neurons);
 
             if stim == 1
-                psth_Hz = res.psth_CS_Hz;
-                onset_lat = res.CS_onset_lat;
-                offset_lat = res.CS_offset_lat;
+                peak_fr_data = res.CS_peak_Hz;
             elseif stim == 2
-                psth_Hz = res.psth_US_Hz;
-                onset_lat = res.US_onset_lat;
-                offset_lat = res.US_offset_lat;
+                peak_fr_data = res.US_peak_Hz;
             else
-                psth_Hz = res.psth_Both_Hz;
-                onset_lat = res.Both_onset_lat;
-                offset_lat = res.Both_offset_lat;
+                peak_fr_data = res.Both_peak_Hz;
             end
-            responsive_idx = find(~isnan(onset_lat) & ~isnan(offset_lat));
-            if ~isempty(responsive_idx)
-                delta_peak_fr = zeros(length(responsive_idx), 1);
-                baseline_idx = 1:(g.pre_time / g.bin_time);
-                for n = 1:length(responsive_idx)
-                    idx_n = responsive_idx(n);
-                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                    onset_bin = round(onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(psth_Hz(idx_n, onset_bin:offset_bin));
-                    delta_peak_fr(n) = peak_fr - baseline_fr;
-                end
 
-                % Store with global indices
-                if br == 1
-                    LA_data = delta_peak_fr;
-                    LA_global_indices = global_indices(responsive_idx);
-                    for n = 1:length(responsive_idx)
-                        LA_animal_ids{n} = g.cell_metrics.animal{LA_global_indices(n)};
-                    end
-                else
-                    Astria_data = delta_peak_fr;
-                    Astria_global_indices = global_indices(responsive_idx);
-                    for n = 1:length(responsive_idx)
-                        Astria_animal_ids{n} = g.cell_metrics.animal{Astria_global_indices(n)};
-                    end
+            % Store with global indices (use all neurons)
+            if br == 1
+                LA_data = peak_fr_data;
+                LA_global_indices = global_indices;
+                for n = 1:length(global_indices)
+                    LA_animal_ids{n} = g.cell_metrics.animal{LA_global_indices(n)};
+                end
+            else
+                Astria_data = peak_fr_data;
+                Astria_global_indices = global_indices;
+                for n = 1:length(global_indices)
+                    Astria_animal_ids{n} = g.cell_metrics.animal{Astria_global_indices(n)};
                 end
             end
         end
@@ -1942,7 +1879,7 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         sheet_data{row, 1} = 'Local #';
         sheet_data{row, 2} = 'Global Index';
         sheet_data{row, 3} = 'Animal ID';
-        sheet_data{row, 4} = 'Delta FR (Hz)';
+        sheet_data{row, 4} = 'Peak FR (Hz)';
         row = row + 1;
         for n = 1:length(LA_data)
             sheet_data{row, 1} = n;
@@ -1966,7 +1903,7 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         sheet_data{row, 1} = 'Local #';
         sheet_data{row, 2} = 'Global Index';
         sheet_data{row, 3} = 'Animal ID';
-        sheet_data{row, 4} = 'Delta FR (Hz)';
+        sheet_data{row, 4} = 'Peak FR (Hz)';
         row = row + 1;
         for n = 1:length(Astria_data)
             sheet_data{row, 1} = n;
@@ -1989,11 +1926,11 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
     fprintf('\n========================================\n');
     fprintf('========================================\n');
-    fprintf('    - PanelsCF_DeltaFR_Bars (summary with stats)\n');
+    fprintf('    - PanelsCF_PeakFR_Bars (summary with stats)\n');
     fprintf('    - PanelG_PieCharts (summary with stats)\n');
     fprintf('    - PanelH_RegionComparison (summary with stats)\n');
     fprintf('    - Lineplots_NeuronIndices (global indices for lineplot neurons)\n');
-    fprintf('    - RawData_DeltaFR (individual neuron Delta FR values)\n');
+    fprintf('    - RawData_PeakFR (individual neuron Peak FR values)\n');
     fprintf('    - RawData_RegionComparison (individual neuron values for Panel H)\n\n');
 end
 

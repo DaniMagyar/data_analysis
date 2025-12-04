@@ -26,6 +26,7 @@ g.bin_time = 0.001;
 g.pre_time = 5;
 g.post_time = 0.5;
 g.monosyn_window = 0.025;  % 0-25ms
+g.artifact_exclusion = 0.010;  % Artifact exclusion period (12ms)
 g.smoothvalue = 5;
 g.plotwin = [0.05 0.05];
 g.timeaxis_hmp = -g.plotwin(1):g.bin_time:g.plotwin(2);
@@ -41,9 +42,9 @@ g.use_two_rule = true;  % true: two-rule (Rule 1 OR Rule 2), false: one-rule (z-
 
 % Two-rule responsiveness parameters (used if g.use_two_rule = true)
 g.zscore_threshold_rule1 = 5;   % Rule 1: z-score threshold
-g.prob_threshold_rule1 = 0.1;  % Rule 1: probability threshold
+g.prob_threshold_rule1 = 0.05;  % Rule 1: probability threshold
 g.zscore_threshold_rule2 = 5;  % Rule 2: z-score threshold
-g.prob_threshold_rule2 = 0.1;   % Rule 2: probability threshold
+g.prob_threshold_rule2 = 0.05;   % Rule 2: probability threshold
 
 % One-rule responsiveness parameter (used if g.use_two_rule = false)
 g.zscore_threshold_one_rule = 5;  % One-rule: z-score threshold only
@@ -119,6 +120,8 @@ for br = 1:2
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
     [~, ~, postAP_norm_US] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{2}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
+    [~, ~, postAP_norm_Both] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{3}, ...
+        'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 
     % Process all neurons (pooled)
     fprintf('  Processing all neurons (%d neurons)...\n', n_neurons);
@@ -189,9 +192,9 @@ for br = 1:2
     Both_offset_lat_all = nan(n_neurons, 1);
 
     for n = 1:n_neurons
-        [CS_onset_lat_all(n), CS_offset_lat_all(n)] = compute_onset_offset_latency(psth_CS_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time);
-        [US_onset_lat_all(n), US_offset_lat_all(n)] = compute_onset_offset_latency(psth_US_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time);
-        [Both_onset_lat_all(n), Both_offset_lat_all(n)] = compute_onset_offset_latency(psth_Both_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time);
+        [CS_onset_lat_all(n), CS_offset_lat_all(n)] = compute_onset_offset_latency(psth_CS_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time, g.artifact_exclusion);
+        [US_onset_lat_all(n), US_offset_lat_all(n)] = compute_onset_offset_latency(psth_US_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time, g.artifact_exclusion);
+        [Both_onset_lat_all(n), Both_offset_lat_all(n)] = compute_onset_offset_latency(psth_Both_all(n, :), monosyn_window_bins, g.onset_threshold, g.min_consec_bins, g.bin_time, g.artifact_exclusion);
     end
 
     fprintf('  All neurons - CS onset latencies (ms): valid=%d\n', sum(~isnan(CS_onset_lat_all)));
@@ -232,6 +235,9 @@ for br = 1:2
     results_all{br}.psth_CS_Hz_all = psth_CS_Hz_all;
     results_all{br}.psth_US_Hz_all = psth_US_Hz_all;
     results_all{br}.psth_Both_Hz_all = psth_Both_Hz_all;
+    results_all{br}.postAP_norm_CS = postAP_norm_CS;
+    results_all{br}.postAP_norm_US = postAP_norm_US;
+    results_all{br}.postAP_norm_Both = postAP_norm_Both;
     results_all{br}.CS_onset_lat_all = CS_onset_lat_all;
     results_all{br}.CS_offset_lat_all = CS_offset_lat_all;
     results_all{br}.US_onset_lat_all = US_onset_lat_all;
@@ -377,9 +383,9 @@ for br = 1:2
         colormap(ax, g.colors.Heatmap);
         hold on;
 
-        % Indicate artifact period (0-10ms) with semi-transparent gray overlay
+        % Indicate artifact period with semi-transparent gray overlay
         if stim >= 1  % All stimuli (CS, US, CS+US)
-            patch([0 0.010 0.010 0], [0.5 0.5 size(matrix,1)+0.5 size(matrix,1)+0.5], ...
+            patch([0 g.artifact_exclusion g.artifact_exclusion 0], [0.5 0.5 size(matrix,1)+0.5 size(matrix,1)+0.5], ...
                 'k', 'FaceAlpha', 0.8, 'EdgeColor', 'none');
 
             % Add lightning bolt symbol at top of artifact region (only for US and CS+US)
@@ -499,30 +505,59 @@ for br = 1:2
         clust_idx = find(res.Clusters_all == c);
 
         if ~isempty(clust_idx)
-            % Calculate Delta Peak FR in monosyn window (12ms to g.monosyn_window)
+            % Calculate ΔFR from nSpikes per trial in monosyn window (artifact_exclusion to g.monosyn_window)
+            % ΔFR = (nSpikes/trial) / window_duration (in seconds)
+            window_duration = g.monosyn_window - g.artifact_exclusion;
+
             CS_metric = zeros(length(clust_idx), 1);
             US_metric = zeros(length(clust_idx), 1);
             Both_metric = zeros(length(clust_idx), 1);
 
-            baseline_idx = 1:baseline_bins;
-            response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-            response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
-
             for n = 1:length(clust_idx)
                 idx_n = clust_idx(n);
-                baseline_fr = mean(res.psth_CS_Hz_all(idx_n, baseline_idx));
+                global_idx = res.neuron_indices_all(idx_n);
 
-                % CS peak firing rate change
-                peak_fr_CS = max(res.psth_CS_Hz_all(idx_n, response_start_bin:response_end_bin));
-                CS_metric(n) = peak_fr_CS - baseline_fr;
+                % CS spike count per trial
+                cs_spike_count = 0;
+                cs_trial_count = 0;
+                if ~isempty(res.postAP_norm_CS{global_idx})
+                    for trial = 1:length(res.postAP_norm_CS{global_idx})
+                        trial_spikes = res.postAP_norm_CS{global_idx}{trial};
+                        cs_spike_count = cs_spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                    end
+                    cs_trial_count = length(res.postAP_norm_CS{global_idx});
+                end
+                if cs_trial_count > 0
+                    CS_metric(n) = (cs_spike_count / cs_trial_count) / window_duration;
+                end
 
-                % US peak firing rate change
-                peak_fr_US = max(res.psth_US_Hz_all(idx_n, response_start_bin:response_end_bin));
-                US_metric(n) = peak_fr_US - baseline_fr;
+                % US spike count per trial
+                us_spike_count = 0;
+                us_trial_count = 0;
+                if ~isempty(res.postAP_norm_US{global_idx})
+                    for trial = 1:length(res.postAP_norm_US{global_idx})
+                        trial_spikes = res.postAP_norm_US{global_idx}{trial};
+                        us_spike_count = us_spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                    end
+                    us_trial_count = length(res.postAP_norm_US{global_idx});
+                end
+                if us_trial_count > 0
+                    US_metric(n) = (us_spike_count / us_trial_count) / window_duration;
+                end
 
-                % CS+US peak firing rate change
-                peak_fr_Both = max(res.psth_Both_Hz_all(idx_n, response_start_bin:response_end_bin));
-                Both_metric(n) = peak_fr_Both - baseline_fr;
+                % CS+US spike count per trial (from triptest_both trials)
+                both_spike_count = 0;
+                both_trial_count = 0;
+                if ~isempty(res.postAP_norm_Both{global_idx})
+                    for trial = 1:length(res.postAP_norm_Both{global_idx})
+                        trial_spikes = res.postAP_norm_Both{global_idx}{trial};
+                        both_spike_count = both_spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                    end
+                    both_trial_count = length(res.postAP_norm_Both{global_idx});
+                end
+                if both_trial_count > 0
+                    Both_metric(n) = (both_spike_count / both_trial_count) / window_duration;
+                end
             end
 
             % Store data for Friedman test (region, cluster, stimulus)
@@ -573,8 +608,8 @@ for br = 1:2
         % Formatting
         xlim([0.5 3.5]);
         xticks([1 2 3]);
-        ylim([0 320]);
-        yticks([0 160 320]);
+        ylim([0 80]);
+        yticks([0 40 80]);
 
         % Add significance markers after setting ylim
         if ~isempty(clust_idx)
@@ -617,7 +652,7 @@ for br = 1:2
             end
 
             % Level 2: Long comparison (CS vs CS+US)
-            y_pos_level2 = y_pos_level1 + 25;  % Increased spacing between levels
+            y_pos_level2 = y_pos_level1 + 10;  % Reduced spacing between levels
 
             % CS vs CS+US
             if p_CS_Both < 0.001
@@ -639,7 +674,7 @@ for br = 1:2
 
         % Add title on top cluster of LA
         if br == 1 && c == 1
-            title('ΔFR (Hz)', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
+            title('FR (Hz)', 'FontSize', g.fontSize2, 'FontWeight', 'bold', 'Interpreter', 'tex');
         end
 
         % X-tick labels only on bottom cluster of Astria
@@ -793,39 +828,43 @@ for stim = 1:3  % CS, US, CS+US
 
         res = results_all{br};
 
-        % Select appropriate PSTH
+        % Select appropriate trial data
         if stim == 1  % CS
-            psth_Hz = res.psth_CS_Hz_all;
+            postAP_norm = res.postAP_norm_CS;
         elseif stim == 2  % US
-            psth_Hz = res.psth_US_Hz_all;
+            postAP_norm = res.postAP_norm_US;
         else  % CS+US
-            psth_Hz = res.psth_Both_Hz_all;
+            postAP_norm = res.postAP_norm_Both;
         end
 
         % Find responsive neurons (clusters 1, 2, 3)
         responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
 
         if ~isempty(responsive_idx)
-            % Calculate Delta Peak FR in monosyn window (12ms to g.monosyn_window)
-            delta_peak_fr = zeros(length(responsive_idx), 1);
-            baseline_idx = 1:baseline_bins;
-            response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-            response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+            % Calculate ΔFR from nSpikes per trial in monosyn window
+            window_duration = g.monosyn_window - g.artifact_exclusion;
+            delta_fr = zeros(length(responsive_idx), 1);
 
             for n = 1:length(responsive_idx)
                 idx_n = responsive_idx(n);
+                global_idx = res.neuron_indices_all(idx_n);
 
-                % Calculate baseline firing rate
-                baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-
-                % Calculate peak firing rate in monosyn window
-                peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
-
-                % Delta Peak FR
-                delta_peak_fr(n) = peak_fr - baseline_fr;
+                % Count spikes per trial
+                spike_count = 0;
+                trial_count = 0;
+                if ~isempty(postAP_norm{global_idx})
+                    for trial = 1:length(postAP_norm{global_idx})
+                        trial_spikes = postAP_norm{global_idx}{trial};
+                        spike_count = spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                    end
+                    trial_count = length(postAP_norm{global_idx});
+                end
+                if trial_count > 0
+                    delta_fr(n) = (spike_count / trial_count) / window_duration;
+                end
             end
 
-            data_regions = [data_regions; delta_peak_fr];
+            data_regions = [data_regions; delta_fr];
 
             if br == 1
                 region_labels = [region_labels; repmat({'LA'}, length(responsive_idx), 1)];
@@ -1209,11 +1248,11 @@ fprintf('\nStatistical calculations complete.\n');
 %% Export data to Excel
 export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
     chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, cell_metrics, g, 'figure_4_data.xlsx');
-
+exportgraphics(gcf, 'figure_4.png', 'Resolution', 300);
 fprintf('\nDone.\n');
 
 %% Helper functions
-function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
+function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time, artifact_exclusion)
     seg = z_trace(event_inds);
     if any(isnan(seg))
         onset_lat = NaN;
@@ -1221,9 +1260,8 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
         return
     end
 
-    % Exclude artifact period (0-12ms)
-    artifact_period = 0.012;  % 12ms
-    artifact_bins = round(artifact_period / bin_time);
+    % Exclude artifact period
+    artifact_bins = round(artifact_exclusion / bin_time);
 
     % Only search for onset after artifact period
     if length(seg) <= artifact_bins
@@ -1291,11 +1329,12 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
     stim_names = {'CS', 'US', 'CS+US'};
     baseline_bins = round(g.pre_time / g.bin_time);
 
-    %% PANELS B & D: Delta Peak FR Bar Charts (main figure)
+    %% PANELS B & D: ΔFR Bar Charts (main figure)
     sheet_data = {};
-    sheet_data{1, 1} = 'PANELS B & D: Delta Peak FR Bar Charts (Monosynaptic 12-25ms window)';
-    sheet_data{2, 1} = '';
-    row = 3;
+    sheet_data{1, 1} = 'PANELS B & D: ΔFR Bar Charts (Monosynaptic 12-25ms window)';
+    sheet_data{2, 1} = 'ΔFR calculated as: (nSpikes/trial) / window_duration';
+    sheet_data{3, 1} = '';
+    row = 4;
 
     for br = 1:2
         if strcmp(brain_regions{br}, 'Astria')
@@ -1454,30 +1493,40 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
 
             res = results_all{br};
 
-            % Select appropriate PSTH
+            % Select appropriate trial data
             if stim == 1
-                psth_Hz = res.psth_CS_Hz_all;
+                postAP_norm = res.postAP_norm_CS;
             elseif stim == 2
-                psth_Hz = res.psth_US_Hz_all;
+                postAP_norm = res.postAP_norm_US;
             else
-                psth_Hz = res.psth_Both_Hz_all;
+                postAP_norm = res.postAP_norm_Both;
             end
 
             % Find responsive neurons (clusters 1, 2, 3)
             responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
 
             if ~isempty(responsive_idx)
-                % Calculate Delta Peak FR in monosyn window (12ms to g.monosyn_window)
-                delta_peak_fr = zeros(length(responsive_idx), 1);
-                baseline_idx = 1:baseline_bins;
-                response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+                % Calculate ΔFR from nSpikes per trial in monosyn window
+                window_duration = g.monosyn_window - g.artifact_exclusion;
+                delta_fr = zeros(length(responsive_idx), 1);
 
                 for n = 1:length(responsive_idx)
                     idx_n = responsive_idx(n);
-                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                    peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
-                    delta_peak_fr(n) = peak_fr - baseline_fr;
+                    global_idx = res.neuron_indices_all(idx_n);
+
+                    % Count spikes per trial
+                    spike_count = 0;
+                    trial_count = 0;
+                    if ~isempty(postAP_norm{global_idx})
+                        for trial = 1:length(postAP_norm{global_idx})
+                            trial_spikes = postAP_norm{global_idx}{trial};
+                            spike_count = spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                        end
+                        trial_count = length(postAP_norm{global_idx});
+                    end
+                    if trial_count > 0
+                        delta_fr(n) = (spike_count / trial_count) / window_duration;
+                    end
                 end
 
                 if strcmp(brain_regions{br}, 'Astria')
@@ -1487,10 +1536,10 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
                 end
 
                 sheet_data{row, 1} = region_name;
-                sheet_data{row, 2} = mean(delta_peak_fr);
-                sheet_data{row, 3} = std(delta_peak_fr)/sqrt(length(delta_peak_fr));
-                sheet_data{row, 4} = median(delta_peak_fr);
-                sheet_data{row, 5} = length(delta_peak_fr);
+                sheet_data{row, 2} = mean(delta_fr);
+                sheet_data{row, 3} = std(delta_fr)/sqrt(length(delta_fr));
+                sheet_data{row, 4} = median(delta_fr);
+                sheet_data{row, 5} = length(delta_fr);
                 row = row + 1;
             end
         end
@@ -1510,28 +1559,38 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
             end
             res = results_all{br};
             if stim == 1
-                psth_Hz = res.psth_CS_Hz_all;
+                postAP_norm = res.postAP_norm_CS;
             elseif stim == 2
-                psth_Hz = res.psth_US_Hz_all;
+                postAP_norm = res.postAP_norm_US;
             else
-                psth_Hz = res.psth_Both_Hz_all;
+                postAP_norm = res.postAP_norm_Both;
             end
             responsive_idx = find(ismember(res.Clusters_all, [1 2 3]));
             if ~isempty(responsive_idx)
-                delta_peak_fr = zeros(length(responsive_idx), 1);
-                baseline_idx = 1:baseline_bins;
-                response_start_bin = round((g.pre_time + 0.012) / g.bin_time);
-                response_end_bin = round((g.pre_time + g.monosyn_window) / g.bin_time);
+                window_duration = g.monosyn_window - g.artifact_exclusion;
+                delta_fr = zeros(length(responsive_idx), 1);
                 for n = 1:length(responsive_idx)
                     idx_n = responsive_idx(n);
-                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                    peak_fr = max(psth_Hz(idx_n, response_start_bin:response_end_bin));
-                    delta_peak_fr(n) = peak_fr - baseline_fr;
+                    global_idx = res.neuron_indices_all(idx_n);
+
+                    % Count spikes per trial
+                    spike_count = 0;
+                    trial_count = 0;
+                    if ~isempty(postAP_norm{global_idx})
+                        for trial = 1:length(postAP_norm{global_idx})
+                            trial_spikes = postAP_norm{global_idx}{trial};
+                            spike_count = spike_count + sum(trial_spikes >= g.artifact_exclusion & trial_spikes <= g.monosyn_window);
+                        end
+                        trial_count = length(postAP_norm{global_idx});
+                    end
+                    if trial_count > 0
+                        delta_fr(n) = (spike_count / trial_count) / window_duration;
+                    end
                 end
                 if br == 1
-                    LA_data = delta_peak_fr;
+                    LA_data = delta_fr;
                 else
-                    Astria_data = delta_peak_fr;
+                    Astria_data = delta_fr;
                 end
             end
         end
@@ -1645,12 +1704,13 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
 
     writecell(sheet_data, output_filename, 'Sheet', 'PanelG_LatencyComparison');
 
-    %% RAW DATA: Delta Peak FR and Onset Latency values
+    %% RAW DATA: ΔFR and Onset Latency values
     sheet_data = {};
-    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Delta Peak FR and Onset Latency Values';
-    sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels B, D & G';
-    sheet_data{3, 1} = '';
-    row = 4;
+    sheet_data{1, 1} = 'RAW DATA: Individual Neuron ΔFR and Onset Latency Values';
+    sheet_data{2, 1} = 'ΔFR calculated as: (nSpikes/trial) / window_duration';
+    sheet_data{3, 1} = 'These are the individual data points used to calculate means and SEMs in Panels B, D & G';
+    sheet_data{4, 1} = '';
+    row = 5;
 
     for br = 1:2
         if strcmp(brain_regions{br}, 'Astria')
@@ -1715,9 +1775,9 @@ function export_figure4_to_excel_simple(results_all, kw_data_storage, kw_results
             sheet_data{row, 1} = 'Local #';
             sheet_data{row, 2} = 'Global Index';
             sheet_data{row, 3} = 'Animal ID';
-            sheet_data{row, 4} = 'ΔPeak FR CS (Hz)';
-            sheet_data{row, 5} = 'ΔPeak FR US (Hz)';
-            sheet_data{row, 6} = 'ΔPeak FR CS+US (Hz)';
+            sheet_data{row, 4} = 'ΔFR CS (Hz)';
+            sheet_data{row, 5} = 'ΔFR US (Hz)';
+            sheet_data{row, 6} = 'ΔFR CS+US (Hz)';
             sheet_data{row, 7} = '';  % Empty separator
             sheet_data{row, 8} = 'Onset Lat CS (ms)';
             sheet_data{row, 9} = 'Onset Lat US (ms)';
