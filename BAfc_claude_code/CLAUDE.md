@@ -85,19 +85,19 @@ Rows 3-4 use nested tiledlayouts with tight spacing, ylabel 'Count' on left only
   - `RawData_AllNeurons`: Individual neuron values (all clusters) with Global Index, Animal ID, Cluster, CS Peak (z-score & Hz), US Peak (z-score & Hz), Response Length (ms)
 
 ### BAfc_figure_3.m (1000×1000px, 5×7 grid)
-Rows 1-4: LA/AStria heatmaps (cols 1-3: CS/US/CS+US, "LA neurons", "AStria neurons"), lineplots (cols 4-6: 3 clusters stacked), Peak FR bars (col 7)
+Rows 1-4: LA/AStria heatmaps (cols 1-3: CS/US/CS+US, "LA neurons", "AStria neurons"), lineplots (cols 4-6: 3 clusters stacked), FR bars (col 7)
 Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: CS/US/CS+US, grey circles with jitter, y-axis to 95th percentile)
-**Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
+**Panel labels**: A (LA heatmaps), B (LA lineplots), C (LA FR bars), D (AStria heatmaps), E (AStria lineplots), F (AStria FR bars), G (pie charts), H (region comparison)
+**Friedman test gating**: Main figure bar charts only show signrank stars if Friedman p<0.05
 **Panel H (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
 **Peak FR calculation** (2025-12-03): Uses maximum firing rate in 0-1s response window (`max(psth_Hz(:, g.roi))`). No baseline subtraction - absolute peak values. Applied to CS, US, and CS+US responses.
-**Response length**: For statistical tests, uses 0 if no onset/offset detected (KW can't handle NaN). For raw data export, retains NaN.
+**Response length**: Computed from onset/offset latencies for ALL neurons (not filtered). Excel export retains NaN values when no onset/offset detected.
+**Heatmaps**: Display only responsive neurons (clusters 1-3); all 5 clusters used for pie charts and statistics
 **Excel export** (2025-12-03): `figure_3_data.xlsx` with sheets:
-  - `Summary_SampleSizes`: Animal counts and neuron counts by region
   - `PanelsCF_PeakFR_RespLen`: Bar chart data with Peak FR and Response Length (Mean, SEM, Median, SD) with Friedman tests
   - `PanelG_PieCharts`: Cluster proportions with Chi-square tests
   - `PanelH_RegionComparison`: LA vs AStria comparison with Wilcoxon rank-sum tests
-  - `RawData_PeakFR_RespLen`: Individual neuron values with Global Index, Animal ID, Peak FR CS/US/CS+US (Hz), Response Length CS/US/CS+US (ms)
-  - `RawData_RegionComparison`: Individual neuron values for Panel H
+  - `RawData_PeakFR_RespLen`: Individual neuron values with Local #, Global Index, Animal ID, Peak FR CS/US/CS+US (Hz), Response Length CS/US/CS+US (ms)
 **Supp figure** (6×3, 1000×1200px): Chi-square (row 1, 1×3), Metrics bars (rows 2-4, 3 clusters × 2 metrics - Peak FR and Response length), KW tests (rows 5-6, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
 
 ### BAfc_figure_4.m (1200×800px, 4×6 grid)
@@ -106,30 +106,28 @@ Col 4: ΔFR bars (6×1 nested, 3 clusters each region)
 Cols 5-6: Pie charts (row 1, FontSize 14), Region comparison (row 2, grey circles with jitter, y-axis to 95th percentile), **G**: Latency comparison (row 3, Wilcoxon rank-sum LA vs AStria)
 α=0.0 for rank score sorting, `g.monosyn_window=0.025`
 **Kruskal-Wallis gating**: Main figure bar charts only show signrank stars if KW p<0.05
-**Panel F (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
+**Panel F (Region comparison)**: CS responses from CS-sel + Multi (clusters 1,3), US responses from US-sel + Multi (clusters 2,3), CS+US from all responsive (clusters 1,2,3). Uses absolute FR, no baseline subtraction.
 **ΔFR calculation** (2025-12-02): `ΔFR = (nSpikes/trial) / window_duration`, where window_duration = 13ms (0.013s). This avoids smoothing artifacts from high-frequency binning while maintaining consistent Hz units. CS+US uses actual `triptest_both` trials, NOT pooled CS+US data.
 **Supp figure removed** (2025-12-01): All supplementary data now in Excel export only
-**Excel export** (2025-12-01, updated 2025-12-02): `figure_4_data.xlsx` with sheets:
+**Excel export** (2025-12-01, updated 2025-12-05): `figure_4_data.xlsx` with sheets:
   - `PanelsBD_DeltaFR`: Bar chart data (monosynaptic 12-25ms window) with Friedman tests. ΔFR calculated from spike counts per trial.
   - `PanelE_PieCharts`: Cluster proportions with Chi-square tests
-  - `PanelF_RegionComparison`: LA vs AStria comparison (monosynaptic 12-25ms)
+  - `PanelF_RegionComparison`: LA vs AStria comparison (monosynaptic 12-25ms). CS: clusters 1,3; US: clusters 2,3; CS+US: clusters 1,2,3
   - `PanelG_LatencyComparison`: Onset latency statistics with Wilcoxon rank-sum tests
   - `RawData_DeltaFR_OnsetLat`: Individual neuron values (Local #, Global Index, Animal ID, ΔFR CS/US/CS+US, Onset Lat CS/US/CS+US)
 
-### BAfc_figure_5.m (1000×500px, 2×4 grid) - Updated 2025-12-03
+### BAfc_figure_5.m (1000×500px, 2×4 grid) - Updated 2025-12-05
 **A**: Example rasters (rows 1-2), **B**: FR lineplots (row 3), **C**: Pie charts (row 1 right), **D**: Spaghetti plots (row 2 right)
 Left: Example neurons (3×4: no-light rasters, light rasters, FR plots)
 Right: Population (2×4: pie charts, spaghetti plots with mean spike count)
-**Testing method** (configurable via `g.testing_method`):
-- `'single_window'` (DEFAULT, reviewer-safe): Test predefined window (12-50ms), no multiple comparisons issue
-- `'multi_window'` (exploratory): Test 12ms to `g.monosyn_window` in 1ms steps, ANY window p<0.05 with positive change (WARNING: 86% false positive rate)
-Window parameters: `g.test_window_start = 0.012`, `g.test_window_end = 0.050`
+**Testing method**: Single pre-defined window (10-50ms), statistically sound, no multiple comparisons issue
+Window parameters: `g.artifact_end = 0.010`, `g.monosyn_window = 0.050`
 Example neurons: MD309_001 cell 20 (LA US ↑), MD317_001 cell 43 (AStria US ↑), MD307_001 cell 16 (LA US ↓), MD315_001 cell 15 (AStria US ↓)
 **Pie chart label overlap fix** (2025-12-03): Manual position adjustments applied to prevent overlap between adjacent pie charts. LA US 34% moved down (-0.1), 54% moved down (-0.3). AStria CS 16% moved right-up (0.05, 0.1), 66% moved down (-0.15).
 **Excel export**: `figure_5_data.xlsx` with sheets:
-  - `PanelE_PieCharts`: Proportions of enhanced/decreased/unchanged neurons
-  - `PanelF_SpaghetttiPlots`: FR statistics for enhanced neurons with paired t-tests
-  - `RawData_Classifications`: Individual neuron classifications with p-values and FR values
+  - `PanelE_PieCharts`: Proportions of enhanced/decreased/unchanged neurons with test window
+  - `PanelF_SpaghetttiPlots`: FR statistics (Mean, SEM, Median, SD) for all three classifications (increased, decreased, unchanged) with paired t-tests
+  - `RawData_Classifications`: Individual neuron classifications with p-values and FR values (no-light and with-light)
   - `ChiSquare_RegionComparisons`: LA vs AStria chi-square tests for CS and US
 
 ### Supplementary Figure 2 (supplementary_figure_2/)
@@ -169,9 +167,10 @@ Light-inhibited neurons (5×4 grid, 1000×1000px): **A**: Example rasters (row 1
 - Supplementary KW panels: Only display post-hoc p-values if KW p<0.05
 - Prevents multiple comparisons inflation in bar chart visualizations
 
-### Figure 5 Optogenetic Testing
-- Default: Single pre-defined window (12-50ms), statistically sound, reviewer-safe
-- Alternative: Multi-window exploratory testing (requires justification, high false positive rate)
+### Figure 5 Optogenetic Testing (Updated 2025-12-05)
+- Single pre-defined window (10-50ms): Statistically sound, no multiple comparisons issue
+- Wilcoxon signed-rank test: Compares no-light vs light conditions for each neuron
+- Classification: Increased (p<0.05, positive change), Decreased (p<0.05, negative change), Unchanged (p≥0.05 or no change)
 
 ## Data Export to Excel (2025-12-01)
 All figures export data to `figure_X_data.xlsx` for verification and supplementary tables:

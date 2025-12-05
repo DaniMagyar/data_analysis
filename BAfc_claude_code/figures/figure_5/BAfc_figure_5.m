@@ -6,22 +6,9 @@
 
 clear all; close all
 
-%% TESTING METHOD SELECTION
-% Choose testing method for optogenetic enhancement detection:
-% 'multi_window' - Test multiple 1ms windows from artifact_end to monosyn_window
-%                  Neuron enhanced if ANY window p<0.05 with positive change
-%                  WARNING: High false positive rate (~86% for 38 windows)
-% 'single_window' - Test single pre-defined window
-%                   No multiple comparisons issue, statistically sound
-g.testing_method = 'single_window';  % Options: 'multi_window' or 'single_window'
-
-% Single window parameters (only used if testing_method = 'single_window')
+%% Test window parameters
 g.artifact_end = 0.010;  % Start of test window (s) - after artifact
 g.monosyn_window = 0.05;    % End of test window (s) - monosynaptic window
-% Common options:
-%   Full monosynaptic: artifact_end=0.012, monosyn_window=0.050
-%   Early responses:   artifact_end=0.012, monosyn_window=0.020
-%   Sustained:         artifact_end=0.020, monosyn_window=0.050
 
 %% Setup - recordings with optogenetic manipulation
 recordings = {...
@@ -86,29 +73,17 @@ for hmp = 1:4
     [psth_spx_og, preAP_norm_all{hmp}, postAP_norm_all{hmp}] = BAfc_psth_spx('cell_metrics', cell_metrics, 'ttl', ttl{hmp}, ...
         'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
 
-    % Convert to Hz
+    % Convert to Hz and apply smoothing with delay correction
     num_trials = size(cell_metrics.general.(ttl{hmp}){1}, 1);
     psth_hz = psth_spx_og / (num_trials * g.bin_time);
-    psth_hz_smooth = smoothdata(psth_hz, 2, 'sgolay', g.smoothvalue);
+    psthHz_full{hmp} = apply_sgolay_with_delay_correction(psth_hz, g.smoothvalue);
 
-    % Correct for filter delay by shifting forward (move data earlier in time)
-    psth_hz_corrected = zeros(size(psth_hz_smooth));
-    psth_hz_corrected(:, filter_delay+1:end) = psth_hz_smooth(:, 1:end-filter_delay);
-    psth_hz_corrected(:, 1:filter_delay) = repmat(psth_hz_smooth(:, 1), 1, filter_delay);
-    psthHz_full{hmp} = psth_hz_corrected;
-
-    % Z-score using baseline period only
+    % Z-score using baseline period only and apply smoothing with delay correction
     baseline_mean = mean(psth_spx_og(:, 1:baseline_bins), 2);
     baseline_std = std(psth_spx_og(:, 1:baseline_bins), 0, 2);
     baseline_std(baseline_std == 0) = 1;
     psth_spx = (psth_spx_og - baseline_mean) ./ baseline_std;
-    psth_spx_smooth = smoothdata(psth_spx, 2, 'sgolay', g.smoothvalue);
-
-    % Correct for filter delay by shifting forward (move data earlier in time)
-    psth_spx_corrected = zeros(size(psth_spx_smooth));
-    psth_spx_corrected(:, filter_delay+1:end) = psth_spx_smooth(:, 1:end-filter_delay);
-    psth_spx_corrected(:, 1:filter_delay) = repmat(psth_spx_smooth(:, 1), 1, filter_delay);
-    psthZ_full{hmp} = psth_spx_corrected;
+    psthZ_full{hmp} = apply_sgolay_with_delay_correction(psth_spx, g.smoothvalue);
 end
 
 %% Monosynaptic detection for each brain region and stimulus type
@@ -137,15 +112,9 @@ for br = 1:2
 
     % Process CS and US separately
     for stim = 1:2  % 1=CS, 2=US
-        stim_name = {'CS', 'US'};
-
         % TTL indices: CS=1,2; US=3,4
         ttl_nolight_idx = stim*2 - 1;  % 1 for CS, 3 for US
         ttl_light_idx = stim*2;        % 2 for CS, 4 for US
-
-        % Get number of trials
-        
-        
 
         % Extract PSTHs for PNs
         psth_nolight_PN = psthZ_full{ttl_nolight_idx}(idx_PN, :);
@@ -380,20 +349,6 @@ for tt = 1:length(ttl)
 end
 
 %% Statistical comparison for CS and US separately
-
-% Setup testing windows based on method
-if strcmp(g.testing_method, 'multi_window')
-    % Fine-grained multi-window testing
-    window_ends = (g.artifact_end + 0.001):0.001:g.monosyn_window;  % artifact+1ms to monosyn_window in 1ms steps
-    n_windows = length(window_ends);
-elseif strcmp(g.testing_method, 'single_window')
-    % Single pre-defined window testing
-    window_ends = g.monosyn_window;  % Single window endpoint
-    n_windows = 1;
-else
-    error('Invalid testing_method. Must be ''multi_window'' or ''single_window''');
-end
-
 comparison_results = struct();
 
 for br = 1:2
@@ -446,63 +401,50 @@ for br = 1:2
         unchanged_idx = [];
         neuron_pvalues = cell(n_responsive, 1);
 
+        test_window = [g.artifact_end, g.monosyn_window];
+
         for n = 1:n_responsive
             global_idx = responsive_neuron_indices(n);
 
-            is_increased_any_window = false;
-            is_decreased_any_window = false;
-            p_vals = nan(1, n_windows);
-
-            for w = 1:n_windows
-                test_window = [g.artifact_end, window_ends(w)];
-
-                % Get spike counts
-                spikes_nolight_trials = [];
-                if ~isempty(postAP_norm_nolight{global_idx})
-                    for trial = 1:length(postAP_norm_nolight{global_idx})
-                        trial_spikes = postAP_norm_nolight{global_idx}{trial};
-                        spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        spikes_nolight_trials = [spikes_nolight_trials; spike_count];
-                    end
-                end
-
-                spikes_light_trials = [];
-                if ~isempty(postAP_norm_light{global_idx})
-                    for trial = 1:length(postAP_norm_light{global_idx})
-                        trial_spikes = postAP_norm_light{global_idx}{trial};
-                        spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        spikes_light_trials = [spikes_light_trials; spike_count];
-                    end
-                end
-
-                % Wilcoxon test
-                try
-                    [p, ~, ~] = signrank(spikes_nolight_trials, spikes_light_trials);
-                    p_vals(w) = p;
-                    obs_diff = mean(spikes_light_trials) - mean(spikes_nolight_trials);
-
-                    if p < 0.05
-                        if obs_diff > 0
-                            is_increased_any_window = true;
-                        else
-                            is_decreased_any_window = true;
-                        end
-                    end
-                catch
-                    p_vals(w) = NaN;
+            % Get spike counts
+            spikes_nolight_trials = [];
+            if ~isempty(postAP_norm_nolight{global_idx})
+                for trial = 1:length(postAP_norm_nolight{global_idx})
+                    trial_spikes = postAP_norm_nolight{global_idx}{trial};
+                    spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                    spikes_nolight_trials = [spikes_nolight_trials; spike_count];
                 end
             end
 
-            neuron_pvalues{n} = p_vals;
+            spikes_light_trials = [];
+            if ~isempty(postAP_norm_light{global_idx})
+                for trial = 1:length(postAP_norm_light{global_idx})
+                    trial_spikes = postAP_norm_light{global_idx}{trial};
+                    spike_count = sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+                    spikes_light_trials = [spikes_light_trials; spike_count];
+                end
+            end
 
-            % Classify neuron
-            if is_increased_any_window
-                n_increased = n_increased + 1;
-                increased_idx = [increased_idx; global_idx];
-            elseif is_decreased_any_window
-                n_decreased = n_decreased + 1;
-                decreased_idx = [decreased_idx; global_idx];
-            else
+            % Wilcoxon test
+            try
+                [p, ~, ~] = signrank(spikes_nolight_trials, spikes_light_trials);
+                obs_diff = mean(spikes_light_trials) - mean(spikes_nolight_trials);
+
+                neuron_pvalues{n} = p;
+
+                % Classify neuron
+                if p < 0.05 && obs_diff > 0
+                    n_increased = n_increased + 1;
+                    increased_idx = [increased_idx; global_idx];
+                elseif p < 0.05 && obs_diff < 0
+                    n_decreased = n_decreased + 1;
+                    decreased_idx = [decreased_idx; global_idx];
+                else
+                    n_unchanged = n_unchanged + 1;
+                    unchanged_idx = [unchanged_idx; global_idx];
+                end
+            catch
+                neuron_pvalues{n} = NaN;
                 n_unchanged = n_unchanged + 1;
                 unchanged_idx = [unchanged_idx; global_idx];
             end
@@ -622,60 +564,9 @@ for r = 1:2
             postAP_norm_nolight = res.postAP_norm_nolight;
             postAP_norm_light = res.postAP_norm_light;
 
-            % Calculate FR for each enhanced neuron in their most significant window
-            fr_nolight = zeros(n_enhanced, 1);
-            fr_light = zeros(n_enhanced, 1);
-
-            for i = 1:n_enhanced
-                idx = increased_idx(i);
-
-                % Define response window based on testing method
-                if strcmp(g.testing_method, 'multi_window')
-                    % Find this neuron's most significant window
-                    neuron_pos = find(all_neuron_indices == idx);
-                    if ~isempty(neuron_pos)
-                        p_vals = neuron_pvalues{neuron_pos};
-                        [~, min_window_idx] = min(p_vals);
-                        window_end = window_ends(min_window_idx);
-                    else
-                        window_end = window_ends(1);  % Fallback
-                    end
-                    test_window = [g.artifact_end, window_end];
-                elseif strcmp(g.testing_method, 'single_window')
-                    % Use the pre-defined window for all neurons
-                    test_window = [g.artifact_end, g.monosyn_window];
-                end
-
-                window_duration = test_window(2) - test_window(1);
-
-                % Calculate FR for no-light trials
-                spike_count_nolight = 0;
-                trial_count_nolight = 0;
-                if ~isempty(postAP_norm_nolight{idx})
-                    for trial = 1:length(postAP_norm_nolight{idx})
-                        trial_spikes = postAP_norm_nolight{idx}{trial};
-                        spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                    end
-                    trial_count_nolight = length(postAP_norm_nolight{idx});
-                end
-                if trial_count_nolight > 0
-                    fr_nolight(i) = (spike_count_nolight / trial_count_nolight) / window_duration;
-                end
-
-                % Calculate FR for light trials
-                spike_count_light = 0;
-                trial_count_light = 0;
-                if ~isempty(postAP_norm_light{idx})
-                    for trial = 1:length(postAP_norm_light{idx})
-                        trial_spikes = postAP_norm_light{idx}{trial};
-                        spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                    end
-                    trial_count_light = length(postAP_norm_light{idx});
-                end
-                if trial_count_light > 0
-                    fr_light(i) = (spike_count_light / trial_count_light) / window_duration;
-                end
-            end
+            % Calculate FR for enhanced neurons
+            [fr_nolight, fr_light] = calculate_fr_for_neurons(increased_idx, ...
+                postAP_norm_nolight, postAP_norm_light, g);
 
             % Create slope graph for FR (enhanced neurons)
             hold(ax_slope_enhanced, 'on');
@@ -704,15 +595,7 @@ for r = 1:2
 
             % Population-level paired t-test on enhanced neurons
             [~, p_pop, ~, ~] = ttest(fr_nolight, fr_light);
-            if p_pop < 0.001
-                sig_str = '***';
-            elseif p_pop < 0.01
-                sig_str = '**';
-            elseif p_pop < 0.05
-                sig_str = '*';
-            else
-                sig_str = 'n.s.';
-            end
+            sig_str = format_significance(p_pop);
 
             % Add significance line and text above the plot
             y_max = max([fr_nolight; fr_light]);
@@ -768,60 +651,9 @@ for r = 1:2
             postAP_norm_nolight = res.postAP_norm_nolight;
             postAP_norm_light = res.postAP_norm_light;
 
-            % Calculate FR for each decreased neuron in their most significant window
-            fr_nolight_dec = zeros(n_decreased, 1);
-            fr_light_dec = zeros(n_decreased, 1);
-
-            for i = 1:n_decreased
-                idx = decreased_idx(i);
-
-                % Define response window based on testing method
-                if strcmp(g.testing_method, 'multi_window')
-                    % Find this neuron's most significant window
-                    neuron_pos = find(all_neuron_indices == idx);
-                    if ~isempty(neuron_pos)
-                        p_vals = neuron_pvalues{neuron_pos};
-                        [~, min_window_idx] = min(p_vals);
-                        window_end = window_ends(min_window_idx);
-                    else
-                        window_end = window_ends(1);  % Fallback
-                    end
-                    test_window = [g.artifact_end, window_end];
-                elseif strcmp(g.testing_method, 'single_window')
-                    % Use the pre-defined window for all neurons
-                    test_window = [g.artifact_end, g.monosyn_window];
-                end
-
-                window_duration = test_window(2) - test_window(1);
-
-                % Calculate FR for no-light trials
-                spike_count_nolight = 0;
-                trial_count_nolight = 0;
-                if ~isempty(postAP_norm_nolight{idx})
-                    for trial = 1:length(postAP_norm_nolight{idx})
-                        trial_spikes = postAP_norm_nolight{idx}{trial};
-                        spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                    end
-                    trial_count_nolight = length(postAP_norm_nolight{idx});
-                end
-                if trial_count_nolight > 0
-                    fr_nolight_dec(i) = (spike_count_nolight / trial_count_nolight) / window_duration;
-                end
-
-                % Calculate FR for light trials
-                spike_count_light = 0;
-                trial_count_light = 0;
-                if ~isempty(postAP_norm_light{idx})
-                    for trial = 1:length(postAP_norm_light{idx})
-                        trial_spikes = postAP_norm_light{idx}{trial};
-                        spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                    end
-                    trial_count_light = length(postAP_norm_light{idx});
-                end
-                if trial_count_light > 0
-                    fr_light_dec(i) = (spike_count_light / trial_count_light) / window_duration;
-                end
-            end
+            % Calculate FR for decreased neurons
+            [fr_nolight_dec, fr_light_dec] = calculate_fr_for_neurons(decreased_idx, ...
+                postAP_norm_nolight, postAP_norm_light, g);
 
             % Create slope graph for FR (decreased neurons)
             hold(ax_slope_decreased, 'on');
@@ -850,15 +682,7 @@ for r = 1:2
 
             % Population-level paired t-test on decreased neurons
             [~, p_pop_dec, ~, ~] = ttest(fr_nolight_dec, fr_light_dec);
-            if p_pop_dec < 0.001
-                sig_str_dec = '***';
-            elseif p_pop_dec < 0.01
-                sig_str_dec = '**';
-            elseif p_pop_dec < 0.05
-                sig_str_dec = '*';
-            else
-                sig_str_dec = 'n.s.';
-            end
+            sig_str_dec = format_significance(p_pop_dec);
 
             % Add significance line and text above the plot
             y_max_dec = max([fr_nolight_dec; fr_light_dec]);
@@ -893,13 +717,6 @@ for r = 1:2
 end
 
 %% Add example raster plots (rows 1-2 of left nested layout)
-% Define example neurons: [animal, cellID, stimulus_type, stimulus_type_light]
-% examples = {
-%     'MD309_001', 20, 'triptest_sound_only', 'triptest_sound_only_light';   % CS-only
-%     'MD309_001', 20, 'triptest_shocks_only', 'triptest_shocks_only_light';  % US-only
-%     'MD318_001', 46, 'triptest_sound_only', 'triptest_sound_only_light';   % CS-only
-%     'MD317_001', 43, 'triptest_shocks_only', 'triptest_shocks_only_light'   % US-only
-% };
 examples = {
     'MD309_001', 20, 'triptest_shocks_only', 'triptest_shocks_only_light';  % LA US UP
     'MD317_001', 43, 'triptest_shocks_only', 'triptest_shocks_only_light';   % AStria US UP
@@ -1054,25 +871,11 @@ for ex = 1:4
         end
 
         if ~isempty(psth_nolight) && ~isempty(psth_light)
-            % Extract this neuron's PSTH
+            % Extract this neuron's PSTH and apply 11ms smoothing for visualization
             neuron_psth_nolight = psth_nolight(neuron_idx, :);
             neuron_psth_light = psth_light(neuron_idx, :);
-
-            % Apply 11ms smoothing for visualization only
-            smoothvalue_vis = 11;
-            filter_delay_vis = floor(smoothvalue_vis / 2);
-
-            % Smooth no-light data
-            neuron_psth_nolight_smooth = smoothdata(neuron_psth_nolight, 2, 'sgolay', smoothvalue_vis);
-            neuron_psth_nolight_corrected = zeros(size(neuron_psth_nolight_smooth));
-            neuron_psth_nolight_corrected(filter_delay_vis+1:end) = neuron_psth_nolight_smooth(1:end-filter_delay_vis);
-            neuron_psth_nolight_corrected(1:filter_delay_vis) = repmat(neuron_psth_nolight_smooth(1), 1, filter_delay_vis);
-
-            % Smooth light data
-            neuron_psth_light_smooth = smoothdata(neuron_psth_light, 2, 'sgolay', smoothvalue_vis);
-            neuron_psth_light_corrected = zeros(size(neuron_psth_light_smooth));
-            neuron_psth_light_corrected(filter_delay_vis+1:end) = neuron_psth_light_smooth(1:end-filter_delay_vis);
-            neuron_psth_light_corrected(1:filter_delay_vis) = repmat(neuron_psth_light_smooth(1), 1, filter_delay_vis);
+            neuron_psth_nolight_corrected = apply_sgolay_with_delay_correction(neuron_psth_nolight, 11);
+            neuron_psth_light_corrected = apply_sgolay_with_delay_correction(neuron_psth_light, 11);
 
             % Time axis in ms, centered at stimulus
             time_axis = ((-g.pre_time:g.bin_time:(g.post_time-g.bin_time)) * 1000);
@@ -1109,16 +912,16 @@ for ex = 1:4
             % Add legend for first and third plots (increased and decreased)
             if ex == 1
                 leg = legend(ax_lineplot, {'No light', 'Laser on'}, 'Location', 'northeast', ...
-                    'FontSize', g.fontSize2, 'Box', 'off');
+                    'FontSize', 9, 'Box', 'off');
                 leg.ItemTokenSize = [10, 12];  % Shorter lines
                 leg.Position(1) = leg.Position(1) + 0.06;  % Shift right
                 leg.Position(2) = leg.Position(2) + 0.03;  % Shift up
             elseif ex == 3
                 leg = legend(ax_lineplot, {'No light', 'Laser on'}, 'Location', 'northeast', ...
-                    'FontSize', g.fontSize2, 'Box', 'off');
+                    'FontSize', 9, 'Box', 'off');
                 leg.ItemTokenSize = [10, 12];  % Shorter lines
-                leg.Position(1) = leg.Position(1) + 0.06;  % Shift right
-                leg.Position(2) = leg.Position(2) + 0.03;  % Shift up
+                leg.Position(1) = leg.Position(1) + 0.07;  % Shift right
+                leg.Position(2) = leg.Position(2) + 0.02;  % Shift up
             end
 
             set(ax_lineplot, 'FontSize', g.fontSize2);
@@ -1168,530 +971,92 @@ annotation(fig_comparison, 'textbox', [0.01, 0.35, 0.03, 0.04], ...
     'EdgeColor', 'none');
 
 % E: Pie charts (top-right of right panel)
-annotation(fig_comparison, 'textbox', [0.51, 0.97, 0.03, 0.04], ...
+annotation(fig_comparison, 'textbox', [0.49, 0.97, 0.03, 0.04], ...
     'String', 'E', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 % F: Enhanced spaghetti plots (middle-right of right panel)
-annotation(fig_comparison, 'textbox', [0.51, 0.63, 0.03, 0.04], ...
+annotation(fig_comparison, 'textbox', [0.49, 0.62, 0.03, 0.04], ...
     'String', 'F', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 % G: Decreased spaghetti plots (bottom-right of right panel)
-annotation(fig_comparison, 'textbox', [0.51, 0.29, 0.03, 0.04], ...
+annotation(fig_comparison, 'textbox', [0.49, 0.32, 0.03, 0.04], ...
     'String', 'G', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
     'EdgeColor', 'none');
 
 
-%% Export data
-export_figure5_to_excel(comparison_results, cell_metrics, results_all, region_names, stim_names, g);
+%% Export data and figure
+export_figure5_to_excel_simple(comparison_results, cell_metrics, results_all, region_names, stim_names, g);
 exportgraphics(gcf, 'figure_5.png', 'Resolution', 300);
-%% Excel Export Function
-function export_figure5_to_excel(comparison_results, cell_metrics, results_all, region_names, stim_names, g)
-    output_filename = 'figure_5_data.xlsx';
 
-    if exist(output_filename, 'file')
-        delete(output_filename);
-    end
+%% Helper functions
+function [fr_nolight, fr_light] = calculate_fr_for_neurons(neuron_idx_list, ...
+    postAP_norm_nolight, postAP_norm_light, g)
+    % Calculate firing rates for a list of neurons
+    n_neurons = length(neuron_idx_list);
+    fr_nolight = zeros(n_neurons, 1);
+    fr_light = zeros(n_neurons, 1);
 
-    % Helper function for significance markers
-    function sig_str = format_significance(p_val)
-        if p_val < 0.001
-            sig_str = '***';
-        elseif p_val < 0.01
-            sig_str = '**';
-        elseif p_val < 0.05
-            sig_str = '*';
-        else
-            sig_str = 'n.s.';
+    test_window = [g.artifact_end, g.monosyn_window];
+    window_duration = test_window(2) - test_window(1);
+
+    for i = 1:n_neurons
+        idx = neuron_idx_list(i);
+
+        % Calculate FR for no-light trials
+        spike_count_nolight = 0;
+        trial_count_nolight = 0;
+        if ~isempty(postAP_norm_nolight{idx})
+            for trial = 1:length(postAP_norm_nolight{idx})
+                trial_spikes = postAP_norm_nolight{idx}{trial};
+                spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+            end
+            trial_count_nolight = length(postAP_norm_nolight{idx});
+        end
+        if trial_count_nolight > 0
+            fr_nolight(i) = (spike_count_nolight / trial_count_nolight) / window_duration;
+        end
+
+        % Calculate FR for light trials
+        spike_count_light = 0;
+        trial_count_light = 0;
+        if ~isempty(postAP_norm_light{idx})
+            for trial = 1:length(postAP_norm_light{idx})
+                trial_spikes = postAP_norm_light{idx}{trial};
+                spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
+            end
+            trial_count_light = length(postAP_norm_light{idx});
+        end
+        if trial_count_light > 0
+            fr_light(i) = (spike_count_light / trial_count_light) / window_duration;
         end
     end
+end
 
-    % Window ends for multi-window testing
-    if strcmp(g.testing_method, 'multi_window')
-        window_ends = (g.artifact_end + 0.001):0.001:g.monosyn_window;
+function sig_str = format_significance(p_val)
+    % Format p-value as significance stars
+    if p_val < 0.001
+        sig_str = '***';
+    elseif p_val < 0.01
+        sig_str = '**';
+    elseif p_val < 0.05
+        sig_str = '*';
+    else
+        sig_str = 'n.s.';
     end
+end
 
-    %% Sheet 1: Panel E - Pie Charts (Proportions)
-    sheet_data = {};
-    sheet_data{1,1} = 'PANEL E: PIE CHARTS - PROPORTIONS OF ENHANCED NEURONS';
-    sheet_data{2,1} = sprintf('Testing method: %s', g.testing_method);
-    if strcmp(g.testing_method, 'single_window')
-        sheet_data{3,1} = sprintf('Test window: %.0f-%.0f ms', g.artifact_end*1000, g.monosyn_window*1000);
-    end
-    sheet_data{5,1} = 'Region';
-    sheet_data{5,2} = 'Stimulus';
-    sheet_data{5,3} = 'Total Monosynaptic';
-    sheet_data{5,4} = 'Enhanced';
-    sheet_data{5,5} = 'Enhanced (%)';
-    sheet_data{5,6} = 'Non-Enhanced';
-    sheet_data{5,7} = 'Non-Enhanced (%)';
+function psth_corrected = apply_sgolay_with_delay_correction(psth_data, smoothvalue)
+    % Apply Savitzky-Golay smoothing with delay correction
+    filter_delay = floor(smoothvalue / 2);
+    psth_smooth = smoothdata(psth_data, 2, 'sgolay', smoothvalue);
 
-    row_idx = 6;
-    for r = 1:2
-        for s = 1:2
-            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
-            result = comparison_results.(result_field);
-
-            n_enhanced = result.n_increased;
-            n_non_enhanced = result.n_decreased + result.n_unchanged;
-
-            sheet_data{row_idx, 1} = region_names{r};
-            sheet_data{row_idx, 2} = stim_names{s};
-            sheet_data{row_idx, 3} = result.n_total;
-            sheet_data{row_idx, 4} = n_enhanced;
-            if result.n_total > 0
-                sheet_data{row_idx, 5} = 100 * n_enhanced / result.n_total;
-            else
-                sheet_data{row_idx, 5} = 0;
-            end
-            sheet_data{row_idx, 6} = n_non_enhanced;
-            if result.n_total > 0
-                sheet_data{row_idx, 7} = 100 * n_non_enhanced / result.n_total;
-            else
-                sheet_data{row_idx, 7} = 0;
-            end
-            row_idx = row_idx + 1;
-        end
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelE_PieCharts');
-
-    %% Sheet 2: Panel F - Spaghetti Plots (FR)
-    sheet_data = {};
-    sheet_data{1,1} = 'PANEL F: SPAGHETTI PLOTS - FR FOR ENHANCED NEURONS';
-    sheet_data{2,1} = 'FR calculated as (nSpikes/trial) / window_duration (no baseline subtraction)';
-    sheet_data{4,1} = 'Region';
-    sheet_data{4,2} = 'Stimulus';
-    sheet_data{4,3} = 'N Enhanced';
-    sheet_data{4,4} = 'No Light Mean (Hz)';
-    sheet_data{4,5} = 'No Light SEM (Hz)';
-    sheet_data{4,6} = 'No Light Median (Hz)';
-    sheet_data{4,7} = 'No Light SD (Hz)';
-    sheet_data{4,8} = '';
-    sheet_data{4,9} = 'With Light Mean (Hz)';
-    sheet_data{4,10} = 'With Light SEM (Hz)';
-    sheet_data{4,11} = 'With Light Median (Hz)';
-    sheet_data{4,12} = 'With Light SD (Hz)';
-    sheet_data{4,13} = '';
-    sheet_data{4,14} = 'Paired t-test p';
-    sheet_data{4,15} = 'Significance';
-
-    row_idx = 5;
-    for r = 1:2
-        for s = 1:2
-            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
-            result = comparison_results.(result_field);
-
-            sheet_data{row_idx, 1} = region_names{r};
-            sheet_data{row_idx, 2} = stim_names{s};
-            sheet_data{row_idx, 3} = result.n_increased;
-
-            if result.n_increased > 0
-                res = results_all{r, s};
-                postAP_norm_nolight = res.postAP_norm_nolight;
-                postAP_norm_light = res.postAP_norm_light;
-
-                increased_idx = result.increased_idx;
-                all_neuron_indices = result.all_neuron_indices;
-                neuron_pvalues = result.neuron_pvalues;
-                n_enhanced = result.n_increased;
-
-                fr_nolight = zeros(n_enhanced, 1);
-                fr_light = zeros(n_enhanced, 1);
-
-                for i = 1:n_enhanced
-                    idx = increased_idx(i);
-
-                    if strcmp(g.testing_method, 'multi_window')
-                        neuron_pos = find(all_neuron_indices == idx);
-                        if ~isempty(neuron_pos)
-                            p_vals = neuron_pvalues{neuron_pos};
-                            [~, min_window_idx] = min(p_vals);
-                            window_end = window_ends(min_window_idx);
-                        else
-                            window_end = window_ends(1);
-                        end
-                        test_window = [g.artifact_end, window_end];
-                    elseif strcmp(g.testing_method, 'single_window')
-                        test_window = [g.artifact_end, g.monosyn_window];
-                    end
-
-                    window_duration = test_window(2) - test_window(1);
-
-                    % Calculate FR for no-light
-                    spike_count_nolight = 0;
-                    trial_count_nolight = 0;
-                    if ~isempty(postAP_norm_nolight{idx})
-                        for trial = 1:length(postAP_norm_nolight{idx})
-                            trial_spikes = postAP_norm_nolight{idx}{trial};
-                            spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_nolight = length(postAP_norm_nolight{idx});
-                    end
-                    if trial_count_nolight > 0
-                        fr_nolight(i) = (spike_count_nolight / trial_count_nolight) / window_duration;
-                    end
-
-                    % Calculate FR for light
-                    spike_count_light = 0;
-                    trial_count_light = 0;
-                    if ~isempty(postAP_norm_light{idx})
-                        for trial = 1:length(postAP_norm_light{idx})
-                            trial_spikes = postAP_norm_light{idx}{trial};
-                            spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_light = length(postAP_norm_light{idx});
-                    end
-                    if trial_count_light > 0
-                        fr_light(i) = (spike_count_light / trial_count_light) / window_duration;
-                    end
-                end
-
-                [~, p_pop, ~, ~] = ttest(fr_nolight, fr_light);
-
-                sheet_data{row_idx, 4} = mean(fr_nolight);
-                sheet_data{row_idx, 5} = std(fr_nolight) / sqrt(length(fr_nolight));
-                sheet_data{row_idx, 6} = median(fr_nolight);
-                sheet_data{row_idx, 7} = std(fr_nolight);
-                sheet_data{row_idx, 9} = mean(fr_light);
-                sheet_data{row_idx, 10} = std(fr_light) / sqrt(length(fr_light));
-                sheet_data{row_idx, 11} = median(fr_light);
-                sheet_data{row_idx, 12} = std(fr_light);
-                sheet_data{row_idx, 14} = p_pop;
-                sheet_data{row_idx, 15} = format_significance(p_pop);
-            end
-
-            row_idx = row_idx + 1;
-        end
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelF_SpaghetttiPlots');
-
-    %% Sheet 3: Raw Data - Individual Neurons
-    sheet_data = {};
-    sheet_data{1,1} = 'RAW DATA: INDIVIDUAL NEURON CLASSIFICATIONS';
-    sheet_data{3,1} = 'Global Index';
-    sheet_data{3,2} = 'Cell ID';
-    sheet_data{3,3} = 'Animal ID';
-    sheet_data{3,4} = 'Region';
-    sheet_data{3,5} = 'Cell Type';
-    sheet_data{3,6} = 'Stimulus';
-    sheet_data{3,7} = 'Classification';
-    sheet_data{3,8} = 'p-value';
-    sheet_data{3,9} = 'Test Window (ms)';
-    sheet_data{3,10} = '';
-    sheet_data{3,11} = 'FR No Light (Hz)';
-    sheet_data{3,12} = 'FR Light (Hz)';
-    sheet_data{3,13} = 'FR Diff (Hz)';
-
-    % Window ends for multi-window testing
-    if strcmp(g.testing_method, 'multi_window')
-        window_ends = (g.artifact_end + 0.001):0.001:g.monosyn_window;
-    end
-
-    row_idx = 4;
-    for r = 1:2
-        for s = 1:2
-            result_field = sprintf('%s_%s', region_names{r}, stim_names{s});
-            result = comparison_results.(result_field);
-
-            if result.n_total == 0
-                continue;
-            end
-
-            % Get data from results_all
-            res = results_all{r, s};
-            postAP_norm_nolight = res.postAP_norm_nolight;
-            postAP_norm_light = res.postAP_norm_light;
-
-            % Process increased
-            for i = 1:length(result.increased_idx)
-                idx = result.increased_idx(i);
-                neuron_pos = find(result.all_neuron_indices == idx);
-
-                sheet_data{row_idx, 1} = idx;
-                sheet_data{row_idx, 2} = cell_metrics.cellID(idx);
-                sheet_data{row_idx, 3} = cell_metrics.animal{idx};
-                sheet_data{row_idx, 4} = region_names{r};
-                sheet_data{row_idx, 5} = cell_metrics.putativeCellType{idx};
-                sheet_data{row_idx, 6} = stim_names{s};
-                sheet_data{row_idx, 7} = 'Increased';
-
-                if ~isempty(neuron_pos)
-                    p_vals = result.neuron_pvalues{neuron_pos};
-                    if strcmp(g.testing_method, 'multi_window')
-                        [min_p, min_idx_val] = min(p_vals);
-                        window_end = window_ends(min_idx_val);
-                        window_end_ms = window_end * 1000;
-                        test_window = [g.artifact_end, window_end];
-                        sheet_data{row_idx, 8} = min_p;
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, window_end_ms);
-                    elseif strcmp(g.testing_method, 'single_window')
-                        test_window = [g.artifact_end, g.monosyn_window];
-                        sheet_data{row_idx, 8} = p_vals(1);
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, g.monosyn_window*1000);
-                    end
-
-                    % Calculate FR
-                    window_duration = test_window(2) - test_window(1);
-
-                    spike_count_nolight = 0;
-                    trial_count_nolight = 0;
-                    if ~isempty(postAP_norm_nolight{idx})
-                        for trial = 1:length(postAP_norm_nolight{idx})
-                            trial_spikes = postAP_norm_nolight{idx}{trial};
-                            spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_nolight = length(postAP_norm_nolight{idx});
-                    end
-                    fr_nolight = 0;
-                    if trial_count_nolight > 0
-                        fr_nolight = (spike_count_nolight / trial_count_nolight) / window_duration;
-                    end
-
-                    spike_count_light = 0;
-                    trial_count_light = 0;
-                    if ~isempty(postAP_norm_light{idx})
-                        for trial = 1:length(postAP_norm_light{idx})
-                            trial_spikes = postAP_norm_light{idx}{trial};
-                            spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_light = length(postAP_norm_light{idx});
-                    end
-                    fr_light = 0;
-                    if trial_count_light > 0
-                        fr_light = (spike_count_light / trial_count_light) / window_duration;
-                    end
-
-                    sheet_data{row_idx, 11} = fr_nolight;
-                    sheet_data{row_idx, 12} = fr_light;
-                    sheet_data{row_idx, 13} = fr_light - fr_nolight;
-                end
-                row_idx = row_idx + 1;
-            end
-
-            % Process decreased
-            for i = 1:length(result.decreased_idx)
-                idx = result.decreased_idx(i);
-                neuron_pos = find(result.all_neuron_indices == idx);
-
-                sheet_data{row_idx, 1} = idx;
-                sheet_data{row_idx, 2} = cell_metrics.cellID(idx);
-                sheet_data{row_idx, 3} = cell_metrics.animal{idx};
-                sheet_data{row_idx, 4} = region_names{r};
-                sheet_data{row_idx, 5} = cell_metrics.putativeCellType{idx};
-                sheet_data{row_idx, 6} = stim_names{s};
-                sheet_data{row_idx, 7} = 'Decreased';
-
-                if ~isempty(neuron_pos)
-                    p_vals = result.neuron_pvalues{neuron_pos};
-                    if strcmp(g.testing_method, 'multi_window')
-                        [min_p, min_idx_val] = min(p_vals);
-                        window_end = window_ends(min_idx_val);
-                        window_end_ms = window_end * 1000;
-                        test_window = [g.artifact_end, window_end];
-                        sheet_data{row_idx, 8} = min_p;
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, window_end_ms);
-                    elseif strcmp(g.testing_method, 'single_window')
-                        test_window = [g.artifact_end, g.monosyn_window];
-                        sheet_data{row_idx, 8} = p_vals(1);
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, g.monosyn_window*1000);
-                    end
-
-                    % Calculate FR
-                    window_duration = test_window(2) - test_window(1);
-
-                    spike_count_nolight = 0;
-                    trial_count_nolight = 0;
-                    if ~isempty(postAP_norm_nolight{idx})
-                        for trial = 1:length(postAP_norm_nolight{idx})
-                            trial_spikes = postAP_norm_nolight{idx}{trial};
-                            spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_nolight = length(postAP_norm_nolight{idx});
-                    end
-                    fr_nolight = 0;
-                    if trial_count_nolight > 0
-                        fr_nolight = (spike_count_nolight / trial_count_nolight) / window_duration;
-                    end
-
-                    spike_count_light = 0;
-                    trial_count_light = 0;
-                    if ~isempty(postAP_norm_light{idx})
-                        for trial = 1:length(postAP_norm_light{idx})
-                            trial_spikes = postAP_norm_light{idx}{trial};
-                            spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_light = length(postAP_norm_light{idx});
-                    end
-                    fr_light = 0;
-                    if trial_count_light > 0
-                        fr_light = (spike_count_light / trial_count_light) / window_duration;
-                    end
-
-                    sheet_data{row_idx, 11} = fr_nolight;
-                    sheet_data{row_idx, 12} = fr_light;
-                    sheet_data{row_idx, 13} = fr_light - fr_nolight;
-                end
-                row_idx = row_idx + 1;
-            end
-
-            % Process unchanged
-            for i = 1:length(result.unchanged_idx)
-                idx = result.unchanged_idx(i);
-                neuron_pos = find(result.all_neuron_indices == idx);
-
-                sheet_data{row_idx, 1} = idx;
-                sheet_data{row_idx, 2} = cell_metrics.cellID(idx);
-                sheet_data{row_idx, 3} = cell_metrics.animal{idx};
-                sheet_data{row_idx, 4} = region_names{r};
-                sheet_data{row_idx, 5} = cell_metrics.putativeCellType{idx};
-                sheet_data{row_idx, 6} = stim_names{s};
-                sheet_data{row_idx, 7} = 'Unchanged';
-
-                if ~isempty(neuron_pos)
-                    p_vals = result.neuron_pvalues{neuron_pos};
-                    if strcmp(g.testing_method, 'multi_window')
-                        [min_p, min_idx_val] = min(p_vals);
-                        window_end = window_ends(min_idx_val);
-                        window_end_ms = window_end * 1000;
-                        test_window = [g.artifact_end, window_end];
-                        sheet_data{row_idx, 8} = min_p;
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, window_end_ms);
-                    elseif strcmp(g.testing_method, 'single_window')
-                        test_window = [g.artifact_end, g.monosyn_window];
-                        sheet_data{row_idx, 8} = p_vals(1);
-                        sheet_data{row_idx, 9} = sprintf('%.0f-%.0f', g.artifact_end*1000, g.monosyn_window*1000);
-                    end
-
-                    % Calculate FR
-                    window_duration = test_window(2) - test_window(1);
-
-                    spike_count_nolight = 0;
-                    trial_count_nolight = 0;
-                    if ~isempty(postAP_norm_nolight{idx})
-                        for trial = 1:length(postAP_norm_nolight{idx})
-                            trial_spikes = postAP_norm_nolight{idx}{trial};
-                            spike_count_nolight = spike_count_nolight + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_nolight = length(postAP_norm_nolight{idx});
-                    end
-                    fr_nolight = 0;
-                    if trial_count_nolight > 0
-                        fr_nolight = (spike_count_nolight / trial_count_nolight) / window_duration;
-                    end
-
-                    spike_count_light = 0;
-                    trial_count_light = 0;
-                    if ~isempty(postAP_norm_light{idx})
-                        for trial = 1:length(postAP_norm_light{idx})
-                            trial_spikes = postAP_norm_light{idx}{trial};
-                            spike_count_light = spike_count_light + sum(trial_spikes >= test_window(1) & trial_spikes <= test_window(2));
-                        end
-                        trial_count_light = length(postAP_norm_light{idx});
-                    end
-                    fr_light = 0;
-                    if trial_count_light > 0
-                        fr_light = (spike_count_light / trial_count_light) / window_duration;
-                    end
-
-                    sheet_data{row_idx, 11} = fr_nolight;
-                    sheet_data{row_idx, 12} = fr_light;
-                    sheet_data{row_idx, 13} = fr_light - fr_nolight;
-                end
-                row_idx = row_idx + 1;
-            end
-        end
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'RawData_Classifications');
-
-    %% Sheet 4: Chi-square tests - LA vs AStria comparisons
-    sheet_data = {};
-    sheet_data{1,1} = 'CHI-SQUARE TESTS: LA VS ASTRIA';
-    sheet_data{2,1} = 'Comparison of classification distributions between brain regions';
-
-    % Get data for both tests
-    LA_CS = comparison_results.LA_CS;
-    LA_US = comparison_results.LA_US;
-    Astria_CS = comparison_results.Astria_CS;
-    Astria_US = comparison_results.Astria_US;
-
-    % Test 1: LA CS vs AStria CS
-    sheet_data{4,1} = 'TEST 1: LA CS vs AStria CS';
-    sheet_data{5,1} = '';
-    sheet_data{6,1} = 'Contingency Table:';
-    sheet_data{7,1} = '';
-    sheet_data{7,2} = 'Increased';
-    sheet_data{7,3} = 'Decreased';
-    sheet_data{7,4} = 'Unchanged';
-    sheet_data{7,5} = 'Total';
-
-    sheet_data{8,1} = 'LA CS';
-    sheet_data{8,2} = LA_CS.n_increased;
-    sheet_data{8,3} = LA_CS.n_decreased;
-    sheet_data{8,4} = LA_CS.n_unchanged;
-    sheet_data{8,5} = LA_CS.n_total;
-
-    sheet_data{9,1} = 'AStria CS';
-    sheet_data{9,2} = Astria_CS.n_increased;
-    sheet_data{9,3} = Astria_CS.n_decreased;
-    sheet_data{9,4} = Astria_CS.n_unchanged;
-    sheet_data{9,5} = Astria_CS.n_total;
-
-    % Perform chi-square test for CS
-    contingency_table_CS = [LA_CS.n_increased, LA_CS.n_decreased, LA_CS.n_unchanged;
-                            Astria_CS.n_increased, Astria_CS.n_decreased, Astria_CS.n_unchanged];
-    [chi2_CS, p_CS] = calculate_chi_square(contingency_table_CS);
-    df_CS = (size(contingency_table_CS,1)-1) * (size(contingency_table_CS,2)-1);
-
-    sheet_data{11,1} = 'Chi-square statistic:';
-    sheet_data{11,2} = chi2_CS;
-    sheet_data{12,1} = 'Degrees of freedom:';
-    sheet_data{12,2} = df_CS;
-    sheet_data{13,1} = 'p-value:';
-    sheet_data{13,2} = p_CS;
-    sheet_data{13,3} = format_significance(p_CS);
-
-    % Test 2: LA US vs AStria US
-    sheet_data{16,1} = 'TEST 2: LA US vs AStria US';
-    sheet_data{17,1} = '';
-    sheet_data{18,1} = 'Contingency Table:';
-    sheet_data{19,1} = '';
-    sheet_data{19,2} = 'Increased';
-    sheet_data{19,3} = 'Decreased';
-    sheet_data{19,4} = 'Unchanged';
-    sheet_data{19,5} = 'Total';
-
-    sheet_data{20,1} = 'LA US';
-    sheet_data{20,2} = LA_US.n_increased;
-    sheet_data{20,3} = LA_US.n_decreased;
-    sheet_data{20,4} = LA_US.n_unchanged;
-    sheet_data{20,5} = LA_US.n_total;
-
-    sheet_data{21,1} = 'AStria US';
-    sheet_data{21,2} = Astria_US.n_increased;
-    sheet_data{21,3} = Astria_US.n_decreased;
-    sheet_data{21,4} = Astria_US.n_unchanged;
-    sheet_data{21,5} = Astria_US.n_total;
-
-    % Perform chi-square test for US only using contingency table
-    contingency_table_US = [LA_US.n_increased, LA_US.n_decreased, LA_US.n_unchanged;
-                            Astria_US.n_increased, Astria_US.n_decreased, Astria_US.n_unchanged];
-    [chi2_US, p_US] = calculate_chi_square(contingency_table_US);
-    df_US = (size(contingency_table_US,1)-1) * (size(contingency_table_US,2)-1);
-
-    sheet_data{23,1} = 'Chi-square statistic:';
-    sheet_data{23,2} = chi2_US;
-    sheet_data{24,1} = 'Degrees of freedom:';
-    sheet_data{24,2} = df_US;
-    sheet_data{25,1} = 'p-value:';
-    sheet_data{25,2} = p_US;
-    sheet_data{25,3} = format_significance(p_US);
-
-    writecell(sheet_data, output_filename, 'Sheet', 'ChiSquare_RegionComparisons');
+    % Correct for filter delay by shifting forward
+    psth_corrected = zeros(size(psth_smooth));
+    psth_corrected(:, filter_delay+1:end) = psth_smooth(:, 1:end-filter_delay);
+    psth_corrected(:, 1:filter_delay) = repmat(psth_smooth(:, 1), 1, filter_delay);
 end

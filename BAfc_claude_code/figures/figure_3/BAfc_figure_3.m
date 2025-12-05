@@ -72,14 +72,11 @@ cluster_colors = [
 cluster_names = {'CS-sel', 'US-sel', 'Multi'};
 
 %% Calculate PSTHs once
-fprintf('Calculating PSTHs...\n');
 psthZ_full = cell(1, numel(ttl));
 psthHz_full = cell(1, numel(ttl));
 
 % Calculate Savitzky-Golay filter delay correction
 filter_delay = floor(g.smoothvalue / 2);  % Half the filter width (symmetric kernel)
-fprintf('Savitzky-Golay filter width: %d bins, delay correction: %d bins (%.1f ms)\n', ...
-    g.smoothvalue, filter_delay, filter_delay * g.bin_time * 1000);
 
 for hmp = 1:numel(ttl)
     psth_spx_og = BAfc_psth_spx('cell_metrics', g.cell_metrics, 'ttl', ttl{hmp}, 'pre_time', g.pre_time, 'post_time', g.post_time, 'bin_time', g.bin_time);
@@ -394,8 +391,6 @@ for br = 1:2
             y_min = min([y_min, min(psth_CS_mean), min(psth_US_mean), min(psth_Both_mean)]);
         end
     end
-
-    fprintf('  %s lineplots: y_min = %.2f, y_max = %.2f\n', brain_regions{br}, y_min*1.1, y_max*1.1);
 
     % Create nested tiledlayouts for each stimulus column (4, 5, 6)
     for stim = 1:3  % CS, US, CS+US
@@ -751,16 +746,16 @@ for stim = 1:3  % CS, US, CS+US
 
         res = results_all{br};
 
-        % Filter for responsive neurons only (Clusters 1, 2, 3)
-        responsive_idx = ismember(res.Clusters, [1 2 3]);
+        % Filter for stimulus-matched responsive neurons
+        cluster_mask = get_cluster_mask_for_stimulus(res, stim);
 
         % Select appropriate PSTH and latencies
         if stim == 1  % CS
-            peak_fr_data = res.CS_peak_Hz(responsive_idx);
+            peak_fr_data = res.CS_peak_Hz(cluster_mask);
         elseif stim == 2  % US
-            peak_fr_data = res.US_peak_Hz(responsive_idx);
+            peak_fr_data = res.US_peak_Hz(cluster_mask);
         else  % CS+US
-            peak_fr_data = res.Both_peak_Hz(responsive_idx);
+            peak_fr_data = res.Both_peak_Hz(cluster_mask);
         end
 
         % Use responsive neurons only
@@ -864,8 +859,6 @@ set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
 cb_ax.FontSize = g.fontSize2;
 
 %% Chi-square test for cluster proportions between LA and Astria
-fprintf('\n=== Chi-square Test: LA vs Astria ===\n');
-
 % Build contingency table: 2 regions × 3 clusters (CS-sel, US-sel, CS+US)
 contingency_table = zeros(2, 3);
 for br = 1:2
@@ -876,47 +869,13 @@ for br = 1:2
     end
 end
 
-fprintf('Contingency Table (regions × clusters):\n');
-fprintf('%12s', 'Region', 'CS-sel', 'US-sel', 'CS+US', 'Total');
-fprintf('\n');
-for br = 1:2
-    if strcmp(brain_regions{br}, 'Astria')
-        fprintf('%12s', 'AStria');
-    else
-        fprintf('%12s', brain_regions{br});
-    end
-    for c = 1:3
-        fprintf('%12d', contingency_table(br, c));
-    end
-    fprintf('%12d\n', sum(contingency_table(br, :)));
-end
-fprintf('%12s', 'Total');
-for c = 1:3
-    fprintf('%12d', sum(contingency_table(:, c)));
-end
-fprintf('%12d\n', sum(contingency_table(:)));
-
 % Calculate chi-square statistic
 [chi2_obs, p_parametric] = calculate_chi_square(contingency_table);
-fprintf('\nObserved chi-square statistic: %.4f\n', chi2_obs);
-fprintf('Parametric p-value: %.4f\n', p_parametric);
 
 % Cramér's V for effect size
 n_total = sum(contingency_table(:));
 df_cramer = min(size(contingency_table, 1) - 1, size(contingency_table, 2) - 1);
 cramers_v = sqrt(chi2_obs / (n_total * df_cramer));
-fprintf('Cramér''s V (effect size): %.4f\n', cramers_v);
-
-% Check expected counts
-row_totals = sum(contingency_table, 2);
-col_totals = sum(contingency_table, 1);
-expected = (row_totals * col_totals) / n_total;
-min_expected = min(expected(:));
-if min_expected < 5
-    fprintf('WARNING: Minimum expected count = %.2f (< 5). Chi-square approximation may be unreliable.\n', min_expected);
-else
-    fprintf('Minimum expected count = %.2f (>= 5). Chi-square assumptions satisfied.\n', min_expected);
-end
 
 % Permutation test
 n_permutations = 10000;
@@ -933,7 +892,6 @@ for br = 1:2
     end
 end
 
-fprintf('Running %d permutations...\n', n_permutations);
 for perm = 1:n_permutations
     % Shuffle cluster assignments
     shuffled_clusters = all_clusters(randperm(length(all_clusters)));
@@ -950,205 +908,14 @@ for perm = 1:n_permutations
 
     % Calculate chi-square for permuted data
     chi2_perm(perm) = calculate_chi_square(perm_table);
-
-    if mod(perm, 1000) == 0
-        fprintf('  Completed %d/%d permutations\n', perm, n_permutations);
-    end
 end
 
 % Calculate permutation p-value
 p_perm = sum(chi2_perm >= chi2_obs) / n_permutations;
-fprintf('\nPermutation p-value: %.4f\n', p_perm);
-if p_perm < 0.05
-    fprintf('Significance (p < 0.05): YES\n');
-else
-    fprintf('Significance (p < 0.05): NO\n');
-end
-%% Prepare data for table export (Supplementary Panel D data)
-metric_names = {'ΔnSpikes', 'FR (Hz)', 'Response length (ms)'};
-
-% Store data for table export
-table_data = struct();
-
-for c = [1 2 3]  % CS-selective, US-selective, Multisensory
-    for metric = 2:3  % ΔPeak FR, Response length (skip metric 1 - ΔnSpikes)
-        % Collect data for LA and Astria
-        data_LA = [];
-        data_Astria = [];
-
-        for br = 1:2
-            if isempty(results_all{br})
-                continue;
-            end
-
-            res = results_all{br};
-            clust_idx = find(res.Clusters == c);
-
-            fprintf('Cluster %d, Metric %d, Region %s: %d neurons\n', c, metric, brain_regions{br}, length(clust_idx));
-
-            if ~isempty(clust_idx)
-                if metric == 1  % ΔnSpikes between onset and offset (change from baseline)
-                    CS_metric = zeros(length(clust_idx), 1);
-                    US_metric = zeros(length(clust_idx), 1);
-                    Both_metric = zeros(length(clust_idx), 1);
-
-                    baseline_idx = 1:(g.pre_time / g.bin_time);
-
-                    for n = 1:length(clust_idx)
-                        idx_n = clust_idx(n);
-
-                        % Calculate baseline spike count per bin
-                        baseline_spikes_per_bin = mean(res.psth_CS_Hz(idx_n, baseline_idx)) * g.bin_time;
-
-                        % CS ΔnSpikes
-                        if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                            onset_bin = round(res.CS_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.CS_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            num_bins = offset_bin - onset_bin + 1;
-                            % Sum spikes in response window
-                            response_spikes = sum(res.psth_CS_Hz(idx_n, onset_bin:offset_bin)) * g.bin_time;
-                            % Subtract expected baseline spikes
-                            CS_metric(n) = response_spikes - (baseline_spikes_per_bin * num_bins);
-                        else
-                            CS_metric(n) = 0;  % No response detected
-                        end
-
-                        % US ΔnSpikes
-                        if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                            onset_bin = round(res.US_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.US_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            num_bins = offset_bin - onset_bin + 1;
-                            response_spikes = sum(res.psth_US_Hz(idx_n, onset_bin:offset_bin)) * g.bin_time;
-                            US_metric(n) = response_spikes - (baseline_spikes_per_bin * num_bins);
-                        else
-                            US_metric(n) = 0;
-                        end
-
-                        % CS+US ΔnSpikes
-                        if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                            onset_bin = round(res.Both_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            offset_bin = round(res.Both_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                            num_bins = offset_bin - onset_bin + 1;
-                            response_spikes = sum(res.psth_Both_Hz(idx_n, onset_bin:offset_bin)) * g.bin_time;
-                            Both_metric(n) = response_spikes - (baseline_spikes_per_bin * num_bins);
-                        else
-                            Both_metric(n) = 0;
-                        end
-                    end
-                elseif metric == 2  % Peak firing rate change (Hz)
-                    CS_metric = zeros(length(clust_idx), 1);
-                    US_metric = zeros(length(clust_idx), 1);
-                    Both_metric = zeros(length(clust_idx), 1);
-
-                    baseline_idx = 1:(g.pre_time / g.bin_time);
-                    response_start_bin = g.roi(1);
-                    response_end_bin = g.roi(1) + round(1.0 / g.bin_time) - 1;
-
-                    for n = 1:length(clust_idx)
-                        idx_n = clust_idx(n);
-
-                        % Calculate baseline firing rate for this neuron
-                        baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
-
-                        % CS peak firing rate change (using fixed 0-1s window for all neurons)
-                        peak_fr_CS = max(res.psth_CS_Hz(idx_n, response_start_bin:response_end_bin));
-                        CS_metric(n) = peak_fr_CS - baseline_fr;
-
-                        % US peak firing rate change (using fixed 0-1s window for all neurons)
-                        peak_fr_US = max(res.psth_US_Hz(idx_n, response_start_bin:response_end_bin));
-                        US_metric(n) = peak_fr_US - baseline_fr;
-
-                        % CS+US peak firing rate change (using fixed 0-1s window for all neurons)
-                        peak_fr_Both = max(res.psth_Both_Hz(idx_n, response_start_bin:response_end_bin));
-                        Both_metric(n) = peak_fr_Both - baseline_fr;
-                    end
-                elseif metric == 3  % Response length (time between onset and offset in ms)
-                    CS_metric = zeros(length(clust_idx), 1);
-                    US_metric = zeros(length(clust_idx), 1);
-                    Both_metric = zeros(length(clust_idx), 1);
-
-                    for n = 1:length(clust_idx)
-                        idx_n = clust_idx(n);
-
-                        % CS response length
-                        if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                            CS_metric(n) = (res.CS_offset_lat(idx_n) - res.CS_onset_lat(idx_n)) * 1000;  % Convert to ms
-                        else
-                            CS_metric(n) = 0;  % No response detected
-                        end
-
-                        % US response length
-                        if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                            US_metric(n) = (res.US_offset_lat(idx_n) - res.US_onset_lat(idx_n)) * 1000;
-                        else
-                            US_metric(n) = 0;
-                        end
-
-                        % CS+US response length
-                        if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                            Both_metric(n) = (res.Both_offset_lat(idx_n) - res.Both_onset_lat(idx_n)) * 1000;
-                        else
-                            Both_metric(n) = 0;
-                        end
-                    end
-                end
-
-                if br == 1
-                    data_LA = [CS_metric, US_metric, Both_metric];
-                else
-                    data_Astria = [CS_metric, US_metric, Both_metric];
-                end
-            end
-        end
-
-        % Store data for table export
-        % Calculate statistics
-        if ~isempty(data_LA)
-            % CS vs US
-            [p_LA_CS_US, ~] = signrank(data_LA(:,1), data_LA(:,2));
-            % CS vs CS+US
-            [p_LA_CS_Both, ~] = signrank(data_LA(:,1), data_LA(:,3));
-            % US vs CS+US
-            [p_LA_US_Both, ~] = signrank(data_LA(:,2), data_LA(:,3));
-
-            % Store for table
-            table_data(1, c, metric).region = 'LA';
-            table_data(1, c, metric).cluster = cluster_names{c};
-            table_data(1, c, metric).metric = metric_names{metric};
-            table_data(1, c, metric).data = data_LA;
-            table_data(1, c, metric).p_CS_US = p_LA_CS_US;
-            table_data(1, c, metric).p_CS_Both = p_LA_CS_Both;
-            table_data(1, c, metric).p_US_Both = p_LA_US_Both;
-        end
-
-        if ~isempty(data_Astria)
-            % CS vs US
-            [p_Astria_CS_US, ~] = signrank(data_Astria(:,1), data_Astria(:,2));
-            % CS vs CS+US
-            [p_Astria_CS_Both, ~] = signrank(data_Astria(:,1), data_Astria(:,3));
-            % US vs CS+US
-            [p_Astria_US_Both, ~] = signrank(data_Astria(:,2), data_Astria(:,3));
-
-            % Store for table
-            table_data(2, c, metric).region = 'AStria';
-            table_data(2, c, metric).cluster = cluster_names{c};
-            table_data(2, c, metric).metric = metric_names{metric};
-            table_data(2, c, metric).data = data_Astria;
-            table_data(2, c, metric).p_CS_US = p_Astria_CS_US;
-            table_data(2, c, metric).p_CS_Both = p_Astria_CS_Both;
-            table_data(2, c, metric).p_US_Both = p_Astria_US_Both;
-        end
-    end
-end
-
-%% Export all figure data to Excel (must be done after Friedman tests)
-% This will be called after kw_results is computed
 
 %% Perform Friedman tests for table export
 % Perform Friedman tests for each region × cluster combination
 kw_results = struct();
-
-fprintf('\n=== Friedman Tests for Bar Charts (CS vs US vs CS+US within each cluster, repeated measures) ===\n');
 
 cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
 
@@ -1159,12 +926,9 @@ for br = 1:2
         continue;
     end
 
-    fprintf('\n--- %s ---\n', brain_regions{br});
-
     for c = 1:3  % CS-selective, US-selective, Multisensory
         % Check if we have data for this cluster
         if isempty(kw_data_storage{br, c, 1})
-            fprintf('  %s: No data\n', cluster_names_kw{c});
             continue;
         end
 
@@ -1205,7 +969,23 @@ end
 export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
     chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, g, 'figure_3_data.xlsx');
 exportgraphics(gcf, 'figure_3.png', 'Resolution', 300);
+
 %% Helper functions
+function cluster_mask = get_cluster_mask_for_stimulus(res, stim)
+    % Return cluster mask for Panel H region comparison
+    % stim: 1=CS, 2=US, 3=CS+US
+    if stim == 1
+        % CS: CS-sel (cluster 1) + Multi (cluster 3)
+        cluster_mask = (res.Clusters == 1) | (res.Clusters == 3);
+    elseif stim == 2
+        % US: US-sel (cluster 2) + Multi (cluster 3)
+        cluster_mask = (res.Clusters == 2) | (res.Clusters == 3);
+    else
+        % CS+US: CS-sel (cluster 1) + US-sel (cluster 2) + Multi (cluster 3)
+        cluster_mask = (res.Clusters == 1) | (res.Clusters == 2) | (res.Clusters == 3);
+    end
+end
+
 function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_inds, threshold, min_consec, bin_time)
     seg = z_trace(event_inds);
     if any(isnan(seg))
@@ -1236,705 +1016,6 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
             offset_lat = (offset_idx - 1) * bin_time;
         end
     end
-end
-
-function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results, contingency_table, ...
-    chi2_obs, p_perm, cramers_v, brain_regions, cluster_names, g, output_filename)
-
-    if exist(output_filename, 'file')
-        delete(output_filename);
-    end
-
-    stim_names = {'CS', 'US', 'CS+US'};
-
-    %% PANEL C & F: Peak FR and Response Length Bar Charts (main figure)
-    sheet_data = {};
-    sheet_data{1, 1} = 'PANELS C & F: Peak FR and Response Length Bar Charts';
-    sheet_data{2, 1} = '';
-    row = 3;
-
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-
-        sheet_data{row, 1} = sprintf('=== %s ===', region_name);
-        row = row + 1;
-
-        for c = 1:3
-            if isempty(kw_data_storage{br, c, 1})
-                continue;
-            end
-
-            res = results_all{br};
-            clust_idx = find(res.Clusters == c);
-
-            sheet_data{row, 1} = cluster_names{c};
-            sheet_data{row, 2} = sprintf('(n = %d neurons)', length(kw_data_storage{br, c, 1}));
-            row = row + 1;
-
-            % Calculate response length for each stimulus
-            CS_metric = zeros(length(clust_idx), 1);
-            US_metric = zeros(length(clust_idx), 1);
-            Both_metric = zeros(length(clust_idx), 1);
-
-            for n = 1:length(clust_idx)
-                idx_n = clust_idx(n);
-
-                % CS response length
-                if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                    CS_metric(n) = (res.CS_offset_lat(idx_n) - res.CS_onset_lat(idx_n)) * 1000;  % Convert to ms
-                else
-                    CS_metric(n) = 0;  % No response detected
-                end
-
-                % US response length
-                if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                    US_metric(n) = (res.US_offset_lat(idx_n) - res.US_onset_lat(idx_n)) * 1000;
-                else
-                    US_metric(n) = 0;
-                end
-
-                % CS+US response length
-                if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                    Both_metric(n) = (res.Both_offset_lat(idx_n) - res.Both_onset_lat(idx_n)) * 1000;
-                else
-                    Both_metric(n) = 0;
-                end
-            end
-
-            % Perform Friedman test for response length
-            response_length_data = [CS_metric, US_metric, Both_metric];
-            [p_friedman_rl, ~, stats_rl] = friedman(response_length_data, 1, 'off');
-
-            % Get post-hoc for response length
-            if p_friedman_rl < 0.05
-                [p_cs_us_rl, ~] = signrank(CS_metric, US_metric);
-                [p_cs_both_rl, ~] = signrank(CS_metric, Both_metric);
-                [p_us_both_rl, ~] = signrank(US_metric, Both_metric);
-            end
-
-            % Header with both Delta FR and Response Length
-            sheet_data{row, 1} = 'Stimulus';
-            sheet_data{row, 2} = 'ΔPeak FR Mean (Hz)';
-            sheet_data{row, 3} = 'ΔPeak FR SEM (Hz)';
-            sheet_data{row, 4} = 'ΔPeak FR Median (Hz)';
-            sheet_data{row, 5} = 'ΔPeak FR SD (Hz)';
-            sheet_data{row, 6} = '';  % Empty column separator
-            sheet_data{row, 7} = 'Resp Length Mean (ms)';
-            sheet_data{row, 8} = 'Resp Length SEM (ms)';
-            sheet_data{row, 9} = 'Resp Length Median (ms)';
-            sheet_data{row, 10} = 'Resp Length SD (ms)';
-            row = row + 1;
-
-            % Data for each stimulus (side by side)
-            stim_metrics = {kw_data_storage{br, c, 1}, kw_data_storage{br, c, 2}, kw_data_storage{br, c, 3}};
-            resp_metrics = {CS_metric, US_metric, Both_metric};
-
-            for stim = 1:3
-                data_fr = stim_metrics{stim};
-                data_rl = resp_metrics{stim};
-
-                sheet_data{row, 1} = stim_names{stim};
-                sheet_data{row, 2} = mean(data_fr);
-                sheet_data{row, 3} = std(data_fr)/sqrt(length(data_fr));
-                sheet_data{row, 4} = median(data_fr);
-                sheet_data{row, 5} = std(data_fr);
-                sheet_data{row, 6} = '';  % Empty column separator
-                sheet_data{row, 7} = mean(data_rl);
-                sheet_data{row, 8} = std(data_rl)/sqrt(length(data_rl));
-                sheet_data{row, 9} = median(data_rl);
-                sheet_data{row, 10} = std(data_rl);
-                row = row + 1;
-            end
-
-            % Add statistical test results side by side
-            sheet_data{row, 1} = '';
-            row = row + 1;
-
-            % Statistical test headers
-            sheet_data{row, 1} = 'Statistical Tests:';
-            sheet_data{row, 2} = 'ΔPeak FR';
-            sheet_data{row, 3} = '';
-            sheet_data{row, 4} = '';
-            sheet_data{row, 5} = '';
-            sheet_data{row, 6} = '';  % Empty column separator
-            sheet_data{row, 7} = 'Response Length';
-            row = row + 1;
-
-            % Friedman test results
-            if ~isempty(kw_results) && numel(kw_results) >= (br + (c-1)*2)
-                p_friedman = kw_results(br, c).p_friedman;
-                p_values = kw_results(br, c).p_values;
-
-                sheet_data{row, 1} = 'Friedman test p-value:';
-                sheet_data{row, 2} = p_friedman;
-                sheet_data{row, 3} = format_significance(p_friedman);
-                sheet_data{row, 4} = '';
-                sheet_data{row, 5} = '';
-                sheet_data{row, 6} = '';  % Empty column separator
-                sheet_data{row, 7} = p_friedman_rl;
-                sheet_data{row, 8} = format_significance(p_friedman_rl);
-                row = row + 1;
-
-                % Post-hoc header
-                if p_friedman < 0.05 || p_friedman_rl < 0.05
-                    sheet_data{row, 1} = 'Post-hoc (Wilcoxon signed-rank):';
-                    row = row + 1;
-
-                    % CS vs US
-                    sheet_data{row, 1} = '  CS vs US:';
-                    if p_friedman < 0.05
-                        sheet_data{row, 2} = p_values(1);
-                        sheet_data{row, 3} = format_significance(p_values(1));
-                    else
-                        sheet_data{row, 2} = 'n/a';
-                        sheet_data{row, 3} = '';
-                    end
-                    sheet_data{row, 4} = '';
-                    sheet_data{row, 5} = '';
-                    sheet_data{row, 6} = '';  % Empty column separator
-                    if p_friedman_rl < 0.05
-                        sheet_data{row, 7} = p_cs_us_rl;
-                        sheet_data{row, 8} = format_significance(p_cs_us_rl);
-                    else
-                        sheet_data{row, 7} = 'n/a';
-                        sheet_data{row, 8} = '';
-                    end
-                    row = row + 1;
-
-                    % CS vs CS+US
-                    sheet_data{row, 1} = '  CS vs CS+US:';
-                    if p_friedman < 0.05
-                        sheet_data{row, 2} = p_values(2);
-                        sheet_data{row, 3} = format_significance(p_values(2));
-                    else
-                        sheet_data{row, 2} = 'n/a';
-                        sheet_data{row, 3} = '';
-                    end
-                    sheet_data{row, 4} = '';
-                    sheet_data{row, 5} = '';
-                    sheet_data{row, 6} = '';  % Empty column separator
-                    if p_friedman_rl < 0.05
-                        sheet_data{row, 7} = p_cs_both_rl;
-                        sheet_data{row, 8} = format_significance(p_cs_both_rl);
-                    else
-                        sheet_data{row, 7} = 'n/a';
-                        sheet_data{row, 8} = '';
-                    end
-                    row = row + 1;
-
-                    % US vs CS+US
-                    sheet_data{row, 1} = '  US vs CS+US:';
-                    if p_friedman < 0.05
-                        sheet_data{row, 2} = p_values(3);
-                        sheet_data{row, 3} = format_significance(p_values(3));
-                    else
-                        sheet_data{row, 2} = 'n/a';
-                        sheet_data{row, 3} = '';
-                    end
-                    sheet_data{row, 4} = '';
-                    sheet_data{row, 5} = '';
-                    sheet_data{row, 6} = '';  % Empty column separator
-                    if p_friedman_rl < 0.05
-                        sheet_data{row, 7} = p_us_both_rl;
-                        sheet_data{row, 8} = format_significance(p_us_both_rl);
-                    else
-                        sheet_data{row, 7} = 'n/a';
-                        sheet_data{row, 8} = '';
-                    end
-                    row = row + 1;
-                else
-                    sheet_data{row, 1} = '  (Post-hoc not performed - Both Friedman tests n.s.)';
-                    row = row + 1;
-                end
-            end
-            row = row + 1;
-        end
-        row = row + 1;
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelsCF_PeakFR_RespLen');
-
-    %% PANEL G: Pie Charts
-    sheet_data = {};
-    sheet_data{1, 1} = 'PANEL G: Pie Charts - Cluster Proportions';
-    sheet_data{2, 1} = '';
-    sheet_data{3, 1} = 'Region';
-    sheet_data{3, 2} = 'CS-sel (n)';
-    sheet_data{3, 3} = 'CS-sel (%)';
-    sheet_data{3, 4} = 'US-sel (n)';
-    sheet_data{3, 5} = 'US-sel (%)';
-    sheet_data{3, 6} = 'Multi (n)';
-    sheet_data{3, 7} = 'Multi (%)';
-    sheet_data{3, 8} = 'Total';
-
-    row = 4;
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-
-        total = sum(contingency_table(br, :));
-        sheet_data{row, 1} = region_name;
-        sheet_data{row, 2} = contingency_table(br, 1);
-        sheet_data{row, 3} = 100 * contingency_table(br, 1) / total;
-        sheet_data{row, 4} = contingency_table(br, 2);
-        sheet_data{row, 5} = 100 * contingency_table(br, 2) / total;
-        sheet_data{row, 6} = contingency_table(br, 3);
-        sheet_data{row, 7} = 100 * contingency_table(br, 3) / total;
-        sheet_data{row, 8} = total;
-        row = row + 1;
-    end
-
-    % Add chi-square test results
-    sheet_data{row, 1} = '';
-    row = row + 1;
-    sheet_data{row, 1} = '=== Chi-square Test (LA vs AStria) ===';
-    row = row + 1;
-    sheet_data{row, 1} = 'Chi-square statistic:';
-    sheet_data{row, 2} = chi2_obs;
-    row = row + 1;
-    sheet_data{row, 1} = 'Permutation p-value:';
-    sheet_data{row, 2} = p_perm;
-    sheet_data{row, 3} = format_significance(p_perm);
-    row = row + 1;
-    sheet_data{row, 1} = 'Cramer''s V (effect size):';
-    sheet_data{row, 2} = cramers_v;
-    row = row + 1;
-
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelG_PieCharts');
-
-    %% PANEL H: Across-region comparison bars
-    sheet_data = {};
-    sheet_data{1, 1} = 'PANEL H: LA vs AStria Comparison';
-    sheet_data{2, 1} = '';
-    row = 3;
-
-    for stim = 1:3
-        sheet_data{row, 1} = sprintf('=== %s trials ===', stim_names{stim});
-        row = row + 1;
-
-        % Header
-        sheet_data{row, 1} = 'Region';
-        sheet_data{row, 2} = 'Mean (Hz)';
-        sheet_data{row, 3} = 'SEM (Hz)';
-        sheet_data{row, 4} = 'Median (Hz)';
-        sheet_data{row, 5} = 'n neurons';
-        row = row + 1;
-
-        % Collect data
-        for br = 1:2
-            if isempty(results_all{br})
-                continue;
-            end
-
-            res = results_all{br};
-
-            % Select appropriate PSTH and latencies
-            if stim == 1
-                psth_Hz = res.psth_CS_Hz;
-                onset_lat = res.CS_onset_lat;
-                offset_lat = res.CS_offset_lat;
-            elseif stim == 2
-                psth_Hz = res.psth_US_Hz;
-                onset_lat = res.US_onset_lat;
-                offset_lat = res.US_offset_lat;
-            else
-                psth_Hz = res.psth_Both_Hz;
-                onset_lat = res.Both_onset_lat;
-                offset_lat = res.Both_offset_lat;
-            end
-
-            responsive_idx = find(~isnan(onset_lat) & ~isnan(offset_lat));
-
-            if ~isempty(responsive_idx)
-                delta_peak_fr = zeros(length(responsive_idx), 1);
-                baseline_idx = 1:(g.pre_time / g.bin_time);
-
-                for n = 1:length(responsive_idx)
-                    idx_n = responsive_idx(n);
-                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                    onset_bin = round(onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(psth_Hz(idx_n, onset_bin:offset_bin));
-                    delta_peak_fr(n) = peak_fr - baseline_fr;
-                end
-
-                if strcmp(brain_regions{br}, 'Astria')
-                    region_name = 'AStria';
-                else
-                    region_name = brain_regions{br};
-                end
-
-                sheet_data{row, 1} = region_name;
-                sheet_data{row, 2} = mean(delta_peak_fr);
-                sheet_data{row, 3} = std(delta_peak_fr)/sqrt(length(delta_peak_fr));
-                sheet_data{row, 4} = median(delta_peak_fr);
-                sheet_data{row, 5} = length(delta_peak_fr);
-                row = row + 1;
-            end
-        end
-
-        % Add statistical test (Wilcoxon rank-sum between regions)
-        sheet_data{row, 1} = '';
-        row = row + 1;
-        sheet_data{row, 1} = 'Statistical Test:';
-        row = row + 1;
-
-        % Collect LA and AStria data for this stimulus
-        LA_data = [];
-        Astria_data = [];
-        for br = 1:2
-            if isempty(results_all{br})
-                continue;
-            end
-            res = results_all{br};
-            if stim == 1
-                psth_Hz = res.psth_CS_Hz;
-                onset_lat = res.CS_onset_lat;
-                offset_lat = res.CS_offset_lat;
-            elseif stim == 2
-                psth_Hz = res.psth_US_Hz;
-                onset_lat = res.US_onset_lat;
-                offset_lat = res.US_offset_lat;
-            else
-                psth_Hz = res.psth_Both_Hz;
-                onset_lat = res.Both_onset_lat;
-                offset_lat = res.Both_offset_lat;
-            end
-            responsive_idx = find(~isnan(onset_lat) & ~isnan(offset_lat));
-            if ~isempty(responsive_idx)
-                delta_peak_fr = zeros(length(responsive_idx), 1);
-                baseline_idx = 1:(g.pre_time / g.bin_time);
-                for n = 1:length(responsive_idx)
-                    idx_n = responsive_idx(n);
-                    baseline_fr = mean(psth_Hz(idx_n, baseline_idx));
-                    onset_bin = round(onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(psth_Hz(idx_n, onset_bin:offset_bin));
-                    delta_peak_fr(n) = peak_fr - baseline_fr;
-                end
-                if br == 1
-                    LA_data = delta_peak_fr;
-                else
-                    Astria_data = delta_peak_fr;
-                end
-            end
-        end
-
-        if ~isempty(LA_data) && ~isempty(Astria_data)
-            [p_val, ~] = ranksum(LA_data, Astria_data);
-            sheet_data{row, 1} = 'Wilcoxon rank-sum (LA vs AStria):';
-            sheet_data{row, 2} = p_val;
-            sheet_data{row, 3} = format_significance(p_val);
-            row = row + 1;
-        end
-
-        row = row + 1;
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelH_RegionComparison');
-
-    %% PANELS B & E: Neuron indices used for lineplots
-    sheet_data = {};
-    sheet_data{1, 1} = 'PANELS B & E: Neuron Indices Used for Lineplots';
-    sheet_data{2, 1} = 'Global indices from g.cell_metrics for neurons used to calculate mean lines';
-    sheet_data{3, 1} = '';
-    row = 4;
-
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-
-        res = results_all{br};
-        idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br});
-        global_indices = find(idx_neurons);
-
-        sheet_data{row, 1} = sprintf('========== %s ==========', region_name);
-        row = row + 1;
-        row = row + 1;
-
-        for c = 1:3
-            clust_idx = find(res.Clusters == c);
-
-            if isempty(clust_idx)
-                continue;
-            end
-
-            sheet_data{row, 1} = sprintf('%s (n = %d neurons)', cluster_names{c}, length(clust_idx));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'Local #';
-            sheet_data{row, 2} = 'Global Index';
-            sheet_data{row, 3} = 'Animal ID';
-            row = row + 1;
-
-            for n = 1:length(clust_idx)
-                local_idx = clust_idx(n);
-                global_idx = global_indices(local_idx);
-                animal_id = g.cell_metrics.animal{global_idx};
-
-                sheet_data{row, 1} = n;
-                sheet_data{row, 2} = global_idx;
-                sheet_data{row, 3} = animal_id;
-                row = row + 1;
-            end
-
-            row = row + 1;
-        end
-        row = row + 1;
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'Lineplots_NeuronIndices');
-
-    %% RAW DATA: Individual neuron values for bar charts
-    sheet_data = {};
-    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Peak FR and Response Length Values';
-    sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels C & F';
-    sheet_data{3, 1} = '';
-    row = 4;
-
-    for br = 1:2
-        if strcmp(brain_regions{br}, 'Astria')
-            region_name = 'AStria';
-        else
-            region_name = brain_regions{br};
-        end
-
-        sheet_data{row, 1} = sprintf('========== %s ==========', region_name);
-        row = row + 1;
-        row = row + 1;
-
-        % Get global indices for this region
-        idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br});
-        global_indices = find(idx_neurons);
-
-        res = results_all{br};
-
-        for c = 1:3
-            if isempty(kw_data_storage{br, c, 1})
-                continue;
-            end
-
-            sheet_data{row, 1} = sprintf('%s (n = %d neurons)', cluster_names{c}, length(kw_data_storage{br, c, 1}));
-            row = row + 1;
-
-            % Get neurons in this cluster
-            clust_idx = find(res.Clusters == c);
-            n_neurons = length(clust_idx);
-
-            % Calculate response lengths
-            CS_resp_len = zeros(n_neurons, 1);
-            US_resp_len = zeros(n_neurons, 1);
-            Both_resp_len = zeros(n_neurons, 1);
-
-            for n = 1:n_neurons
-                local_idx = clust_idx(n);
-
-                % CS response length
-                if ~isnan(res.CS_onset_lat(local_idx)) && ~isnan(res.CS_offset_lat(local_idx))
-                    CS_resp_len(n) = (res.CS_offset_lat(local_idx) - res.CS_onset_lat(local_idx)) * 1000;
-                else
-                    CS_resp_len(n) = 0;
-                end
-
-                % US response length
-                if ~isnan(res.US_onset_lat(local_idx)) && ~isnan(res.US_offset_lat(local_idx))
-                    US_resp_len(n) = (res.US_offset_lat(local_idx) - res.US_onset_lat(local_idx)) * 1000;
-                else
-                    US_resp_len(n) = 0;
-                end
-
-                % CS+US response length
-                if ~isnan(res.Both_onset_lat(local_idx)) && ~isnan(res.Both_offset_lat(local_idx))
-                    Both_resp_len(n) = (res.Both_offset_lat(local_idx) - res.Both_onset_lat(local_idx)) * 1000;
-                else
-                    Both_resp_len(n) = 0;
-                end
-            end
-
-            % Header
-            sheet_data{row, 1} = 'Local #';
-            sheet_data{row, 2} = 'Global Index';
-            sheet_data{row, 3} = 'Animal ID';
-            sheet_data{row, 4} = 'ΔPeak FR CS (Hz)';
-            sheet_data{row, 5} = 'ΔPeak FR US (Hz)';
-            sheet_data{row, 6} = 'ΔPeak FR CS+US (Hz)';
-            sheet_data{row, 7} = '';  % Empty separator
-            sheet_data{row, 8} = 'Resp Length CS (ms)';
-            sheet_data{row, 9} = 'Resp Length US (ms)';
-            sheet_data{row, 10} = 'Resp Length CS+US (ms)';
-            row = row + 1;
-
-            for n = 1:n_neurons
-                local_idx = clust_idx(n);
-                global_idx = global_indices(local_idx);
-                animal_id = g.cell_metrics.animal{global_idx};
-
-                sheet_data{row, 1} = n;
-                sheet_data{row, 2} = global_idx;
-                sheet_data{row, 3} = animal_id;
-                sheet_data{row, 4} = kw_data_storage{br, c, 1}(n);  % CS ΔFR
-                sheet_data{row, 5} = kw_data_storage{br, c, 2}(n);  % US ΔFR
-                sheet_data{row, 6} = kw_data_storage{br, c, 3}(n);  % CS+US ΔFR
-                sheet_data{row, 7} = '';  % Empty separator
-                sheet_data{row, 8} = CS_resp_len(n);
-                sheet_data{row, 9} = US_resp_len(n);
-                sheet_data{row, 10} = Both_resp_len(n);
-                row = row + 1;
-            end
-
-            % Add summary stats
-            sheet_data{row, 1} = '';
-            row = row + 1;
-            sheet_data{row, 1} = 'Mean:';
-            sheet_data{row, 4} = mean(kw_data_storage{br, c, 1});
-            sheet_data{row, 5} = mean(kw_data_storage{br, c, 2});
-            sheet_data{row, 6} = mean(kw_data_storage{br, c, 3});
-            sheet_data{row, 7} = '';  % Empty separator
-            sheet_data{row, 8} = mean(CS_resp_len);
-            sheet_data{row, 9} = mean(US_resp_len);
-            sheet_data{row, 10} = mean(Both_resp_len);
-            row = row + 1;
-            sheet_data{row, 1} = 'SEM:';
-            sheet_data{row, 4} = std(kw_data_storage{br, c, 1})/sqrt(n_neurons);
-            sheet_data{row, 5} = std(kw_data_storage{br, c, 2})/sqrt(n_neurons);
-            sheet_data{row, 6} = std(kw_data_storage{br, c, 3})/sqrt(n_neurons);
-            sheet_data{row, 7} = '';  % Empty separator
-            sheet_data{row, 8} = std(CS_resp_len)/sqrt(n_neurons);
-            sheet_data{row, 9} = std(US_resp_len)/sqrt(n_neurons);
-            sheet_data{row, 10} = std(Both_resp_len)/sqrt(n_neurons);
-            row = row + 1;
-
-            row = row + 2;
-        end
-        row = row + 1;
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'RawData_PeakFR_RespLen');
-
-    %% RAW DATA: Individual neuron values for Panel H (region comparison)
-    sheet_data = {};
-    sheet_data{1, 1} = 'RAW DATA: Individual Neuron Values for Panel H';
-    sheet_data{2, 1} = 'Peak FR for all neurons (used for LA vs AStria comparison)';
-    sheet_data{3, 1} = '';
-    row = 4;
-
-    for stim = 1:3
-        sheet_data{row, 1} = sprintf('========== %s trials ==========', stim_names{stim});
-        row = row + 1;
-        row = row + 1;
-
-        % Collect data
-        LA_data = [];
-        LA_global_indices = [];
-        LA_animal_ids = {};
-        Astria_data = [];
-        Astria_global_indices = [];
-        Astria_animal_ids = {};
-
-        for br = 1:2
-            if isempty(results_all{br})
-                continue;
-            end
-            res = results_all{br};
-
-            % Get global indices for this region
-            idx_neurons = strcmp(g.cell_metrics.brainRegion, brain_regions{br});
-            global_indices = find(idx_neurons);
-
-            if stim == 1
-                peak_fr_data = res.CS_peak_Hz;
-            elseif stim == 2
-                peak_fr_data = res.US_peak_Hz;
-            else
-                peak_fr_data = res.Both_peak_Hz;
-            end
-
-            % Store with global indices (use all neurons)
-            if br == 1
-                LA_data = peak_fr_data;
-                LA_global_indices = global_indices;
-                for n = 1:length(global_indices)
-                    LA_animal_ids{n} = g.cell_metrics.animal{LA_global_indices(n)};
-                end
-            else
-                Astria_data = peak_fr_data;
-                Astria_global_indices = global_indices;
-                for n = 1:length(global_indices)
-                    Astria_animal_ids{n} = g.cell_metrics.animal{Astria_global_indices(n)};
-                end
-            end
-        end
-
-        % Write LA data
-        sheet_data{row, 1} = 'LA';
-        sheet_data{row, 2} = sprintf('(n = %d)', length(LA_data));
-        row = row + 1;
-        sheet_data{row, 1} = 'Local #';
-        sheet_data{row, 2} = 'Global Index';
-        sheet_data{row, 3} = 'Animal ID';
-        sheet_data{row, 4} = 'Peak FR (Hz)';
-        row = row + 1;
-        for n = 1:length(LA_data)
-            sheet_data{row, 1} = n;
-            sheet_data{row, 2} = LA_global_indices(n);
-            sheet_data{row, 3} = LA_animal_ids{n};
-            sheet_data{row, 4} = LA_data(n);
-            row = row + 1;
-        end
-        sheet_data{row, 1} = 'Mean:';
-        sheet_data{row, 4} = mean(LA_data);
-        row = row + 1;
-        sheet_data{row, 1} = 'SEM:';
-        sheet_data{row, 4} = std(LA_data)/sqrt(length(LA_data));
-        row = row + 1;
-        row = row + 1;
-
-        % Write AStria data
-        sheet_data{row, 1} = 'AStria';
-        sheet_data{row, 2} = sprintf('(n = %d)', length(Astria_data));
-        row = row + 1;
-        sheet_data{row, 1} = 'Local #';
-        sheet_data{row, 2} = 'Global Index';
-        sheet_data{row, 3} = 'Animal ID';
-        sheet_data{row, 4} = 'Peak FR (Hz)';
-        row = row + 1;
-        for n = 1:length(Astria_data)
-            sheet_data{row, 1} = n;
-            sheet_data{row, 2} = Astria_global_indices(n);
-            sheet_data{row, 3} = Astria_animal_ids{n};
-            sheet_data{row, 4} = Astria_data(n);
-            row = row + 1;
-        end
-        sheet_data{row, 1} = 'Mean:';
-        sheet_data{row, 4} = mean(Astria_data);
-        row = row + 1;
-        sheet_data{row, 1} = 'SEM:';
-        sheet_data{row, 4} = std(Astria_data)/sqrt(length(Astria_data));
-        row = row + 1;
-
-        row = row + 2;
-    end
-
-    writecell(sheet_data, output_filename, 'Sheet', 'RawData_RegionComparison');
-
-    fprintf('\n========================================\n');
-    fprintf('========================================\n');
-    fprintf('    - PanelsCF_PeakFR_Bars (summary with stats)\n');
-    fprintf('    - PanelG_PieCharts (summary with stats)\n');
-    fprintf('    - PanelH_RegionComparison (summary with stats)\n');
-    fprintf('    - Lineplots_NeuronIndices (global indices for lineplot neurons)\n');
-    fprintf('    - RawData_PeakFR (individual neuron Peak FR values)\n');
-    fprintf('    - RawData_RegionComparison (individual neuron values for Panel H)\n\n');
 end
 
 function sig_str = format_significance(p_val)
