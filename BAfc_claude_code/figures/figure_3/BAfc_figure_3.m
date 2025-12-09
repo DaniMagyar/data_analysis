@@ -275,17 +275,17 @@ annotation(fig, 'textbox', [0.01 0.95 0.05 0.05], 'String', 'A', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % B: LA lineplots (top middle)
-annotation(fig, 'textbox', [0.42 0.95 0.05 0.05], 'String', 'B', ...
+annotation(fig, 'textbox', [0.42 0.95 0.05 0.05], 'String', 'C', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % D: Astria heatmaps (middle left)
-annotation(fig, 'textbox', [0.01 0.56 0.05 0.05], 'String', 'D', ...
+annotation(fig, 'textbox', [0.01 0.56 0.05 0.05], 'String', 'B', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
 % E: Astria lineplots (middle)
-annotation(fig, 'textbox', [0.42 0.56 0.05 0.05], 'String', 'E', ...
+annotation(fig, 'textbox', [0.42 0.56 0.05 0.05], 'String', 'D', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
@@ -471,7 +471,7 @@ t_bars_container.Layout.Tile = 7;  % Column 7
 t_bars_container.Layout.TileSpan = [4 1];  % Span rows 1-4
 
 % C: LA bar charts (top right)
-annotation(fig, 'textbox', [0.83 0.95 0.05 0.05], 'String', 'C', ...
+annotation(fig, 'textbox', [0.83 0.95 0.05 0.05], 'String', 'E', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
@@ -639,95 +639,17 @@ t_row5 = tiledlayout(t, 1, 2, 'TileSpacing', 'compact', 'Padding', 'tight');
 t_row5.Layout.Tile = 29;  % Start at row 5, col 1 (in 5x7 grid: (5-1)*7+1=29)
 t_row5.Layout.TileSpan = [1 7];  % Span row 5, cols 1-7
 
-% G: Pie charts (bottom left)
+% G: Region comparison (bottom left)
 annotation(fig, 'textbox', [0.01 0.15 0.05 0.05], 'String', 'G', ...
     'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
     'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
 
-% Nested tiledlayout 1: Pie charts (1×2)
-t_pie = tiledlayout(t_row5, 1, 2, 'TileSpacing', 'tight', 'Padding', 'none');
-t_pie.Layout.Tile = 1;
-
-% Calculate cluster proportions for each region
-for br = 1:2
-    if isempty(results_all{br})
-        continue;
-    end
-
-    res = results_all{br};
-
-    % Count neurons in each cluster (only clusters 1, 2, 3)
-    n_CS_sel = sum(res.Clusters == 1);
-    n_US_sel = sum(res.Clusters == 2);
-    n_Multi = sum(res.Clusters == 3);
-
-    % Create pie chart
-    ax_pie = nexttile(t_pie, br);
-
-    pie_data = [n_CS_sel, n_US_sel, n_Multi];
-    total_n = n_CS_sel + n_US_sel + n_Multi;
-
-    % Calculate percentages
-    pct_CS = (n_CS_sel / total_n) * 100;
-    pct_US = (n_US_sel / total_n) * 100;
-    pct_Multi = (n_Multi / total_n) * 100;
-
-    pie_labels = {sprintf('%.0f%%', pct_CS), ...
-                  sprintf('%.0f%%', pct_US), ...
-                  sprintf('%.0f%%', pct_Multi)};
-
-    p = pie(ax_pie, pie_data, pie_labels);
-
-    % Set colors
-    for i = 1:2:length(p)  % Every other element is a patch
-        patch_idx = (i+1)/2;
-        set(p(i), 'FaceColor', cluster_colors(patch_idx, :));
-        set(p(i), 'EdgeColor', 'k');
-        set(p(i), 'LineWidth', 1);
-    end
-
-    % Set text properties and move inside pie - FontSize 12
-    for i = 2:2:length(p)  % Text elements
-        set(p(i), 'FontSize', 12);
-        set(p(i), 'FontWeight', 'bold');
-        set(p(i), 'Color', 'w');  % White font color
-        % Move text closer to center (inside the pie)
-        pos = get(p(i), 'Position');
-        set(p(i), 'Position', pos * 0.15);  % Move toward center
-    end
-
-    % Add title
-    if strcmp(brain_regions{br}, 'Astria')
-        title('AStria', 'FontSize', 10, 'FontWeight', 'bold');
-    else
-        title(brain_regions{br}, 'FontSize', 10, 'FontWeight', 'bold');
-    end
-
-    % Add legend to the right of the first pie chart (LA)
-    if br == 1
-        % Create invisible plot objects with square markers for legend
-        hold(ax_pie, 'on');
-        h1 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(1, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
-        h2 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(2, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
-        h3 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(3, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
-        lgd = legend(ax_pie, [h1, h2, h3], {'CS-sel', 'US-sel', 'Multi'}, ...
-                     'Location', 'eastoutside', 'FontSize', 10, 'Box', 'off');
-        lgd.ItemTokenSize = [30, 30];  % Increase marker size in legend
-    end
-
-end
-
-% Add title to pie chart section
-title(t_pie, 'Response categories', 'FontSize', 12, 'FontWeight', 'bold');
-
-% Nested tiledlayout 2: Bar graphs (1×3)
+% Nested tiledlayout 1: Bar graphs (1×3)
 t_bars = tiledlayout(t_row5, 1, 3, 'TileSpacing', 'none', 'Padding', 'tight');
-t_bars.Layout.Tile = 2;
+t_bars.Layout.Tile = 1;
 
-% H: Across region comparison (bottom right)
-annotation(fig, 'textbox', [0.51 0.15 0.05 0.05], 'String', 'H', ...
-    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
-    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+% Add title to bar graph section
+title(t_bars, 'Across region comparison', 'FontSize', 12, 'FontWeight', 'bold');
 
 %% Add comparison bar plots (CS, US, CS+US LA vs Astria Delta Peak FR)
 stim_names = {'CS', 'US', 'CS+US'};
@@ -841,8 +763,86 @@ for stim = 1:3  % CS, US, CS+US
     end
 end
 
-% Add title to bar graph section
-title(t_bars, 'Across region comparison', 'FontSize', 12, 'FontWeight', 'bold');
+% H: Pie charts (bottom right)
+annotation(fig, 'textbox', [0.51 0.15 0.05 0.05], 'String', 'H', ...
+    'FontSize', 14, 'FontWeight', 'bold', 'EdgeColor', 'none', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top');
+
+% Nested tiledlayout 2: Pie charts (1×2)
+t_pie = tiledlayout(t_row5, 1, 2, 'TileSpacing', 'tight', 'Padding', 'none');
+t_pie.Layout.Tile = 2;
+
+% Calculate cluster proportions for each region
+for br = 1:2
+    if isempty(results_all{br})
+        continue;
+    end
+
+    res = results_all{br};
+
+    % Count neurons in each cluster (only clusters 1, 2, 3)
+    n_CS_sel = sum(res.Clusters == 1);
+    n_US_sel = sum(res.Clusters == 2);
+    n_Multi = sum(res.Clusters == 3);
+
+    % Create pie chart
+    ax_pie = nexttile(t_pie, br);
+
+    pie_data = [n_CS_sel, n_US_sel, n_Multi];
+    total_n = n_CS_sel + n_US_sel + n_Multi;
+
+    % Calculate percentages
+    pct_CS = (n_CS_sel / total_n) * 100;
+    pct_US = (n_US_sel / total_n) * 100;
+    pct_Multi = (n_Multi / total_n) * 100;
+
+    pie_labels = {sprintf('%.0f%%', pct_CS), ...
+                  sprintf('%.0f%%', pct_US), ...
+                  sprintf('%.0f%%', pct_Multi)};
+
+    p = pie(ax_pie, pie_data, pie_labels);
+
+    % Set colors
+    for i = 1:2:length(p)  % Every other element is a patch
+        patch_idx = (i+1)/2;
+        set(p(i), 'FaceColor', cluster_colors(patch_idx, :));
+        set(p(i), 'EdgeColor', 'k');
+        set(p(i), 'LineWidth', 1);
+    end
+
+    % Set text properties and move inside pie - FontSize 12
+    for i = 2:2:length(p)  % Text elements
+        set(p(i), 'FontSize', 12);
+        set(p(i), 'FontWeight', 'bold');
+        set(p(i), 'Color', 'w');  % White font color
+        % Move text closer to center (inside the pie)
+        pos = get(p(i), 'Position');
+        set(p(i), 'Position', pos * 0.15);  % Move toward center
+    end
+
+    % Add title
+    if strcmp(brain_regions{br}, 'Astria')
+        title('AStria', 'FontSize', 10, 'FontWeight', 'bold');
+    else
+        title(brain_regions{br}, 'FontSize', 10, 'FontWeight', 'bold');
+    end
+
+    % Add legend to the right of the first pie chart (LA)
+    if br == 1
+        % Create invisible plot objects with square markers for legend
+        hold(ax_pie, 'on');
+        h1 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(1, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+        h2 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(2, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+        h3 = plot(ax_pie, NaN, NaN, 's', 'MarkerSize', 12, 'MarkerFaceColor', cluster_colors(3, :), 'MarkerEdgeColor', 'k', 'LineWidth', 1);
+        lgd = legend(ax_pie, [h1, h2, h3], {'CS-sel', 'US-sel', 'Multi'}, ...
+                     'Location', 'eastoutside', 'FontSize', 10, 'Box', 'off');
+        lgd.ItemTokenSize = [30, 30];  % Increase marker size in legend
+    end
+
+end
+
+% Add title to pie chart section
+title(t_pie, 'Response categories', 'FontSize', 12, 'FontWeight', 'bold');
 
 % Add colorbar - manually create with full control, positioned at bottom heatmap (Astria)
 drawnow;  % Ensure all positions are updated

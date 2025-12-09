@@ -493,11 +493,19 @@ function export_figure1_to_excel(g)
 
     writecell(sheet1, output_filename, 'Sheet', 'Summary_SampleSizes');
 
-    %% Sheet 2: Panel D - Spike Features (LA+BA)
+    %% Sheet 2: Panel D - Spike Features (LA+BA combined and separate)
     idx_PN_LABA = idx_PN_all & idx_LABA;
     idx_IN_LABA = idx_IN_all & idx_LABA;
     idx_unk_LABA = idx_unknown_all & idx_LABA;
 
+    idx_LA = strcmp(g.cell_metrics.brainRegion, 'LA');
+    idx_BA = strcmp(g.cell_metrics.brainRegion, 'BA');
+    idx_PN_LA = idx_PN_all & idx_LA;
+    idx_IN_LA = idx_IN_all & idx_LA;
+    idx_PN_BA = idx_PN_all & idx_BA;
+    idx_IN_BA = idx_IN_all & idx_BA;
+
+    % Combined LA+BA
     ttp_PN = g.cell_metrics.spikes.ttp(idx_PN_LABA);
     ttp_IN = g.cell_metrics.spikes.ttp(idx_IN_LABA);
     fr_PN = g.cell_metrics.firingRate(idx_PN_LABA);
@@ -506,71 +514,220 @@ function export_figure1_to_excel(g)
     [p_ttp, ~, stats_ttp] = ranksum(ttp_PN, ttp_IN);
     [p_fr, ~, stats_fr] = ranksum(fr_PN, fr_IN);
 
+    % LA only
+    ttp_PN_LA = g.cell_metrics.spikes.ttp(idx_PN_LA);
+    ttp_IN_LA = g.cell_metrics.spikes.ttp(idx_IN_LA);
+    fr_PN_LA = g.cell_metrics.firingRate(idx_PN_LA);
+    fr_IN_LA = g.cell_metrics.firingRate(idx_IN_LA);
+
+    [p_ttp_LA, ~, stats_ttp_LA] = ranksum(ttp_PN_LA, ttp_IN_LA);
+    [p_fr_LA, ~, stats_fr_LA] = ranksum(fr_PN_LA, fr_IN_LA);
+
+    % BA only
+    ttp_PN_BA = g.cell_metrics.spikes.ttp(idx_PN_BA);
+    ttp_IN_BA = g.cell_metrics.spikes.ttp(idx_IN_BA);
+    fr_PN_BA = g.cell_metrics.firingRate(idx_PN_BA);
+    fr_IN_BA = g.cell_metrics.firingRate(idx_IN_BA);
+
+    [p_ttp_BA, ~, stats_ttp_BA] = ranksum(ttp_PN_BA, ttp_IN_BA);
+    [p_fr_BA, ~, stats_fr_BA] = ranksum(fr_PN_BA, fr_IN_BA);
+
     sheet2 = {};
-    sheet2{1,1} = 'PANEL D: SPIKE FEATURES (LA + BA)';
+    sheet2{1,1} = 'PANEL D: SPIKE FEATURES';
     sheet2{2,1} = '';
-    sheet2{3,1} = 'Sample sizes';
-    sheet2{3,2} = 'n';
-    sheet2{4,1} = 'PNs';
-    sheet2{4,2} = sum(idx_PN_LABA);
-    sheet2{5,1} = 'INs';
-    sheet2{5,2} = sum(idx_IN_LABA);
-    sheet2{6,1} = 'Unknown';
-    sheet2{6,2} = sum(idx_unk_LABA);
-    sheet2{7,1} = '';
 
-    sheet2{8,1} = 'Trough-to-peak (TTP) duration (ms)';
-    sheet2{8,2} = '';
-    sheet2{8,3} = 'Mean';
-    sheet2{8,4} = 'SEM';
-    sheet2{8,5} = 'Median';
-    sheet2{8,6} = 'SD';
-    sheet2{9,1} = 'PNs';
-    sheet2{9,2} = sum(idx_PN_LABA);
-    sheet2{9,3} = mean(ttp_PN);
-    sheet2{9,4} = std(ttp_PN)/sqrt(length(ttp_PN));
-    sheet2{9,5} = median(ttp_PN);
-    sheet2{9,6} = std(ttp_PN);
-    sheet2{10,1} = 'INs';
-    sheet2{10,2} = sum(idx_IN_LABA);
-    sheet2{10,3} = mean(ttp_IN);
-    sheet2{10,4} = std(ttp_IN)/sqrt(length(ttp_IN));
-    sheet2{10,5} = median(ttp_IN);
-    sheet2{10,6} = std(ttp_IN);
-    sheet2{11,1} = '';
-    sheet2{12,1} = 'Wilcoxon rank-sum test (PN vs IN TTP)';
-    sheet2{13,1} = 'Z-statistic';
-    sheet2{13,2} = stats_ttp.zval;
-    sheet2{14,1} = 'p-value';
-    sheet2{14,2} = p_ttp;
-    sheet2{14,3} = format_significance(p_ttp);
-    sheet2{15,1} = '';
+    % LA+BA Combined
+    sheet2{3,1} = '=== LA + BA COMBINED ===';
+    sheet2{4,1} = 'Sample sizes';
+    sheet2{4,2} = 'n';
+    sheet2{5,1} = 'PNs';
+    sheet2{5,2} = sum(idx_PN_LABA);
+    sheet2{6,1} = 'INs';
+    sheet2{6,2} = sum(idx_IN_LABA);
+    sheet2{7,1} = 'Unknown';
+    sheet2{7,2} = sum(idx_unk_LABA);
+    sheet2{8,1} = '';
 
-    sheet2{16,1} = 'Firing rate (Hz)';
-    sheet2{16,2} = '';
-    sheet2{16,3} = 'Mean';
-    sheet2{16,4} = 'SEM';
-    sheet2{16,5} = 'Median';
-    sheet2{16,6} = 'SD';
-    sheet2{17,1} = 'PNs';
-    sheet2{17,2} = sum(idx_PN_LABA);
-    sheet2{17,3} = mean(fr_PN);
-    sheet2{17,4} = std(fr_PN)/sqrt(length(fr_PN));
-    sheet2{17,5} = median(fr_PN);
-    sheet2{17,6} = std(fr_PN);
-    sheet2{18,1} = 'INs';
-    sheet2{18,2} = sum(idx_IN_LABA);
-    sheet2{18,3} = mean(fr_IN);
-    sheet2{18,4} = std(fr_IN)/sqrt(length(fr_IN));
-    sheet2{18,5} = median(fr_IN);
-    sheet2{18,6} = std(fr_IN);
-    sheet2{19,1} = '';
-    sheet2{20,1} = 'Wilcoxon rank-sum test (PN vs IN firing rate)';
-    sheet2{21,1} = 'Z-statistic';
-    sheet2{21,2} = stats_fr.zval;
-    sheet2{22,1} = 'p-value';
-    sheet2{22,2} = p_fr;
-    sheet2{22,3} = format_significance(p_fr);
+    sheet2{9,1} = 'Trough-to-peak (TTP) duration (ms)';
+    sheet2{9,2} = '';
+    sheet2{9,3} = 'Mean';
+    sheet2{9,4} = 'SEM';
+    sheet2{9,5} = 'Median';
+    sheet2{9,6} = 'SD';
+    sheet2{10,1} = 'PNs';
+    sheet2{10,2} = sum(idx_PN_LABA);
+    sheet2{10,3} = mean(ttp_PN);
+    sheet2{10,4} = std(ttp_PN)/sqrt(length(ttp_PN));
+    sheet2{10,5} = median(ttp_PN);
+    sheet2{10,6} = std(ttp_PN);
+    sheet2{11,1} = 'INs';
+    sheet2{11,2} = sum(idx_IN_LABA);
+    sheet2{11,3} = mean(ttp_IN);
+    sheet2{11,4} = std(ttp_IN)/sqrt(length(ttp_IN));
+    sheet2{11,5} = median(ttp_IN);
+    sheet2{11,6} = std(ttp_IN);
+    sheet2{12,1} = '';
+    sheet2{13,1} = 'Wilcoxon rank-sum test (PN vs IN TTP)';
+    sheet2{14,1} = 'Z-statistic';
+    sheet2{14,2} = stats_ttp.zval;
+    sheet2{15,1} = 'p-value';
+    sheet2{15,2} = p_ttp;
+    sheet2{15,3} = format_significance(p_ttp);
+    sheet2{16,1} = '';
+
+    sheet2{17,1} = 'Firing rate (Hz)';
+    sheet2{17,2} = '';
+    sheet2{17,3} = 'Mean';
+    sheet2{17,4} = 'SEM';
+    sheet2{17,5} = 'Median';
+    sheet2{17,6} = 'SD';
+    sheet2{18,1} = 'PNs';
+    sheet2{18,2} = sum(idx_PN_LABA);
+    sheet2{18,3} = mean(fr_PN);
+    sheet2{18,4} = std(fr_PN)/sqrt(length(fr_PN));
+    sheet2{18,5} = median(fr_PN);
+    sheet2{18,6} = std(fr_PN);
+    sheet2{19,1} = 'INs';
+    sheet2{19,2} = sum(idx_IN_LABA);
+    sheet2{19,3} = mean(fr_IN);
+    sheet2{19,4} = std(fr_IN)/sqrt(length(fr_IN));
+    sheet2{19,5} = median(fr_IN);
+    sheet2{19,6} = std(fr_IN);
+    sheet2{20,1} = '';
+    sheet2{21,1} = 'Wilcoxon rank-sum test (PN vs IN firing rate)';
+    sheet2{22,1} = 'Z-statistic';
+    sheet2{22,2} = stats_fr.zval;
+    sheet2{23,1} = 'p-value';
+    sheet2{23,2} = p_fr;
+    sheet2{23,3} = format_significance(p_fr);
+    sheet2{24,1} = '';
+
+    % LA only
+    sheet2{25,1} = '=== LA ONLY ===';
+    sheet2{26,1} = 'Sample sizes';
+    sheet2{26,2} = 'n';
+    sheet2{27,1} = 'PNs';
+    sheet2{27,2} = sum(idx_PN_LA);
+    sheet2{28,1} = 'INs';
+    sheet2{28,2} = sum(idx_IN_LA);
+    sheet2{29,1} = '';
+
+    sheet2{30,1} = 'Trough-to-peak (TTP) duration (ms)';
+    sheet2{30,2} = '';
+    sheet2{30,3} = 'Mean';
+    sheet2{30,4} = 'SEM';
+    sheet2{30,5} = 'Median';
+    sheet2{30,6} = 'SD';
+    sheet2{31,1} = 'PNs';
+    sheet2{31,2} = sum(idx_PN_LA);
+    sheet2{31,3} = mean(ttp_PN_LA);
+    sheet2{31,4} = std(ttp_PN_LA)/sqrt(length(ttp_PN_LA));
+    sheet2{31,5} = median(ttp_PN_LA);
+    sheet2{31,6} = std(ttp_PN_LA);
+    sheet2{32,1} = 'INs';
+    sheet2{32,2} = sum(idx_IN_LA);
+    sheet2{32,3} = mean(ttp_IN_LA);
+    sheet2{32,4} = std(ttp_IN_LA)/sqrt(length(ttp_IN_LA));
+    sheet2{32,5} = median(ttp_IN_LA);
+    sheet2{32,6} = std(ttp_IN_LA);
+    sheet2{33,1} = '';
+    sheet2{34,1} = 'Wilcoxon rank-sum test (PN vs IN TTP)';
+    sheet2{35,1} = 'Z-statistic';
+    sheet2{35,2} = stats_ttp_LA.zval;
+    sheet2{36,1} = 'p-value';
+    sheet2{36,2} = p_ttp_LA;
+    sheet2{36,3} = format_significance(p_ttp_LA);
+    sheet2{37,1} = '';
+
+    sheet2{38,1} = 'Firing rate (Hz)';
+    sheet2{38,2} = '';
+    sheet2{38,3} = 'Mean';
+    sheet2{38,4} = 'SEM';
+    sheet2{38,5} = 'Median';
+    sheet2{38,6} = 'SD';
+    sheet2{39,1} = 'PNs';
+    sheet2{39,2} = sum(idx_PN_LA);
+    sheet2{39,3} = mean(fr_PN_LA);
+    sheet2{39,4} = std(fr_PN_LA)/sqrt(length(fr_PN_LA));
+    sheet2{39,5} = median(fr_PN_LA);
+    sheet2{39,6} = std(fr_PN_LA);
+    sheet2{40,1} = 'INs';
+    sheet2{40,2} = sum(idx_IN_LA);
+    sheet2{40,3} = mean(fr_IN_LA);
+    sheet2{40,4} = std(fr_IN_LA)/sqrt(length(fr_IN_LA));
+    sheet2{40,5} = median(fr_IN_LA);
+    sheet2{40,6} = std(fr_IN_LA);
+    sheet2{41,1} = '';
+    sheet2{42,1} = 'Wilcoxon rank-sum test (PN vs IN firing rate)';
+    sheet2{43,1} = 'Z-statistic';
+    sheet2{43,2} = stats_fr_LA.zval;
+    sheet2{44,1} = 'p-value';
+    sheet2{44,2} = p_fr_LA;
+    sheet2{44,3} = format_significance(p_fr_LA);
+    sheet2{45,1} = '';
+
+    % BA only
+    sheet2{46,1} = '=== BA ONLY ===';
+    sheet2{47,1} = 'Sample sizes';
+    sheet2{47,2} = 'n';
+    sheet2{48,1} = 'PNs';
+    sheet2{48,2} = sum(idx_PN_BA);
+    sheet2{49,1} = 'INs';
+    sheet2{49,2} = sum(idx_IN_BA);
+    sheet2{50,1} = '';
+
+    sheet2{51,1} = 'Trough-to-peak (TTP) duration (ms)';
+    sheet2{51,2} = '';
+    sheet2{51,3} = 'Mean';
+    sheet2{51,4} = 'SEM';
+    sheet2{51,5} = 'Median';
+    sheet2{51,6} = 'SD';
+    sheet2{52,1} = 'PNs';
+    sheet2{52,2} = sum(idx_PN_BA);
+    sheet2{52,3} = mean(ttp_PN_BA);
+    sheet2{52,4} = std(ttp_PN_BA)/sqrt(length(ttp_PN_BA));
+    sheet2{52,5} = median(ttp_PN_BA);
+    sheet2{52,6} = std(ttp_PN_BA);
+    sheet2{53,1} = 'INs';
+    sheet2{53,2} = sum(idx_IN_BA);
+    sheet2{53,3} = mean(ttp_IN_BA);
+    sheet2{53,4} = std(ttp_IN_BA)/sqrt(length(ttp_IN_BA));
+    sheet2{53,5} = median(ttp_IN_BA);
+    sheet2{53,6} = std(ttp_IN_BA);
+    sheet2{54,1} = '';
+    sheet2{55,1} = 'Wilcoxon rank-sum test (PN vs IN TTP)';
+    sheet2{56,1} = 'Z-statistic';
+    sheet2{56,2} = stats_ttp_BA.zval;
+    sheet2{57,1} = 'p-value';
+    sheet2{57,2} = p_ttp_BA;
+    sheet2{57,3} = format_significance(p_ttp_BA);
+    sheet2{58,1} = '';
+
+    sheet2{59,1} = 'Firing rate (Hz)';
+    sheet2{59,2} = '';
+    sheet2{59,3} = 'Mean';
+    sheet2{59,4} = 'SEM';
+    sheet2{59,5} = 'Median';
+    sheet2{59,6} = 'SD';
+    sheet2{60,1} = 'PNs';
+    sheet2{60,2} = sum(idx_PN_BA);
+    sheet2{60,3} = mean(fr_PN_BA);
+    sheet2{60,4} = std(fr_PN_BA)/sqrt(length(fr_PN_BA));
+    sheet2{60,5} = median(fr_PN_BA);
+    sheet2{60,6} = std(fr_PN_BA);
+    sheet2{61,1} = 'INs';
+    sheet2{61,2} = sum(idx_IN_BA);
+    sheet2{61,3} = mean(fr_IN_BA);
+    sheet2{61,4} = std(fr_IN_BA)/sqrt(length(fr_IN_BA));
+    sheet2{61,5} = median(fr_IN_BA);
+    sheet2{61,6} = std(fr_IN_BA);
+    sheet2{62,1} = '';
+    sheet2{63,1} = 'Wilcoxon rank-sum test (PN vs IN firing rate)';
+    sheet2{64,1} = 'Z-statistic';
+    sheet2{64,2} = stats_fr_BA.zval;
+    sheet2{65,1} = 'p-value';
+    sheet2{65,2} = p_fr_BA;
+    sheet2{65,3} = format_significance(p_fr_BA);
 
     writecell(sheet2, output_filename, 'Sheet', 'PanelD_SpikeFeatures');
 
@@ -732,24 +889,31 @@ function export_figure1_to_excel(g)
 
     %% Sheet 5: Cross-Region Comparisons
     idx_LA_PN = strcmp(g.cell_metrics.brainRegion, 'LA') & idx_PN_all;
+    idx_LA_IN = strcmp(g.cell_metrics.brainRegion, 'LA') & idx_IN_all;
     idx_BA_PN = strcmp(g.cell_metrics.brainRegion, 'BA') & idx_PN_all;
+    idx_BA_IN = strcmp(g.cell_metrics.brainRegion, 'BA') & idx_IN_all;
     idx_Astria = strcmp(g.cell_metrics.brainRegion, 'Astria');
     idx_CeA = strcmp(g.cell_metrics.brainRegion, 'CeA');
 
     fr_LA_PN = g.cell_metrics.firingRate(idx_LA_PN);
+    fr_LA_IN = g.cell_metrics.firingRate(idx_LA_IN);
     fr_BA_PN = g.cell_metrics.firingRate(idx_BA_PN);
+    fr_BA_IN = g.cell_metrics.firingRate(idx_BA_IN);
     fr_Astria = g.cell_metrics.firingRate(idx_Astria);
     fr_CeA = g.cell_metrics.firingRate(idx_CeA);
 
     % Ensure column vectors
     fr_LA_PN = fr_LA_PN(:);
+    fr_LA_IN = fr_LA_IN(:);
     fr_BA_PN = fr_BA_PN(:);
+    fr_BA_IN = fr_BA_IN(:);
     fr_Astria = fr_Astria(:);
     fr_CeA = fr_CeA(:);
 
-    group_labels = [ones(sum(idx_LA_PN), 1); 2*ones(sum(idx_BA_PN), 1); ...
-        3*ones(sum(idx_Astria), 1); 4*ones(sum(idx_CeA), 1)];
-    fr_combined = [fr_LA_PN; fr_BA_PN; fr_Astria; fr_CeA];
+    group_labels = [ones(sum(idx_LA_PN), 1); 2*ones(sum(idx_LA_IN), 1); ...
+        3*ones(sum(idx_BA_PN), 1); 4*ones(sum(idx_BA_IN), 1); ...
+        5*ones(sum(idx_Astria), 1); 6*ones(sum(idx_CeA), 1)];
+    fr_combined = [fr_LA_PN; fr_LA_IN; fr_BA_PN; fr_BA_IN; fr_Astria; fr_CeA];
 
     [p_kw, tbl_kw, stats_kw] = kruskalwallis(fr_combined, group_labels, 'off');
 
@@ -760,25 +924,29 @@ function export_figure1_to_excel(g)
     sheet5{3,2} = 'n';
     sheet5{4,1} = 'LA PNs';
     sheet5{4,2} = sum(idx_LA_PN);
-    sheet5{5,1} = 'BA PNs';
-    sheet5{5,2} = sum(idx_BA_PN);
-    sheet5{6,1} = 'AStria';
-    sheet5{6,2} = sum(idx_Astria);
-    sheet5{7,1} = 'CeA';
-    sheet5{7,2} = sum(idx_CeA);
-    sheet5{8,1} = '';
+    sheet5{5,1} = 'LA INs';
+    sheet5{5,2} = sum(idx_LA_IN);
+    sheet5{6,1} = 'BA PNs';
+    sheet5{6,2} = sum(idx_BA_PN);
+    sheet5{7,1} = 'BA INs';
+    sheet5{7,2} = sum(idx_BA_IN);
+    sheet5{8,1} = 'AStria';
+    sheet5{8,2} = sum(idx_Astria);
+    sheet5{9,1} = 'CeA';
+    sheet5{9,2} = sum(idx_CeA);
+    sheet5{10,1} = '';
 
-    sheet5{9,1} = 'Kruskal-Wallis Test: Firing rate across regions';
-    sheet5{10,1} = 'Chi-square statistic';
-    sheet5{10,2} = tbl_kw{2,5};
-    sheet5{11,1} = 'Degrees of freedom';
-    sheet5{11,2} = tbl_kw{2,3};
-    sheet5{12,1} = 'p-value';
-    sheet5{12,2} = p_kw;
-    sheet5{12,3} = format_significance(p_kw);
-    sheet5{13,1} = '';
+    sheet5{11,1} = 'Kruskal-Wallis Test: Firing rate across regions';
+    sheet5{12,1} = 'Chi-square statistic';
+    sheet5{12,2} = tbl_kw{2,5};
+    sheet5{13,1} = 'Degrees of freedom';
+    sheet5{13,2} = tbl_kw{2,3};
+    sheet5{14,1} = 'p-value';
+    sheet5{14,2} = p_kw;
+    sheet5{14,3} = format_significance(p_kw);
+    sheet5{15,1} = '';
 
-    row_idx = 14;
+    row_idx = 16;
     if p_kw < 0.05
         sheet5{row_idx,1} = 'Post-hoc pairwise comparisons (Dunn-Sidak)';
         row_idx = row_idx + 1;
@@ -788,7 +956,7 @@ function export_figure1_to_excel(g)
         row_idx = row_idx + 1;
 
         c = multcompare(stats_kw, 'Display', 'off', 'CType', 'dunn-sidak');
-        region_names = {'LA_PN', 'BA_PN', 'AStria', 'CeA'};
+        region_names = {'LA_PN', 'LA_IN', 'BA_PN', 'BA_IN', 'AStria', 'CeA'};
         for i = 1:size(c, 1)
             sheet5{row_idx,1} = [region_names{c(i,1)} ' vs ' region_names{c(i,2)}];
             sheet5{row_idx,2} = c(i,6);
@@ -800,6 +968,89 @@ function export_figure1_to_excel(g)
     end
 
     writecell(sheet5, output_filename, 'Sheet', 'CrossRegion_FiringRate');
+
+    %% Sheet 6: Cross-Region Comparisons - Burst Index
+    bi_LA_PN = g.cell_metrics.burstIndex_Royer2012(idx_LA_PN);
+    bi_LA_IN = g.cell_metrics.burstIndex_Royer2012(idx_LA_IN);
+    bi_BA_PN = g.cell_metrics.burstIndex_Royer2012(idx_BA_PN);
+    bi_BA_IN = g.cell_metrics.burstIndex_Royer2012(idx_BA_IN);
+    bi_Astria = g.cell_metrics.burstIndex_Royer2012(idx_Astria);
+    bi_CeA = g.cell_metrics.burstIndex_Royer2012(idx_CeA);
+
+    % Remove NaNs before analysis
+    bi_LA_PN_clean = bi_LA_PN(~isnan(bi_LA_PN));
+    bi_LA_IN_clean = bi_LA_IN(~isnan(bi_LA_IN));
+    bi_BA_PN_clean = bi_BA_PN(~isnan(bi_BA_PN));
+    bi_BA_IN_clean = bi_BA_IN(~isnan(bi_BA_IN));
+    bi_Astria_clean = bi_Astria(~isnan(bi_Astria));
+    bi_CeA_clean = bi_CeA(~isnan(bi_CeA));
+
+    % Ensure column vectors
+    bi_LA_PN_clean = bi_LA_PN_clean(:);
+    bi_LA_IN_clean = bi_LA_IN_clean(:);
+    bi_BA_PN_clean = bi_BA_PN_clean(:);
+    bi_BA_IN_clean = bi_BA_IN_clean(:);
+    bi_Astria_clean = bi_Astria_clean(:);
+    bi_CeA_clean = bi_CeA_clean(:);
+
+    group_labels_bi = [ones(length(bi_LA_PN_clean), 1); 2*ones(length(bi_LA_IN_clean), 1); ...
+        3*ones(length(bi_BA_PN_clean), 1); 4*ones(length(bi_BA_IN_clean), 1); ...
+        5*ones(length(bi_Astria_clean), 1); 6*ones(length(bi_CeA_clean), 1)];
+    bi_combined = [bi_LA_PN_clean; bi_LA_IN_clean; bi_BA_PN_clean; bi_BA_IN_clean; bi_Astria_clean; bi_CeA_clean];
+
+    [p_kw_bi, tbl_kw_bi, stats_kw_bi] = kruskalwallis(bi_combined, group_labels_bi, 'off');
+
+    sheet6 = {};
+    sheet6{1,1} = 'CROSS-REGION COMPARISONS: BURST INDEX';
+    sheet6{2,1} = '';
+    sheet6{3,1} = 'Sample sizes (excluding NaN)';
+    sheet6{3,2} = 'n';
+    sheet6{4,1} = 'LA PNs';
+    sheet6{4,2} = length(bi_LA_PN_clean);
+    sheet6{5,1} = 'LA INs';
+    sheet6{5,2} = length(bi_LA_IN_clean);
+    sheet6{6,1} = 'BA PNs';
+    sheet6{6,2} = length(bi_BA_PN_clean);
+    sheet6{7,1} = 'BA INs';
+    sheet6{7,2} = length(bi_BA_IN_clean);
+    sheet6{8,1} = 'AStria';
+    sheet6{8,2} = length(bi_Astria_clean);
+    sheet6{9,1} = 'CeA';
+    sheet6{9,2} = length(bi_CeA_clean);
+    sheet6{10,1} = '';
+
+    sheet6{11,1} = 'Kruskal-Wallis Test: Burst index across regions';
+    sheet6{12,1} = 'Chi-square statistic';
+    sheet6{12,2} = tbl_kw_bi{2,5};
+    sheet6{13,1} = 'Degrees of freedom';
+    sheet6{13,2} = tbl_kw_bi{2,3};
+    sheet6{14,1} = 'p-value';
+    sheet6{14,2} = p_kw_bi;
+    sheet6{14,3} = format_significance(p_kw_bi);
+    sheet6{15,1} = '';
+
+    row_idx = 16;
+    if p_kw_bi < 0.05
+        sheet6{row_idx,1} = 'Post-hoc pairwise comparisons (Dunn-Sidak)';
+        row_idx = row_idx + 1;
+        sheet6{row_idx,1} = 'Comparison';
+        sheet6{row_idx,2} = 'p-value';
+        sheet6{row_idx,3} = 'Significance';
+        row_idx = row_idx + 1;
+
+        c_bi = multcompare(stats_kw_bi, 'Display', 'off', 'CType', 'dunn-sidak');
+        region_names = {'LA_PN', 'LA_IN', 'BA_PN', 'BA_IN', 'AStria', 'CeA'};
+        for i = 1:size(c_bi, 1)
+            sheet6{row_idx,1} = [region_names{c_bi(i,1)} ' vs ' region_names{c_bi(i,2)}];
+            sheet6{row_idx,2} = c_bi(i,6);
+            sheet6{row_idx,3} = format_significance(c_bi(i,6));
+            row_idx = row_idx + 1;
+        end
+    else
+        sheet6{row_idx,1} = 'No post-hoc tests (K-W p >= 0.05)';
+    end
+
+    writecell(sheet6, output_filename, 'Sheet', 'CrossRegion_BurstIndex');
 end
 
 function sig_str = format_significance(p_val)

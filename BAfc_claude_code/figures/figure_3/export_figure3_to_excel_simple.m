@@ -7,9 +7,9 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
     stim_names = {'CS', 'US', 'CS+US'};
 
-    %% PANEL C & F: Peak FR and Response Length Bar Charts (main figure)
+    %% PANEL E & F: Peak FR and Response Length Bar Charts (main figure)
     sheet_data = {};
-    sheet_data{1, 1} = 'PANELS C & F: Peak FR and Response Length Bar Charts';
+    sheet_data{1, 1} = 'PANELS E & F: Peak FR and Response Length Bar Charts';
     sheet_data{2, 1} = '';
     row = 3;
 
@@ -216,11 +216,11 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         row = row + 1;
     end
 
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelsCF_PeakFR_RespLen');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelsEF_PeakFR_RespLen');
 
-    %% PANEL G: Pie Charts
+    %% PANEL H: Pie Charts
     sheet_data = {};
-    sheet_data{1, 1} = 'PANEL G: Pie Charts - Cluster Proportions';
+    sheet_data{1, 1} = 'PANEL H: Pie Charts - Cluster Proportions';
     sheet_data{2, 1} = '';
     sheet_data{3, 1} = 'Region';
     sheet_data{3, 2} = 'CS-sel (n)';
@@ -267,11 +267,11 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
     sheet_data{row, 2} = cramers_v;
     row = row + 1;
 
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelG_PieCharts');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelH_PieCharts');
 
-    %% PANEL H: Across-region comparison bars
+    %% PANEL G: Across-region comparison bars
     sheet_data = {};
-    sheet_data{1, 1} = 'PANEL H: LA vs AStria Comparison';
+    sheet_data{1, 1} = 'PANEL G: LA vs AStria Comparison';
     sheet_data{2, 1} = '';
     row = 3;
 
@@ -369,12 +369,12 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         row = row + 1;
     end
 
-    writecell(sheet_data, output_filename, 'Sheet', 'PanelH_RegionComparison');
+    writecell(sheet_data, output_filename, 'Sheet', 'PanelG_RegionComparison');
 
     %% RAW DATA: Individual neuron values for bar charts
     sheet_data = {};
     sheet_data{1, 1} = 'RAW DATA: Individual Neuron Peak FR and Response Length Values';
-    sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels C & F';
+    sheet_data{2, 1} = 'These are the individual data points used to calculate means and SEMs in Panels E & F';
     sheet_data{3, 1} = '';
     row = 4;
 

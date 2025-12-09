@@ -59,12 +59,13 @@ Corrects temporal delay by shifting forward `filter_delay = floor(smoothvalue/2)
 **A**: Experimental setup (empty panel, manual insertion), **B**: Example traces (CS/US, 2 cols), **C**: ISI (PN/IN, 2 cols), **D**: Spike features + waveforms (2 cols), **E**: FR distributions (nested 1×4), **F**: Burst indices (nested 1×4)
 Rows 3-4 use nested tiledlayouts with tight spacing, ylabel 'Count' on left only
 **NaN handling**: Burst index statistics use `'omitnan'` option for mean/std/median, and exclude NaNs before ranksum tests
-**Excel export** (2025-12-03): `figure_1_data.xlsx` with sheets:
+**Excel export** (2025-12-03, updated 2025-12-08): `figure_1_data.xlsx` with sheets:
   - `Summary_SampleSizes`: Animal counts, neuron counts by region
-  - `PanelD_SpikeFeatures`: TTP and firing rate statistics (LA+BA)
+  - `PanelD_SpikeFeatures`: TTP and firing rate statistics (LA+BA combined, LA only, BA only)
   - `PanelE_FiringRate`: Firing rate distributions by region
   - `PanelF_BurstIndex`: Burst index distributions by region (handles NaN values)
-  - `CrossRegion_FiringRate`: Kruskal-Wallis test + post-hoc comparisons
+  - `CrossRegion_FiringRate`: Kruskal-Wallis test (6 groups: LA_PN, LA_IN, BA_PN, BA_IN, AStria, CeA) + post-hoc comparisons
+  - `CrossRegion_BurstIndex`: Kruskal-Wallis test (6 groups: LA_PN, LA_IN, BA_PN, BA_IN, AStria, CeA) + post-hoc comparisons
 
 ### BAfc_figure_2_example_rasters.m (1000×300px, 2×2 grid)
 **A**: 4 example neurons (CS-sel, US-sel, Multi, Inhibited), each with CS/US rasters (nested 1×2)
@@ -86,17 +87,17 @@ Rows 3-4 use nested tiledlayouts with tight spacing, ylabel 'Count' on left only
 
 ### BAfc_figure_3.m (1000×1000px, 5×7 grid)
 Rows 1-4: LA/AStria heatmaps (cols 1-3: CS/US/CS+US, "LA neurons", "AStria neurons"), lineplots (cols 4-6: 3 clusters stacked), FR bars (col 7)
-Row 5: Pie charts (left: LA/AStria proportions), Region comparison bars (right: CS/US/CS+US, grey circles with jitter, y-axis to 95th percentile)
-**Panel labels**: A (LA heatmaps), B (LA lineplots), C (LA FR bars), D (AStria heatmaps), E (AStria lineplots), F (AStria FR bars), G (pie charts), H (region comparison)
+Row 5: Region comparison bars (left: CS/US/CS+US, grey circles with jitter, y-axis to 95th percentile), Pie charts (right: LA/AStria proportions)
+**Panel labels**: A (LA heatmaps), C (LA lineplots), E (LA FR bars), B (AStria heatmaps), D (AStria lineplots), F (AStria FR bars), G (region comparison), H (pie charts)
 **Friedman test gating**: Main figure bar charts only show signrank stars if Friedman p<0.05
-**Panel H (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
+**Panel G (Region comparison)**: Uses only responsive neurons (CS-sel, US-sel, Multi clusters 1-3) for LA vs AStria comparison
 **Peak FR calculation** (2025-12-03): Uses maximum firing rate in 0-1s response window (`max(psth_Hz(:, g.roi))`). No baseline subtraction - absolute peak values. Applied to CS, US, and CS+US responses.
 **Response length**: Computed from onset/offset latencies for ALL neurons (not filtered). Excel export retains NaN values when no onset/offset detected.
 **Heatmaps**: Display only responsive neurons (clusters 1-3); all 5 clusters used for pie charts and statistics
-**Excel export** (2025-12-03): `figure_3_data.xlsx` with sheets:
-  - `PanelsCF_PeakFR_RespLen`: Bar chart data with Peak FR and Response Length (Mean, SEM, Median, SD) with Friedman tests
-  - `PanelG_PieCharts`: Cluster proportions with Chi-square tests
-  - `PanelH_RegionComparison`: LA vs AStria comparison with Wilcoxon rank-sum tests
+**Excel export** (2025-12-03, updated 2025-12-08): `figure_3_data.xlsx` with sheets:
+  - `PanelsEF_PeakFR_RespLen`: Bar chart data with Peak FR and Response Length (Mean, SEM, Median, SD) with Friedman tests
+  - `PanelG_RegionComparison`: LA vs AStria comparison with Wilcoxon rank-sum tests
+  - `PanelH_PieCharts`: Cluster proportions with Chi-square tests
   - `RawData_PeakFR_RespLen`: Individual neuron values with Local #, Global Index, Animal ID, Peak FR CS/US/CS+US (Hz), Response Length CS/US/CS+US (ms)
 **Supp figure** (6×3, 1000×1200px): Chi-square (row 1, 1×3), Metrics bars (rows 2-4, 3 clusters × 2 metrics - Peak FR and Response length), KW tests (rows 5-6, LA/AStria × 3 clusters). Post-hoc only shown if KW p<0.05
 

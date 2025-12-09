@@ -26,6 +26,18 @@ I am a specialized local agent dedicated exclusively to the research project loc
 *   **Decimal Standard:** 2 decimal places for percentages, firing rates, and latencies. 3 decimal places for spike width. For p-values: use "p < 0.001" if the value is less than 0.001; otherwise, report the exact p-value with 3 decimal places (e.g., p = 0.041). **It is critical to ensure these p-values are precisely extracted from the statistical sources and accurately reflected in the text.**
 4.  **DOCX Formatting:** When generating or modifying DOCX files, always use "Times New Roman" font and 12pt font size for body text.
 
+## Tables
+
+*   **Table 1:** Baseline characterization of firing rates and bursting properties
+*   **Table 2:** Block-by-block firing rate evolution across regions and stimuli
+*   **Table 3:** Comparison of US-evoked excitatory responses across amygdala regions
+*   **Table 4:** Firing rate dynamics and signal gain in LA and AStria
+*   **Table 5:** Comparison of signal gain (firing rate) between LA and AStria across stimulus conditions
+*   **Table 6:** Monosynaptic firing rate responses (0-25ms) in LA and AStria
+*   **Table 7:** Comparison of monosynaptic response magnitude and onset latency between LA and AStria
+*   **Table 8:** Comparison of Principal Neuron (PN) and Interneuron (IN) responses in LA
+*   **Table 9:** Modulation of Firing Rates by PV Interneuron Inhibition
+
 ## Manuscript Figures & Statistical Sources
 
 This section details the visual data structure and where to find the corresponding statistical outputs.
@@ -94,24 +106,14 @@ This section details the visual data structure and where to find the correspondi
 *   **A-E:** Maps, tracks, and schematics of recording sites.
 *   **Source:** Histological reconstruction (No text stats).
 
-**Figure S2: Statistical analysis of cluster distributions (Related to Fig 2)**
-*   **A:** Permutation test histogram.
-*   **B:** Contingency table (Observed counts).
-*   **C:** Cramér's V effect size matrix.
-*   **D:** Kruskal-Wallis results for metrics.
+**Figure S2: Stability of neuronal responses across trial blocks.**
 *   **Source Stats:** `figures/supplementary_figure_2/supplementary_figure_2_data.xlsx`.
 
-**Figure S3: Statistical analysis of regional cluster distributions (Related to Fig 3)**
-*   **A:** Permutation test (LA vs AStria).
-*   **B:** Contingency table.
-*   **C:** Stats summary.
-*   **D:** Response metrics (Delta Spikes, Delta FR, Length).
-*   **E:** Detailed Kruskal-Wallis tests.
+**Figure S3: PN vs IN: Cell type comparison of response profiles in the lateral amygdala.**
 *   **Source Stats:** `figures/supplementary_figure_3/supplementary_figure_3_data.xlsx`.
 
-**Figure S4: PN vs IN comparison in LA**
-*   **A-E:** Heatmaps and metrics comparing Principal Neurons vs Interneurons.
-*   **Source Stats:** `figures/supplementary_figure_4/supplementary_figure_4_data.xlsx`.
+**Figure S4: Light-inhibited PV interneurons during optogenetic manipulation.**
+*   **Source Stats:** `figures/figure_5/figure_5_data.xlsx` (Manipulation check stats: baseline FR drops).
 
 **Figure S5: Monosynaptic latency analysis (Related to Fig 4)**
 *   **A:** Boxplots (Latency comparison across subtypes).
@@ -120,11 +122,3 @@ This section details the visual data structure and where to find the correspondi
 *   **D:** Chi-square stats.
 *   **E:** Kruskal-Wallis for monosynaptic magnitude.
 *   **Source Stats:** `figures/figure_4/figure_4_data.xlsx` (Latency section).
-
-**Figure S6: Light-inhibited PV interneurons (Related to Fig 5)**
-*   **A:** Example rasters (PV inhibition).
-*   **B:** Heatmaps (LA PVs).
-*   **C:** Lineplots (LA PV firing drops).
-*   **D:** Heatmaps (AStria PVs).
-*   **E:** Lineplots (AStria PV firing drops).
-*   **Source Stats:** `figures/figure_5/figure_5_data.xlsx` (Manipulation check stats: baseline FR drops).
