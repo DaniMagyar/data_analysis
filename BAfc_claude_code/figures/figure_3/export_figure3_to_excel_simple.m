@@ -271,7 +271,7 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
     %% PANEL G: Across-region comparison bars
     sheet_data = {};
-    sheet_data{1, 1} = 'PANEL G: LA vs AStria Comparison';
+    sheet_data{1, 1} = 'PANEL G: LA vs AStria Comparison - Peak FR and Response Length';
     sheet_data{2, 1} = '';
     row = 3;
 
@@ -279,15 +279,20 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
         sheet_data{row, 1} = sprintf('=== %s trials ===', stim_names{stim});
         row = row + 1;
 
-        % Header
+        % Header - Peak FR and Response Length side by side
         sheet_data{row, 1} = 'Region';
-        sheet_data{row, 2} = 'Mean (Hz)';
-        sheet_data{row, 3} = 'SEM (Hz)';
-        sheet_data{row, 4} = 'Median (Hz)';
+        sheet_data{row, 2} = 'Peak FR Mean (Hz)';
+        sheet_data{row, 3} = 'Peak FR SEM (Hz)';
+        sheet_data{row, 4} = 'Peak FR Median (Hz)';
         sheet_data{row, 5} = 'n neurons';
+        sheet_data{row, 6} = '';  % Empty separator
+        sheet_data{row, 7} = 'Resp Length Mean (ms)';
+        sheet_data{row, 8} = 'Resp Length SEM (ms)';
+        sheet_data{row, 9} = 'Resp Length Median (ms)';
+        sheet_data{row, 10} = 'Resp Length SD (ms)';
         row = row + 1;
 
-        % Collect data
+        % Collect data for both regions
         for br = 1:2
             if isempty(results_all{br})
                 continue;
@@ -295,20 +300,35 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
 
             res = results_all{br};
 
-            % Select appropriate peak FR data based on stimulus
+            % Select appropriate peak FR and latency data based on stimulus
             cluster_mask = get_cluster_mask_for_stimulus(res, stim);
-            if stim == 1
-                peak_fr_data = res.CS_peak_Hz;
-            elseif stim == 2
-                peak_fr_data = res.US_peak_Hz;
-            else
-                peak_fr_data = res.Both_peak_Hz;
-            end
-
             responsive_idx = find(cluster_mask);
 
             if ~isempty(responsive_idx)
-                peak_fr = peak_fr_data(responsive_idx);
+                % Get Peak FR
+                if stim == 1
+                    peak_fr_data = res.CS_peak_Hz(responsive_idx);
+                    onset_lat = res.CS_onset_lat(responsive_idx);
+                    offset_lat = res.CS_offset_lat(responsive_idx);
+                elseif stim == 2
+                    peak_fr_data = res.US_peak_Hz(responsive_idx);
+                    onset_lat = res.US_onset_lat(responsive_idx);
+                    offset_lat = res.US_offset_lat(responsive_idx);
+                else
+                    peak_fr_data = res.Both_peak_Hz(responsive_idx);
+                    onset_lat = res.Both_onset_lat(responsive_idx);
+                    offset_lat = res.Both_offset_lat(responsive_idx);
+                end
+
+                % Calculate response length in ms
+                resp_len = zeros(length(responsive_idx), 1);
+                for n = 1:length(responsive_idx)
+                    if ~isnan(onset_lat(n)) && ~isnan(offset_lat(n))
+                        resp_len(n) = (offset_lat(n) - onset_lat(n)) * 1000;
+                    else
+                        resp_len(n) = 0;
+                    end
+                end
 
                 if strcmp(brain_regions{br}, 'Astria')
                     region_name = 'AStria';
@@ -317,52 +337,94 @@ function export_figure3_to_excel_simple(results_all, kw_data_storage, kw_results
                 end
 
                 sheet_data{row, 1} = region_name;
-                sheet_data{row, 2} = mean(peak_fr);
-                sheet_data{row, 3} = std(peak_fr)/sqrt(length(peak_fr));
-                sheet_data{row, 4} = median(peak_fr);
-                sheet_data{row, 5} = length(peak_fr);
+                sheet_data{row, 2} = mean(peak_fr_data);
+                sheet_data{row, 3} = std(peak_fr_data)/sqrt(length(peak_fr_data));
+                sheet_data{row, 4} = median(peak_fr_data);
+                sheet_data{row, 5} = length(peak_fr_data);
+                sheet_data{row, 6} = '';  % Empty separator
+                sheet_data{row, 7} = mean(resp_len);
+                sheet_data{row, 8} = std(resp_len)/sqrt(length(resp_len));
+                sheet_data{row, 9} = median(resp_len);
+                sheet_data{row, 10} = std(resp_len);
                 row = row + 1;
             end
         end
 
-        % Add statistical test (Wilcoxon rank-sum between regions)
+        % Add statistical tests (Wilcoxon rank-sum between regions)
         sheet_data{row, 1} = '';
         row = row + 1;
-        sheet_data{row, 1} = 'Statistical Test:';
+        sheet_data{row, 1} = 'Statistical Tests:';
+        sheet_data{row, 2} = 'Peak FR';
+        sheet_data{row, 3} = '';
+        sheet_data{row, 4} = '';
+        sheet_data{row, 5} = '';
+        sheet_data{row, 6} = '';  % Empty separator
+        sheet_data{row, 7} = 'Response Length';
         row = row + 1;
 
         % Collect LA and AStria data for this stimulus
-        LA_data = [];
-        Astria_data = [];
+        LA_fr = [];
+        Astria_fr = [];
+        LA_rl = [];
+        Astria_rl = [];
+
         for br = 1:2
             if isempty(results_all{br})
                 continue;
             end
             res = results_all{br};
             cluster_mask = get_cluster_mask_for_stimulus(res, stim);
-            if stim == 1
-                peak_fr_data = res.CS_peak_Hz;
-            elseif stim == 2
-                peak_fr_data = res.US_peak_Hz;
-            else
-                peak_fr_data = res.Both_peak_Hz;
-            end
             responsive_idx = find(cluster_mask);
+
             if ~isempty(responsive_idx)
-                peak_fr = peak_fr_data(responsive_idx);
-                if br == 1
-                    LA_data = peak_fr;
+                % Get Peak FR
+                if stim == 1
+                    peak_fr_data = res.CS_peak_Hz(responsive_idx);
+                    onset_lat = res.CS_onset_lat(responsive_idx);
+                    offset_lat = res.CS_offset_lat(responsive_idx);
+                elseif stim == 2
+                    peak_fr_data = res.US_peak_Hz(responsive_idx);
+                    onset_lat = res.US_onset_lat(responsive_idx);
+                    offset_lat = res.US_offset_lat(responsive_idx);
                 else
-                    Astria_data = peak_fr;
+                    peak_fr_data = res.Both_peak_Hz(responsive_idx);
+                    onset_lat = res.Both_onset_lat(responsive_idx);
+                    offset_lat = res.Both_offset_lat(responsive_idx);
+                end
+
+                % Calculate response length in ms
+                resp_len = zeros(length(responsive_idx), 1);
+                for n = 1:length(responsive_idx)
+                    if ~isnan(onset_lat(n)) && ~isnan(offset_lat(n))
+                        resp_len(n) = (offset_lat(n) - onset_lat(n)) * 1000;
+                    else
+                        resp_len(n) = 0;
+                    end
+                end
+
+                if br == 1
+                    LA_fr = peak_fr_data;
+                    LA_rl = resp_len;
+                else
+                    Astria_fr = peak_fr_data;
+                    Astria_rl = resp_len;
                 end
             end
         end
 
-        if ~isempty(LA_data) && ~isempty(Astria_data)
-            [p_val, ~] = ranksum(LA_data, Astria_data);
+        % Statistical tests
+        if ~isempty(LA_fr) && ~isempty(Astria_fr)
+            [p_val_fr, ~] = ranksum(LA_fr, Astria_fr);
+            [p_val_rl, ~] = ranksum(LA_rl, Astria_rl);
+
             sheet_data{row, 1} = 'Wilcoxon rank-sum (LA vs AStria):';
-            sheet_data{row, 2} = p_val;
-            sheet_data{row, 3} = format_significance(p_val);
+            sheet_data{row, 2} = p_val_fr;
+            sheet_data{row, 3} = format_significance(p_val_fr);
+            sheet_data{row, 4} = '';
+            sheet_data{row, 5} = '';
+            sheet_data{row, 6} = '';  % Empty separator
+            sheet_data{row, 7} = p_val_rl;
+            sheet_data{row, 8} = format_significance(p_val_rl);
             row = row + 1;
         end
 

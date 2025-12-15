@@ -217,6 +217,11 @@ for ct = 1:2
         leafOrder = [leafOrder; clust_idx(sort_idx)];
     end
 
+    % Calculate peak FR for CS, US, and CS+US (same as figure 3)
+    CS_peak_Hz = max(psth_CS_Hz(:, g.roi), [], 2);
+    US_peak_Hz = max(psth_US_Hz(:, g.roi), [], 2);
+    Both_peak_Hz = max(psth_Both_Hz(:, g.roi), [], 2);
+
     % Store results
     results_all{ct}.Clusters = Clusters;
     results_all{ct}.leafOrder = leafOrder;
@@ -226,6 +231,9 @@ for ct = 1:2
     results_all{ct}.psth_CS_Hz = psth_CS_Hz;
     results_all{ct}.psth_US_Hz = psth_US_Hz;
     results_all{ct}.psth_Both_Hz = psth_Both_Hz;
+    results_all{ct}.CS_peak_Hz = CS_peak_Hz;
+    results_all{ct}.US_peak_Hz = US_peak_Hz;
+    results_all{ct}.Both_peak_Hz = Both_peak_Hz;
     results_all{ct}.CS_onset_lat = CS_onset_lat;
     results_all{ct}.CS_offset_lat = CS_offset_lat;
     results_all{ct}.US_onset_lat = US_onset_lat;
@@ -233,6 +241,31 @@ for ct = 1:2
     results_all{ct}.Both_onset_lat = Both_onset_lat;
     results_all{ct}.Both_offset_lat = Both_offset_lat;
     results_all{ct}.n_neurons = n_neurons;
+    results_all{ct}.animals = g.cell_metrics.animal(idx_neurons);
+end
+
+%% Storage for Friedman test data
+% Structure: kw_data_storage{cell_type, cluster, stimulus}
+kw_data_storage = cell(2, 3, 3);  % 2 cell types × 3 clusters × 3 stimuli (CS, US, Both)
+
+% Populate kw_data_storage with peak FR values
+for ct = 1:2
+    if isempty(results_all{ct})
+        continue;
+    end
+
+    res = results_all{ct};
+
+    for c = 1:3  % CS-selective, US-selective, Multisensory
+        clust_idx = find(res.Clusters == c);
+
+        if ~isempty(clust_idx)
+            % Store peak FR values (same as figure 3)
+            kw_data_storage{ct, c, 1} = res.CS_peak_Hz(clust_idx);
+            kw_data_storage{ct, c, 2} = res.US_peak_Hz(clust_idx);
+            kw_data_storage{ct, c, 3} = res.Both_peak_Hz(clust_idx);
+        end
+    end
 end
 
 %% Create figure (2×2 grid: heatmaps and lineplots only)
@@ -506,8 +539,58 @@ set(cb_ax, 'YDir', 'normal');
 set(cb_ax, 'XTick', [], 'YAxisLocation', 'right');
 cb_ax.FontSize = 10;
 
+%% Perform Friedman tests for Excel export
+% Perform Friedman tests for each cell type × cluster combination
+kw_results = struct();
+
+cluster_names_kw = {'CS-sel', 'US-sel', 'Multi'};
+
+for ct = 1:2
+    if isempty(results_all{ct})
+        continue;
+    end
+
+    for c = 1:3  % CS-selective, US-selective, Multisensory
+        % Check if we have data for this cluster
+        if isempty(kw_data_storage{ct, c, 1})
+            continue;
+        end
+
+        % Prepare data matrix for Friedman test (repeated measures)
+        % Rows = subjects (neurons), Columns = conditions (CS, US, Both)
+        % Friedman test requires at least 2 neurons
+        if length(kw_data_storage{ct, c, 1}) >= 2
+            % Ensure data is properly formatted as column vectors
+            data_matrix = [kw_data_storage{ct, c, 1}(:), kw_data_storage{ct, c, 2}(:), kw_data_storage{ct, c, 3}(:)];
+
+            % Friedman test (repeated measures)
+            [p_friedman, ~, ~] = friedman(data_matrix, 1, 'off');
+
+            % Only perform post-hoc tests if Friedman test is significant
+            if p_friedman < 0.05
+                % Post-hoc pairwise Wilcoxon signed-rank tests
+                p_values = zeros(3, 1);
+                p_values(1) = signrank(kw_data_storage{ct, c, 1}, kw_data_storage{ct, c, 2});  % CS vs US
+                p_values(2) = signrank(kw_data_storage{ct, c, 1}, kw_data_storage{ct, c, 3});  % CS vs Both
+                p_values(3) = signrank(kw_data_storage{ct, c, 2}, kw_data_storage{ct, c, 3});  % US vs Both
+            else
+                % Set p-values to 1 (non-significant) if Friedman is not significant
+                p_values = ones(3, 1);
+            end
+        else
+            % Not enough data for Friedman test (n < 2)
+            p_friedman = 1;
+            p_values = ones(3, 1);
+        end
+
+        % Store results
+        kw_results(ct, c).p_friedman = p_friedman;
+        kw_results(ct, c).p_values = p_values;
+    end
+end
+
 %% Export data to Excel
-export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_names);
+export_figure3_supp_PN_IN_to_excel(results_all, kw_data_storage, kw_results, g, cell_types, cluster_names);
 exportgraphics(gcf, 'supplementary_figure_3.png', 'Resolution', 300);
 fprintf('\nDone.\n');
 
@@ -544,7 +627,7 @@ function [onset_lat, offset_lat] = compute_onset_offset_latency(z_trace, event_i
     end
 end
 
-function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_names)
+function export_figure3_supp_PN_IN_to_excel(results_all, kw_data_storage, kw_results, g, cell_types, cluster_names)
     output_filename = 'supplementary_figure_3_data.xlsx';
 
     if exist(output_filename, 'file')
@@ -554,9 +637,9 @@ function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_
     stim_names = {'CS', 'US', 'CS+US'};
     all_cluster_names = {'CS-sel', 'US-sel', 'Multi', 'Non-resp', 'Inhibited'};
 
-    %% Sheet 1: Delta FR and Response Length
+    %% Sheet 1: Peak FR and Response Length (side by side layout like figure 3)
     sheet_data = {};
-    sheet_data{1, 1} = 'LA PN vs IN: Delta Peak FR and Response Length';
+    sheet_data{1, 1} = 'LA PN vs IN: Peak FR and Response Length';
     sheet_data{2, 1} = '';
     row = 3;
 
@@ -580,140 +663,179 @@ function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_
                 continue;
             end
 
-            % Calculate metrics for all neurons in this cluster
-            CS_fr = zeros(length(clust_idx), 1);
-            US_fr = zeros(length(clust_idx), 1);
-            Both_fr = zeros(length(clust_idx), 1);
+            % Calculate response length for each stimulus
             CS_resplen = zeros(length(clust_idx), 1);
             US_resplen = zeros(length(clust_idx), 1);
             Both_resplen = zeros(length(clust_idx), 1);
 
-            baseline_idx = 1:(g.pre_time / g.bin_time);
-
             for n = 1:length(clust_idx)
                 idx_n = clust_idx(n);
-                baseline_fr = mean(res.psth_CS_Hz(idx_n, baseline_idx));
 
-                % CS metrics
+                % CS response length
                 if ~isnan(res.CS_onset_lat(idx_n)) && ~isnan(res.CS_offset_lat(idx_n))
-                    onset_bin = round(res.CS_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.CS_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_CS_Hz(idx_n, onset_bin:offset_bin));
-                    CS_fr(n) = peak_fr - baseline_fr;
                     CS_resplen(n) = (res.CS_offset_lat(idx_n) - res.CS_onset_lat(idx_n)) * 1000;
                 end
 
-                % US metrics
+                % US response length
                 if ~isnan(res.US_onset_lat(idx_n)) && ~isnan(res.US_offset_lat(idx_n))
-                    onset_bin = round(res.US_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.US_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_US_Hz(idx_n, onset_bin:offset_bin));
-                    US_fr(n) = peak_fr - baseline_fr;
                     US_resplen(n) = (res.US_offset_lat(idx_n) - res.US_onset_lat(idx_n)) * 1000;
                 end
 
-                % CS+US metrics
+                % CS+US response length
                 if ~isnan(res.Both_onset_lat(idx_n)) && ~isnan(res.Both_offset_lat(idx_n))
-                    onset_bin = round(res.Both_onset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    offset_bin = round(res.Both_offset_lat(idx_n) / g.bin_time) + 1 + g.roi(1) - 1;
-                    peak_fr = max(res.psth_Both_Hz(idx_n, onset_bin:offset_bin));
-                    Both_fr(n) = peak_fr - baseline_fr;
                     Both_resplen(n) = (res.Both_offset_lat(idx_n) - res.Both_onset_lat(idx_n)) * 1000;
                 end
             end
 
-            % Statistical tests
-            data_fr = [CS_fr, US_fr, Both_fr];
-            data_resplen = [CS_resplen, US_resplen, Both_resplen];
+            % Perform Friedman test for response length
+            response_length_data = [CS_resplen, US_resplen, Both_resplen];
+            if length(clust_idx) >= 2
+                [p_friedman_rl, ~, ~] = friedman(response_length_data, 1, 'off');
 
-            % Wilcoxon signed-rank tests
-            p_CS_US_fr = signrank(CS_fr, US_fr);
-            p_CS_Both_fr = signrank(CS_fr, Both_fr);
-            p_US_Both_fr = signrank(US_fr, Both_fr);
+                % Get post-hoc for response length
+                if p_friedman_rl < 0.05
+                    p_cs_us_rl = signrank(CS_resplen, US_resplen);
+                    p_cs_both_rl = signrank(CS_resplen, Both_resplen);
+                    p_us_both_rl = signrank(US_resplen, Both_resplen);
+                else
+                    p_cs_us_rl = 1;
+                    p_cs_both_rl = 1;
+                    p_us_both_rl = 1;
+                end
+            else
+                p_friedman_rl = 1;
+                p_cs_us_rl = 1;
+                p_cs_both_rl = 1;
+                p_us_both_rl = 1;
+            end
 
-            p_CS_US_resplen = signrank(CS_resplen, US_resplen);
-            p_CS_Both_resplen = signrank(CS_resplen, Both_resplen);
-            p_US_Both_resplen = signrank(US_resplen, Both_resplen);
-
-            % Write summary statistics - Delta FR
+            % Header with both Peak FR and Response Length side by side
             sheet_data{row, 1} = sprintf('%s (n=%d)', cell_types{ct}, length(clust_idx));
-            sheet_data{row, 2} = 'Delta Peak FR (Hz)';
             row = row + 1;
 
-            % Header row
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Mean';
-            sheet_data{row, 3} = 'SEM';
-            sheet_data{row, 4} = 'Median';
-            sheet_data{row, 5} = 'SD';
+            sheet_data{row, 1} = 'Stimulus';
+            sheet_data{row, 2} = 'Peak FR Mean (Hz)';
+            sheet_data{row, 3} = 'Peak FR SEM (Hz)';
+            sheet_data{row, 4} = 'Peak FR Median (Hz)';
+            sheet_data{row, 5} = 'Peak FR SD (Hz)';
+            sheet_data{row, 6} = '';  % Empty column separator
+            sheet_data{row, 7} = 'Resp Length Mean (ms)';
+            sheet_data{row, 8} = 'Resp Length SEM (ms)';
+            sheet_data{row, 9} = 'Resp Length Median (ms)';
+            sheet_data{row, 10} = 'Resp Length SD (ms)';
             row = row + 1;
 
-            % CS, US, CS+US rows
-            for s = 1:3
-                sheet_data{row, 1} = stim_names{s};
-                sheet_data{row, 2} = mean(data_fr(:,s), 'omitnan');
-                sheet_data{row, 3} = std(data_fr(:,s), 'omitnan') / sqrt(sum(~isnan(data_fr(:,s))));
-                sheet_data{row, 4} = median(data_fr(:,s), 'omitnan');
-                sheet_data{row, 5} = std(data_fr(:,s), 'omitnan');
+            % Data for each stimulus (side by side)
+            stim_metrics_fr = {kw_data_storage{ct, c, 1}, kw_data_storage{ct, c, 2}, kw_data_storage{ct, c, 3}};
+            resp_metrics = {CS_resplen, US_resplen, Both_resplen};
+
+            for stim = 1:3
+                data_fr = stim_metrics_fr{stim};
+                data_rl = resp_metrics{stim};
+
+                sheet_data{row, 1} = stim_names{stim};
+                sheet_data{row, 2} = mean(data_fr, 'omitnan');
+                sheet_data{row, 3} = std(data_fr, 'omitnan') / sqrt(sum(~isnan(data_fr)));
+                sheet_data{row, 4} = median(data_fr, 'omitnan');
+                sheet_data{row, 5} = std(data_fr, 'omitnan');
+                sheet_data{row, 6} = '';  % Empty column separator
+                sheet_data{row, 7} = mean(data_rl, 'omitnan');
+                sheet_data{row, 8} = std(data_rl, 'omitnan') / sqrt(sum(~isnan(data_rl)));
+                sheet_data{row, 9} = median(data_rl, 'omitnan');
+                sheet_data{row, 10} = std(data_rl, 'omitnan');
                 row = row + 1;
             end
 
-            % Statistical tests for Delta FR
+            % Add statistical test results side by side
             sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Statistical Tests (Wilcoxon signed-rank)';
             row = row + 1;
 
-            sheet_data{row, 1} = 'CS vs US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_US_fr, format_significance(p_CS_US_fr));
+            % Statistical test headers
+            sheet_data{row, 1} = 'Statistical Tests:';
+            sheet_data{row, 2} = 'Peak FR';
+            sheet_data{row, 6} = '';  % Empty column separator
+            sheet_data{row, 7} = 'Response Length';
             row = row + 1;
 
-            sheet_data{row, 1} = 'CS vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_Both_fr, format_significance(p_CS_Both_fr));
-            row = row + 1;
+            % Friedman test results
+            if ~isempty(kw_results) && numel(kw_results) >= (ct + (c-1)*2)
+                p_friedman = kw_results(ct, c).p_friedman;
+                p_values = kw_results(ct, c).p_values;
 
-            sheet_data{row, 1} = 'US vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_US_Both_fr, format_significance(p_US_Both_fr));
-            row = row + 1;
-
-            % Response Length
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Response Length (ms)';
-            row = row + 1;
-
-            % Header row
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Mean';
-            sheet_data{row, 3} = 'SEM';
-            sheet_data{row, 4} = 'Median';
-            sheet_data{row, 5} = 'SD';
-            row = row + 1;
-
-            % CS, US, CS+US rows
-            for s = 1:3
-                sheet_data{row, 1} = stim_names{s};
-                sheet_data{row, 2} = mean(data_resplen(:,s), 'omitnan');
-                sheet_data{row, 3} = std(data_resplen(:,s), 'omitnan') / sqrt(sum(~isnan(data_resplen(:,s))));
-                sheet_data{row, 4} = median(data_resplen(:,s), 'omitnan');
-                sheet_data{row, 5} = std(data_resplen(:,s), 'omitnan');
+                sheet_data{row, 1} = 'Friedman test p-value:';
+                sheet_data{row, 2} = p_friedman;
+                sheet_data{row, 3} = format_significance(p_friedman);
+                sheet_data{row, 6} = '';  % Empty column separator
+                sheet_data{row, 7} = p_friedman_rl;
+                sheet_data{row, 8} = format_significance(p_friedman_rl);
                 row = row + 1;
+
+                % Post-hoc header
+                if p_friedman < 0.05 || p_friedman_rl < 0.05
+                    sheet_data{row, 1} = 'Post-hoc (Wilcoxon signed-rank):';
+                    row = row + 1;
+
+                    % CS vs US
+                    sheet_data{row, 1} = '  CS vs US:';
+                    if p_friedman < 0.05
+                        sheet_data{row, 2} = p_values(1);
+                        sheet_data{row, 3} = format_significance(p_values(1));
+                    else
+                        sheet_data{row, 2} = 'n/a';
+                        sheet_data{row, 3} = '';
+                    end
+                    sheet_data{row, 6} = '';  % Empty column separator
+                    if p_friedman_rl < 0.05
+                        sheet_data{row, 7} = p_cs_us_rl;
+                        sheet_data{row, 8} = format_significance(p_cs_us_rl);
+                    else
+                        sheet_data{row, 7} = 'n/a';
+                        sheet_data{row, 8} = '';
+                    end
+                    row = row + 1;
+
+                    % CS vs CS+US
+                    sheet_data{row, 1} = '  CS vs CS+US:';
+                    if p_friedman < 0.05
+                        sheet_data{row, 2} = p_values(2);
+                        sheet_data{row, 3} = format_significance(p_values(2));
+                    else
+                        sheet_data{row, 2} = 'n/a';
+                        sheet_data{row, 3} = '';
+                    end
+                    sheet_data{row, 6} = '';  % Empty column separator
+                    if p_friedman_rl < 0.05
+                        sheet_data{row, 7} = p_cs_both_rl;
+                        sheet_data{row, 8} = format_significance(p_cs_both_rl);
+                    else
+                        sheet_data{row, 7} = 'n/a';
+                        sheet_data{row, 8} = '';
+                    end
+                    row = row + 1;
+
+                    % US vs CS+US
+                    sheet_data{row, 1} = '  US vs CS+US:';
+                    if p_friedman < 0.05
+                        sheet_data{row, 2} = p_values(3);
+                        sheet_data{row, 3} = format_significance(p_values(3));
+                    else
+                        sheet_data{row, 2} = 'n/a';
+                        sheet_data{row, 3} = '';
+                    end
+                    sheet_data{row, 6} = '';  % Empty column separator
+                    if p_friedman_rl < 0.05
+                        sheet_data{row, 7} = p_us_both_rl;
+                        sheet_data{row, 8} = format_significance(p_us_both_rl);
+                    else
+                        sheet_data{row, 7} = 'n/a';
+                        sheet_data{row, 8} = '';
+                    end
+                    row = row + 1;
+                else
+                    sheet_data{row, 1} = '  (Post-hoc not performed - Both Friedman tests n.s.)';
+                    row = row + 1;
+                end
             end
-
-            % Statistical tests for Response Length
-            sheet_data{row, 1} = '';
-            sheet_data{row, 2} = 'Statistical Tests (Wilcoxon signed-rank)';
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_US_resplen, format_significance(p_CS_US_resplen));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'CS vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_CS_Both_resplen, format_significance(p_CS_Both_resplen));
-            row = row + 1;
-
-            sheet_data{row, 1} = 'US vs CS+US';
-            sheet_data{row, 2} = sprintf('p = %.4f %s', p_US_Both_resplen, format_significance(p_US_Both_resplen));
-            row = row + 1;
 
             sheet_data{row, 1} = '';
             row = row + 1;
@@ -727,17 +849,17 @@ function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_
 
     %% Sheet 2: Raw Data - Individual Neuron Values
     raw_data = {};
-    raw_data{1, 1} = 'LA PN vs IN: Individual Neuron Values';
-    raw_data{2, 1} = '';
+    raw_data{1, 1} = 'LA PN vs IN: Individual Neuron Peak FR and Response Length Values';
+    raw_data{2, 1} = 'These are the individual data points used to calculate means and SEMs';
     raw_data{3, 1} = 'Local #';
     raw_data{3, 2} = 'Global Index';
     raw_data{3, 3} = 'Animal ID';
     raw_data{3, 4} = 'Cell Type';
     raw_data{3, 5} = 'Cluster';
     raw_data{3, 6} = '';
-    raw_data{3, 7} = 'Delta FR CS (Hz)';
-    raw_data{3, 8} = 'Delta FR US (Hz)';
-    raw_data{3, 9} = 'Delta FR CS+US (Hz)';
+    raw_data{3, 7} = 'Peak FR CS (Hz)';
+    raw_data{3, 8} = 'Peak FR US (Hz)';
+    raw_data{3, 9} = 'Peak FR CS+US (Hz)';
     raw_data{3, 10} = '';
     raw_data{3, 11} = 'Response Length CS (ms)';
     raw_data{3, 12} = 'Response Length US (ms)';
@@ -809,9 +931,26 @@ function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_
             raw_data{row, 4} = cell_types{ct};
             raw_data{row, 5} = all_cluster_names{res.Clusters(n)};
             raw_data{row, 6} = '';
-            raw_data{row, 7} = CS_fr;
-            raw_data{row, 8} = US_fr;
-            raw_data{row, 9} = Both_fr;
+            % Use peak FR from kw_data_storage (if available for this cluster)
+            cluster_id = res.Clusters(n);
+            if cluster_id <= 3 && ~isempty(kw_data_storage{ct, cluster_id, 1})
+                % Find this neuron's position in the cluster
+                clust_neurons = find(res.Clusters == cluster_id);
+                pos_in_cluster = find(clust_neurons == n);
+                if ~isempty(pos_in_cluster)
+                    raw_data{row, 7} = kw_data_storage{ct, cluster_id, 1}(pos_in_cluster);
+                    raw_data{row, 8} = kw_data_storage{ct, cluster_id, 2}(pos_in_cluster);
+                    raw_data{row, 9} = kw_data_storage{ct, cluster_id, 3}(pos_in_cluster);
+                else
+                    raw_data{row, 7} = CS_fr;
+                    raw_data{row, 8} = US_fr;
+                    raw_data{row, 9} = Both_fr;
+                end
+            else
+                raw_data{row, 7} = CS_fr;
+                raw_data{row, 8} = US_fr;
+                raw_data{row, 9} = Both_fr;
+            end
             raw_data{row, 10} = '';
             raw_data{row, 11} = CS_resplen;
             raw_data{row, 12} = US_resplen;
@@ -821,7 +960,7 @@ function export_figure3_supp_PN_IN_to_excel(results_all, g, cell_types, cluster_
         end
     end
 
-    writecell(raw_data, output_filename, 'Sheet', 'RawData_Individual_Neurons');
+    writecell(raw_data, output_filename, 'Sheet', 'RawData_PeakFR_RespLen');
 end
 
 function sig_str = format_significance(p_val)

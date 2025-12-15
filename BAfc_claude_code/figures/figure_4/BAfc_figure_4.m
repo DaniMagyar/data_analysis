@@ -200,7 +200,7 @@ fig = figure('Units', 'pixels', 'Position', [100, 100, 1200, 800], 'Visible', 'o
 t = tiledlayout(fig, 4, 6, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Add panel labels
-label_positions = {[0.01 0.94], [0.48 0.94], [0.01 0.47], [0.48 0.47], ...
+label_positions = {[0.01 0.94], [0.48 0.94], [0.01 0.466], [0.48 0.466], ...
                    [0.68 0.94], [0.68 0.62], [0.68 0.28]};
 label_texts = {'A', 'C', 'B', 'D', 'E', 'F', 'G'};
 for i = 1:length(label_positions)
@@ -316,10 +316,10 @@ end
 
 % Colorbar
 drawnow;
-cb_ax = axes('Position', [0.185, 0.06, 0.008, 0.08]);
+cb_ax = axes('Position', [0.191, 0.06, 0.008, 0.08]);
 imagesc(cb_ax, [0 1], [clim_min clim_max], repmat(linspace(clim_min, clim_max, 256)', 1, 10));
 colormap(cb_ax, g.colors.Heatmap);
-set(cb_ax, 'YDir', 'normal', 'XTick', [], 'YAxisLocation', 'right', 'FontSize', g.fontSize2);
+set(cb_ax, 'YDir', 'normal', 'XTick', [], 'YAxisLocation', 'right', 'FontSize', 8);
 
 %% Right panels
 t_right = tiledlayout(t, 3, 2, 'TileSpacing', 'compact', 'Padding', 'tight');
